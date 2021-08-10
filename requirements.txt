@@ -1,0 +1,5 @@
+pysdl2
+pysdl2-dll
+pillow
+freetype-py
+requests

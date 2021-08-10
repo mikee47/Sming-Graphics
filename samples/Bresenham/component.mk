@@ -1,0 +1,2 @@
+ARDUINO_LIBRARIES := \
+	Graphics

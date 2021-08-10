@@ -1,0 +1,238 @@
+{
+    "resources": {
+        "image": {
+            "sming_bmp": {
+                "source": "sming.bmp"
+            },
+            "sming_raw": {
+                "format": "RGB565",
+                "source": "sming.bmp"
+            },
+            "heron_raw": {
+                "format": "RGB565",
+                "source": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Ardea_purpurea%2C_Tarn%2C_France%2C_2012.jpg/800px-Ardea_purpurea%2C_Tarn%2C_France%2C_2012.jpg",
+                "transform": {
+                    "width": 100
+                }
+            },
+            "otter_raw": {
+                "format": "RGB565",
+                "source": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Sea-otter-morro-bay_13.jpg/320px-Sea-otter-morro-bay_13.jpg"
+            }
+        },
+        "font": {
+            // PFI
+            "Ascii4x6": {
+                "normal": "Ascii4x6.pfi"
+            },
+            "Ascii4x6p": {
+                "normal": "Ascii4x6p.pfi"
+            },
+            "Ascii6x10": {
+                "normal": "Ascii6x10.pfi"
+            },
+            "Ascii6x10p": {
+                "normal": "Ascii6x10p.pfi"
+            },
+            "Ascii7x11": {
+                "normal": "Ascii7x11.pfi"
+            },
+            "Ascii7x11p": {
+                "normal": "Ascii7x11p.pfi"
+            },
+            "Ascii9x13": {
+                "normal": "Ascii9x13.pfi"
+            },
+            "Ascii9x13p": {
+                "normal": "Ascii9x13p.pfi"
+            },
+            "AsciiCaps4x6": {
+                "normal": "AsciiCaps4x6.pfi"
+            },
+            "AsciiCaps4x6p": {
+                "normal": "AsciiCaps4x6p.pfi"
+            },
+            "Latin6x10": {
+                "normal": "Latin6x10.pfi"
+            },
+            "Latin6x10p": {
+                "normal": "Latin6x10p.pfi"
+            },
+            "LineDraw6x10": {
+                "normal": "LineDraw6x10.pfi"
+            },
+            // FreeType
+            "DroidSans": {
+                "mono": true,
+                "size": 24,
+                "codepoints": "a-z,A-Z,0-9,0x4000-0x4050",
+                "normal": "DroidSansFallbackFull.ttf"
+            },
+            "ISO8559": {
+                "mono": true,
+                "normal": "6x12-ISO8859-1.pcf.gz"
+            },
+            "NimbusSans": {
+                "mono": true,
+                "size": 24,
+                "normal": "NimbusSans-Regular.otf",
+                "italic": "NimbusSans-Italic.otf",
+                "bold": "NimbusSans-Bold.otf",
+                "boldItalic": "NimbusSans-BoldItalic.otf"
+            },
+            "ubuntu": {
+                "mono": false,
+                "size": 16,
+                "normal": "UbuntuMono-R.ttf",
+                "italic": "UbuntuMono-RI.ttf",
+                "bold": "UbuntuMono-B.ttf",
+                "boldItalic": "UbuntuMono-BI.ttf"
+            },
+            "ubuntuLarge": {
+                "size": 56,
+                "codepoints": "",
+                "chars": " Crazy Paving Sming Rocks!",
+                "normal": "UbuntuMono-R.ttf"
+            },
+            "vera": {
+                "size": 24,
+                "normal": "NotoMono-Regular.ttf"
+            },
+            // Linux fonts
+            "linux_6x8": {
+                "normal": "Linux/font_6x8.c"
+            },
+            "linux_6x10": {
+                "normal": "Linux/font_6x10.c"
+            },
+            "linux_6x11": {
+                "normal": "Linux/font_6x11.c"
+            },
+            "linux_7x14": {
+                "normal": "Linux/font_7x14.c"
+            },
+            "linux_8x8": {
+                "normal": "Linux/font_8x8.c"
+            },
+            "linux_8x16": {
+                "normal": "Linux/font_8x16.c"
+            },
+            "linux_10x18": {
+                "normal": "Linux/font_10x18.c"
+            },
+            "linux_acorn_8x8": {
+                "normal": "Linux/font_acorn_8x8.c"
+            },
+            "linux_mini_4x6": {
+                "normal": "Linux/font_mini_4x6.c"
+            },
+            "linux_pearl_8x8": {
+                "normal": "Linux/font_pearl_8x8.c"
+            },
+            "linux_sun8x16": {
+                "normal": "Linux/font_sun8x16.c"
+            },
+            "linux_sun12x22": {
+                "normal": "Linux/font_sun12x22.c"
+            },
+            "linux_ter16x32": {
+                "normal": "Linux/font_ter16x32.c"
+            },
+            // VLW fonts
+            "finalFrontier28": {
+                "normal": "Final-Frontier-28.vlw"
+            },
+            "notoSans15": {
+                "bold": "NotoSansBold-15.vlw"
+            },
+            "notoSans36": {
+                "bold": "NotoSansBold-36.vlw"
+            },
+            "notoSansMonoSCB20": {
+                "normal": "NotoSansMonoSCB20.vlw"
+            },
+            // GFX fonts
+            "Org_01": {
+                "normal": "GFX/Org_01.h"
+            },
+            "Picopixel": {
+                "normal": "GFX/Picopixel.h"
+            },
+            "Tiny3x3a2pt": {
+                "normal": "GFX/Tiny3x3a2pt7b.h"
+            },
+            "freeMono9pt": {
+                "normal": "GFX/FreeMono9pt7b.h",
+                "bold": "GFX/FreeMonoBold9pt7b.h",
+                "italic": "GFX/FreeMonoOblique9pt7b.h",
+                "boldItalic": "GFX/FreeMonoBoldOblique9pt7b.h"
+            },
+            "freeMono12pt": {
+                "normal": "GFX/FreeMono12pt7b.h",
+                "bold": "GFX/FreeMonoBold12pt7b.h",
+                "italic": "GFX/FreeMonoOblique12pt7b.h",
+                "boldItalic": "GFX/FreeMonoBoldOblique12pt7b.h"
+            },
+            "freeMono18pt": {
+                "normal": "GFX/FreeMono18pt7b.h",
+                "bold": "GFX/FreeMonoBold18pt7b.h",
+                "italic": "GFX/FreeMonoOblique18pt7b.h",
+                "boldItalic": "GFX/FreeMonoBoldOblique18pt7b.h"
+            },
+            "freeMono24pt": {
+                "normal": "GFX/FreeMono24pt7b.h",
+                "bold": "GFX/FreeMonoBold24pt7b.h",
+                "italic": "GFX/FreeMonoOblique24pt7b.h",
+                "boldItalic": "GFX/FreeMonoBoldOblique24pt7b.h"
+            },
+            "freeSans9pt": {
+                "normal": "GFX/FreeSans9pt7b.h",
+                "bold": "GFX/FreeSansBold9pt7b.h",
+                "italic": "GFX/FreeSansOblique9pt7b.h",
+                "boldItalic": "GFX/FreeSansBoldOblique9pt7b.h"
+            },
+            "freeSans12pt": {
+                "normal": "GFX/FreeSans12pt7b.h",
+                "bold": "GFX/FreeSansBold12pt7b.h",
+                "italic": "GFX/FreeSansOblique12pt7b.h",
+                "boldItalic": "GFX/FreeSansBoldOblique12pt7b.h"
+            },
+            "freeSans18pt": {
+                "normal": "GFX/FreeSans18pt7b.h",
+                "bold": "GFX/FreeSansBold18pt7b.h",
+                "italic": "GFX/FreeSansOblique18pt7b.h",
+                "boldItalic": "GFX/FreeSansBoldOblique18pt7b.h"
+            },
+            "freeSans24pt": {
+                "normal": "GFX/FreeSans24pt7b.h",
+                "bold": "GFX/FreeSansBold24pt7b.h",
+                "italic": "GFX/FreeSansOblique24pt7b.h",
+                "boldItalic": "GFX/FreeSansBoldOblique24pt7b.h"
+            },
+            "freeSerif9pt": {
+                "normal": "GFX/FreeSerif9pt7b.h",
+                "bold": "GFX/FreeSerifBold9pt7b.h",
+                "italic": "GFX/FreeSerifItalic9pt7b.h",
+                "boldItalic": "GFX/FreeSerifBoldItalic9pt7b.h"
+            },
+            "freeSerif12pt": {
+                "normal": "GFX/FreeSerif12pt7b.h",
+                "bold": "GFX/FreeSerifBold12pt7b.h",
+                "italic": "GFX/FreeSerifItalic12pt7b.h",
+                "boldItalic": "GFX/FreeSerifBoldItalic12pt7b.h"
+            },
+            "freeSerif18pt": {
+                "normal": "GFX/FreeSerif18pt7b.h",
+                "bold": "GFX/FreeSerifBold18pt7b.h",
+                "italic": "GFX/FreeSerifItalic18pt7b.h",
+                "boldItalic": "GFX/FreeSerifBoldItalic18pt7b.h"
+            },
+            "freeSerif24pt": {
+                "normal": "GFX/FreeSerif24pt7b.h",
+                "bold": "GFX/FreeSerifBold24pt7b.h",
+                "italic": "GFX/FreeSerifItalic24pt7b.h",
+                "boldItalic": "GFX/FreeSerifBoldItalic24pt7b.h"
+            }
+        }
+    }
+}

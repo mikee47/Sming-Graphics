@@ -1,0 +1,17 @@
+{
+    "name": "New Profile",
+    "base_config": "spiffs",
+    "options": [],
+    "partitions": {
+        "resource": {
+            "device": "spiFlash",
+            "address": "0x00100000",
+            "size": "1M",
+            "type": "user",
+            "subtype": 1,
+            "readonly": false,
+            "encrypted": false,
+            "filename": "$(OUT_BASE)/build/resource.bin"
+        }
+    }
+}
