@@ -370,9 +370,8 @@ Metafiles
 
     An example use case is for a 'scribble' application, recording pen strokes a touch-enabled screen.
 
-    Windows Metafile Format https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wmf/4813e7fd-52d0-4f42-965f-228c8b7488d2
-
-    WebCGM https://www.w3.org/TR/2010/REC-webcgm21-20100301
+    - `Windows Metafile Format <https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wmf/4813e7fd-52d0-4f42-965f-228c8b7488d2>`__
+    - `WebCGM <https://www.w3.org/TR/2010/REC-webcgm21-20100301>`__
 
     The ``Drawing`` API is intended for this use, providing a simple Graphics Description Language (GDL).
     The provided ``GDRAW_xxx`` macros allow embedding of these scripts within programs.
@@ -450,39 +449,37 @@ References
 ----------
 
 File formats
-    -   `BMP File Format <https://en.wikipedia.org/wiki/BMP_file_format>` (Wikipedia)
+    -   `BMP File Format <https://en.wikipedia.org/wiki/BMP_file_format>`__ (Wikipedia)
 
 Fonts
-    -   `Bitmap fonts <https://github.com/Tecate/bitmap-fonts>` Collection of monospaced bitmap fonts for X11
-    -   `BDF Parser Python library <https://github.com/tomchen/bdfparser>`
-    -   `Arduino font converter <https://github.com/chall3ng3r/Squix-Display-FontConverterV3>`
-    -   `Processing <https://processing.org/>`
-    -   `OpenType Specification <https://docs.microsoft.com/en-us/typography/opentype/spec/>`
-    -   `FreeType library <https://www.freetype.org/index.html>`
-    -   `Adafruit GFX font converter <https://github.com/adafruit/Adafruit-GFX-Library/tree/master/fontconvert>`
-    -   `Adafruit GFX Pixel font customiser <https://tchapi.github.io/Adafruit-GFX-Font-Customiser/>`
+    -   `Bitmap fonts <https://github.com/Tecate/bitmap-fonts>`__ Collection of monospaced bitmap fonts for X11
+    -   `BDF Parser Python library <https://github.com/tomchen/bdfparser>`__
+    -   `Arduino font converter <https://github.com/chall3ng3r/Squix-Display-FontConverterV3>`__
+    -   `Processing <https://processing.org/>`__
+    -   `OpenType Specification <https://docs.microsoft.com/en-us/typography/opentype/spec/>`__
+    -   `FreeType library <https://www.freetype.org/index.html>`__
+    -   `Adafruit GFX font converter <https://github.com/adafruit/Adafruit-GFX-Library/tree/master/fontconvert>`__
+    -   `Adafruit GFX Pixel font customiser <https://tchapi.github.io/Adafruit-GFX-Font-Customiser/>`__
 
 Graphics libraries
-    -   `Simple and Fast Multimedia Library <https://github.com/SFML/SFML>`
-    -   `SDL Wiki <https://wiki.libsdl.org/>`
-    -   `ADA Industrial Control Widget Library <http://www.dmitry-kazakov.de/ada/aicwl.htm>`
-    -   `Cairo 2D graphics library <https://www.cairographics.org/>`
-    -   `GDI+ <https://docs.microsoft.com/en-us/windows/win32/gdiplus/>`
-    -   `Clipper <http://angusj.com/delphi/clipper.php>` for clipping and offsetting lines and polygons
-    -   `FabGL <https://github.com/fdivitto/FabGL>` Display Controller, PS/2 Mouse and Keyboard Controller,
+    -   `Simple and Fast Multimedia Library <https://github.com/SFML/SFML>`__
+    -   `SDL Wiki <https://wiki.libsdl.org/>`__
+    -   `ADA Industrial Control Widget Library <http://www.dmitry-kazakov.de/ada/aicwl.htm>`__
+    -   `Cairo 2D graphics library <https://www.cairographics.org/>`__
+    -   `GDI+ <https://docs.microsoft.com/en-us/windows/win32/gdiplus/>`__
+    -   `Clipper <http://angusj.com/delphi/clipper.php>`__ for clipping and offsetting lines and polygons
+    -   `FabGL <https://github.com/fdivitto/FabGL>`__ Display Controller, PS/2 Mouse and Keyboard Controller,
         Graphics Library, Sound Engine, Graphical User Interface (GUI), Game Engine and ANSI/VT Terminal for the ESP32
-    -   `TFT_eSPI <https://github.com/Bodmer/TFT_eSPI>`
-    -   `LVGL <https://docs.lvgl.io/master/index.html>` Light and Versatile Graphics Library
+    -   `TFT_eSPI <https://github.com/Bodmer/TFT_eSPI>`__
+    -   `LVGL <https://docs.lvgl.io/master/index.html>`__ Light and Versatile Graphics Library
 
 Metafiles
-    -   `WebCGM 2.1 <https://www.w3.org/TR/2010/REC-webcgm21-20100301/>` Computer Graphics Metafile standard
-    -   `Windows Metafile <https://en.wikipedia.org/wiki/Windows_Metafile>`
+    -   `WebCGM 2.1 <https://www.w3.org/TR/2010/REC-webcgm21-20100301/>`__ Computer Graphics Metafile standard
+    -   `Windows Metafile <https://en.wikipedia.org/wiki/Windows_Metafile>`__
 
 
 Papers
-    -   `The Beauty of Bresenham's Algorithm <https://zingl.github.io/bresenham.html>` Discuss anti-aliasing techniques
-
-
+    -   `The Beauty of Bresenham's Algorithm <https://zingl.github.io/bresenham.html>`__ Discuss anti-aliasing techniques
 
 
 
