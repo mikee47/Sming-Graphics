@@ -5,7 +5,7 @@
     "partitions": {
         "resource": {
             "device": "spiFlash",
-            "address": "0x00100000",
+            "address": "0x00280000",
             "size": "1M",
             "type": "user",
             "subtype": 1,

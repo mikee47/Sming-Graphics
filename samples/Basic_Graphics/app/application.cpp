@@ -7,6 +7,7 @@
 #include <RapidXML.h>
 #include <Storage/PartitionStream.h>
 #include <resource.h>
+#include <Graphics/SampleConfig.h>
 
 #ifdef ENABLE_MALLOC_COUNT
 #include <malloc_count.h>
@@ -16,31 +17,10 @@
 #include <Storage/FileDevice.h>
 #endif
 
-#ifdef ENABLE_VIRTUAL_SCREEN
-#include <Graphics/Display/Virtual.h>
-#else
-#include <Graphics/Display/ILI9341.h>
-#endif
-
 using namespace Graphics;
 
 namespace
 {
-#ifdef ENABLE_VIRTUAL_SCREEN
-Display::Virtual tft;
-#else
-HSPI::Controller spi;
-Display::ILI9341 tft(spi);
-
-// Pin setup
-constexpr HSPI::PinSet TFT_PINSET{HSPI::PinSet::overlap};
-constexpr uint8_t TFT_CS{2};
-constexpr uint8_t TFT_RESET_PIN{4};
-constexpr uint8_t TFT_DC_PIN{5};
-// Not used in this sample, but needs to be kept high
-constexpr uint8_t TOUCH_CS_PIN{15};
-#endif
-
 constexpr Orientation portrait{Orientation::deg180};
 constexpr Orientation landscape{Orientation::deg270};
 
@@ -1746,24 +1726,9 @@ void init()
 	targetSymbol.drawRect(Pen(Color::Gray, 3), r);
 
 	Serial.println("Display start");
-#ifdef ENABLE_VIRTUAL_SCREEN
-	tft.begin();
-	// tft.setMode(Display::Virtual::Mode::Debug);
-#else
+	initDisplay();
 
-	// Touch CS
-	pinMode(TOUCH_CS_PIN, OUTPUT);
-	digitalWrite(TOUCH_CS_PIN, HIGH);
-
-	spi.begin();
-
-	/*
-	 * ILI9341 min. clock cycle is 100ns write, 150ns read.
-	 * In practice, writes work at 40MHz, reads at 27MHz.
-	 * Attempting to read at 40MHz results in colour corruption.
-	 */
-	tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 27000000);
-
+#ifndef ENABLE_VIRTUAL_SCREEN
 	Serial.printf(_F("Speed: %u\r\n"), tft.getSpeed());
 	Serial.printf(_F("DisplayID: 0x%06x\r\n"), tft.readDisplayId());
 	Serial.printf(_F("Status: 0x%08x\r\n"), tft.readDisplayStatus());

@@ -1,33 +1,13 @@
 #include <SmingCore.h>
 #include <Graphics.h>
 #include <Graphics/Debug.h>
-
-#ifdef ENABLE_VIRTUAL_SCREEN
-#include <Graphics/Display/Virtual.h>
-#else
-#include <Graphics/Display/ILI9341.h>
-#endif
+#include <Graphics/SampleConfig.h>
 
 using Color = Graphics::Color;
 using FontStyle = Graphics::FontStyle;
 
 namespace
 {
-#ifdef ENABLE_VIRTUAL_SCREEN
-Graphics::Display::Virtual tft;
-#else
-HSPI::Controller spi;
-Graphics::Display::ILI9341 tft(spi);
-
-// Pin setup
-constexpr HSPI::PinSet TFT_PINSET{HSPI::PinSet::overlap};
-constexpr uint8_t TFT_CS{2};
-constexpr uint8_t TFT_RESET_PIN{4};
-constexpr uint8_t TFT_DC_PIN{5};
-// Not used in this sample, but needs to be kept high
-constexpr uint8_t TOUCH_CS_PIN{15};
-#endif
-
 Graphics::RenderQueue renderQueue(tft);
 
 // Demonstrate other stuff can be done whilst rendering proceeds
@@ -221,17 +201,7 @@ void init()
 #endif
 
 	Serial.println("Display start");
-#ifdef ENABLE_VIRTUAL_SCREEN
-	tft.begin();
-#else
-
-	// Touch CS
-	pinMode(TOUCH_CS_PIN, OUTPUT);
-	digitalWrite(TOUCH_CS_PIN, HIGH);
-
-	spi.begin();
-	tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 40000000);
-#endif
+	initDisplay();
 
 	backgroundTimer.initializeMs<500>([]() {
 		debug_i("Background timer %u, free heap %u", interval.elapsedTicks(), system_get_free_heap_size());

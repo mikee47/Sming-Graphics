@@ -4,22 +4,16 @@
 #include <Graphics/Touch/XPT2046.h>
 #include <Graphics/RenderQueue.h>
 #include <Graphics/TextBuilder.h>
+#include <Graphics/SampleConfig.h>
 
 namespace
 {
-HSPI::Controller spi;
-Graphics::Display::ILI9341 tft(spi);
 Graphics::XPT2046 touch(spi, tft);
 Graphics::RenderQueue renderQueue(tft);
 
 using namespace Graphics;
 
 // Pin setup
-constexpr HSPI::PinSet TFT_PINSET{HSPI::PinSet::overlap};
-constexpr uint8_t TFT_CS{2};
-constexpr uint8_t TFT_RESET_PIN{4};
-constexpr uint8_t TFT_DC_PIN{5};
-
 constexpr HSPI::PinSet TOUCH_PINSET{HSPI::PinSet::overlap};
 constexpr uint8_t TOUCH_CS{0};
 constexpr uint8_t TOUCH_IRQ_PIN{2};
@@ -267,8 +261,8 @@ void init()
 #endif
 
 	Serial.println("Display start");
-	spi.begin();
-	tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 40000000);
+	initDisplay();
+
 	touch.begin(TOUCH_PINSET, TOUCH_CS, TOUCH_IRQ_PIN);
 	touch.setOrientation(Orientation::deg270);
 	touch.setCallback(touchChanged);

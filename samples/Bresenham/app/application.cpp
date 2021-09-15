@@ -1,32 +1,12 @@
 #include <SmingCore.h>
 #include <Graphics.h>
 #include "bresenham.h"
-
-#ifdef ENABLE_VIRTUAL_SCREEN
-#include <Graphics/Display/Virtual.h>
-#else
-#include <Graphics/Display/ILI9341.h>
-#endif
+#include <Graphics/SampleConfig.h>
 
 using namespace Graphics;
 
 namespace
 {
-#ifdef ENABLE_VIRTUAL_SCREEN
-Display::Virtual tft;
-#else
-HSPI::Controller spi;
-Display::ILI9341 tft(spi);
-
-// Pin setup
-constexpr HSPI::PinSet TFT_PINSET{HSPI::PinSet::overlap};
-constexpr uint8_t TFT_CS{2};
-constexpr uint8_t TFT_RESET_PIN{4};
-constexpr uint8_t TFT_DC_PIN{5};
-// Not used in this sample, but needs to be kept high
-constexpr uint8_t TOUCH_CS_PIN{15};
-#endif
-
 constexpr Orientation portrait{Orientation::deg180};
 constexpr Orientation landscape{Orientation::deg270};
 
@@ -184,24 +164,7 @@ void init()
 	spiffs_mount();
 
 	Serial.println("Display start");
-#ifdef ENABLE_VIRTUAL_SCREEN
-	tft.begin();
-	// tft.setMode(Display::Virtual::Mode::Debug);
-#else
-
-	// Touch CS
-	pinMode(TOUCH_CS_PIN, OUTPUT);
-	digitalWrite(TOUCH_CS_PIN, HIGH);
-
-	spi.begin();
-
-	/*
-	 * ILI9341 min. clock cycle is 100ns write, 150ns read.
-	 * In practice, writes work at 40MHz, reads at 27MHz.
-	 * Attempting to read at 40MHz results in colour corruption.
-	 */
-	tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 27000000);
-#endif
+	initDisplay();
 
 	tftPixelFormat = tft.getPixelFormat();
 

@@ -2,28 +2,10 @@
 #include <Graphics/LcdFont.h>
 #include <Graphics/Renderer.h>
 #include <Services/Profiling/MinMax.h>
-
-#ifdef ENABLE_VIRTUAL_SCREEN
-#include <Graphics/Display/Virtual.h>
-#else
-#include <Graphics/Display/ILI9341.h>
-#endif
+#include <Graphics/SampleConfig.h>
 
 namespace
 {
-#ifdef ENABLE_VIRTUAL_SCREEN
-Graphics::Display::Virtual tft;
-#else
-HSPI::Controller spi;
-Graphics::Display::ILI9341 tft(spi);
-constexpr HSPI::PinSet TFT_PINSET{HSPI::PinSet::overlap};
-constexpr uint8_t TFT_CS{2};
-constexpr uint8_t TFT_RESET_PIN{4};
-constexpr uint8_t TFT_DC_PIN{5};
-// Not used in this sample, but needs to be kept high
-constexpr uint8_t TOUCH_CS_PIN{15};
-#endif
-
 // Demonstrate other stuff can be done whilst rendering proceeds
 SimpleTimer backgroundTimer;
 CpuCycleTimer interval;
@@ -227,16 +209,7 @@ void renderFrame()
 void setup()
 {
 	Serial.println("Display start");
-#ifdef ENABLE_VIRTUAL_SCREEN
-	tft.begin();
-#else
-	// Touch CS
-	pinMode(TOUCH_CS_PIN, OUTPUT);
-	digitalWrite(TOUCH_CS_PIN, HIGH);
-
-	spi.begin();
-	tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 40000000);
-#endif
+	initDisplay();
 
 	tft.setOrientation(Orientation::deg270);
 	tftSize = tft.getSize();
