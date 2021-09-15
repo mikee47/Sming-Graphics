@@ -399,10 +399,9 @@ private:
 
 bool ILI9341::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin, uint32_t clockSpeed)
 {
-	if(!HSPI::Device::begin(pinSet, chipSelect)) {
+	if(!HSPI::Device::begin(pinSet, chipSelect, clockSpeed)) {
 		return false;
 	}
-	setSpeed(clockSpeed);
 	setBitOrder(MSBFIRST);
 	setClockMode(HSPI::ClockMode::mode0);
 	setIoMode(HSPI::IoMode::SPI);

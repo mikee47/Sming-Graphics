@@ -78,11 +78,10 @@ int16_t bestTwoAverage(int16_t a, int16_t b, int16_t c)
 
 bool XPT2046::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t irqPin)
 {
-	if(!HSPI::Device::begin(pinSet, chipSelect)) {
+	if(!HSPI::Device::begin(pinSet, chipSelect, clockSpeed)) {
 		return false;
 	}
 
-	setSpeed(clockSpeed);
 	setBitOrder(MSBFIRST);
 	setClockMode(HSPI::ClockMode::mode0);
 	setIoMode(HSPI::IoMode::SPI);
