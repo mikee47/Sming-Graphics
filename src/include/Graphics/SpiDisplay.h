@@ -47,7 +47,8 @@ public:
 		execute(list.request);
 	}
 
-	void execute(const SpiDisplayList::Commands& commands, const FSTR::ObjectBase& data);
+	void execute(const SpiDisplayList::Commands& commands, const FSTR::ObjectBase& data,
+				 Delegate<void> callback = nullptr);
 
 	void reset(bool state)
 	{
