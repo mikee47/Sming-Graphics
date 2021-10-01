@@ -180,8 +180,8 @@ class Base : public SpiDisplay
 public:
 	using SpiDisplay::SpiDisplay;
 
-	virtual bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin = PIN_NONE,
-					   uint32_t clockSpeed = 4000000) = 0;
+	bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin = PIN_NONE,
+			   uint32_t clockSpeed = 4000000);
 
 	using HSPI::Device::getSpeed;
 
@@ -235,9 +235,14 @@ public:
 	// Surface* createSurface(size_t bufferSize = 0) override;
 
 protected:
-	static bool transferBeginEnd(HSPI::Request& request);
+	/**
+	 * @brief Perform display-specific initialisation
+	 * @retval bool true on success, false on failure
+	 */
+	virtual bool initialise() = 0;
 
-	static bool staticRequestCallback(HSPI::Request& request);
+private:
+	static bool transferBeginEnd(HSPI::Request& request);
 
 	uint8_t dcPin{PIN_NONE};
 	bool dcState{};

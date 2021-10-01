@@ -17,6 +17,21 @@ uint32_t Base::readRegister(uint8_t cmd, uint8_t byteCount)
 	return req.in.data32;
 }
 
+bool Base::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin, uint32_t clockSpeed)
+{
+	if(!SpiDisplay::begin(pinSet, chipSelect, resetPin, clockSpeed)) {
+		return false;
+	}
+
+	this->dcPin = dcPin;
+	pinMode(dcPin, OUTPUT);
+	digitalWrite(dcPin, HIGH);
+	dcState = true;
+	onTransfer(transferBeginEnd);
+
+	return initialise();
+}
+
 // Protected methods
 
 bool IRAM_ATTR Base::transferBeginEnd(HSPI::Request& request)

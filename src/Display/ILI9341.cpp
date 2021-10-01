@@ -364,20 +364,9 @@ private:
 	SpiDisplayList displayList;
 };
 
-bool ILI9341::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin, uint32_t clockSpeed)
+bool ILI9341::initialise()
 {
-	if(!SpiDisplay::begin(pinSet, chipSelect, resetPin, clockSpeed)) {
-		return false;
-	}
-
-	this->dcPin = dcPin;
-	pinMode(dcPin, OUTPUT);
-	digitalWrite(dcPin, HIGH);
-	dcState = true;
-	onTransfer(transferBeginEnd);
-
 	execute(commands, displayInitData);
-
 	return true;
 }
 
