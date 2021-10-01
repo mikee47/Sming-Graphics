@@ -48,8 +48,8 @@ public:
 		uint8_t writeStart;
 	};
 
-	template<typename... Params> SpiDisplayList(const Commands& commands, Params&&... params)
-		: DisplayList(params...), commands(commands)
+	template <typename... Params>
+	SpiDisplayList(const Commands& commands, Params&&... params) : DisplayList(params...), commands(commands)
 	{
 	}
 

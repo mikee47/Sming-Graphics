@@ -19,12 +19,9 @@
  *
  ****/
 
-
 namespace Graphics
 {
 namespace Drawing
 {
-
-
 }
 } // namespace Graphics

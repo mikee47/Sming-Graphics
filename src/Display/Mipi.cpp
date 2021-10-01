@@ -7,7 +7,6 @@ namespace Display
 {
 namespace Mipi
 {
-
 uint32_t Base::readRegister(uint8_t cmd, uint8_t byteCount)
 {
 	HSPI::Request req;
@@ -42,7 +41,6 @@ uint8_t Base::readPixelFormat()
 {
 	return readRegister(DCS_GET_PIXEL_FORMAT, 1);
 }
-
 
 uint8_t Base::readImageFormat()
 {

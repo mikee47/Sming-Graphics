@@ -32,7 +32,6 @@ namespace Display
 {
 namespace
 {
-
 //  Manufacturer Command Set (MCS)
 #define ILI9341_FRMCTR1 0xB1
 #define ILI9341_FRMCTR2 0xB2
@@ -89,33 +88,33 @@ const SpiDisplayList::Commands commands{
 };
 
 // Command(1), length(2) data(length)
-DEFINE_RB_ARRAY(													   //
-	displayInitData,												   //
-	DEFINE_RB_COMMAND(Mipi::DCS_SOFT_RESET, 0)						   //
-	DEFINE_RB_DELAY(5)												   //
-	DEFINE_RB_COMMAND(ILI9341_PWCTRA, 5, 0x39, 0x2C, 0x00, 0x34, 0x02) //
-	DEFINE_RB_COMMAND(ILI9341_PWCTRB, 3, 0x00, 0XC1, 0X30)			   //
-	DEFINE_RB_COMMAND(ILI9341_DRVTMA, 3, 0x85, 0x00, 0x78)			   //
-	DEFINE_RB_COMMAND(ILI9341_DRVTMB, 2, 0x00, 0x00)				   //
-	DEFINE_RB_COMMAND(ILI9341_PWRSEQ, 4, 0x64, 0x03, 0X12, 0X81)	   //
-	DEFINE_RB_COMMAND(ILI9341_PMPRC, 1, 0x20)						   //
-	DEFINE_RB_COMMAND(ILI9341_PWCTR1, 1, 0x23)						   // Power control: VRH[5:0]
-	DEFINE_RB_COMMAND(ILI9341_PWCTR2, 1, 0x10)						   // Power control: SAP[2:0], BT[3:0]
-	DEFINE_RB_COMMAND(ILI9341_VMCTR1, 2, 0x3e, 0x28)				   // VCM control: Contrast
-	DEFINE_RB_COMMAND(ILI9341_VMCTR2, 1, 0x86)						   // VCM control2
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_ADDRESS_MODE, 1, MADCTL_MX | MADCTL_BGR)	   // Orientation = normal
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55)						   // 16 bits per pixel
-	DEFINE_RB_COMMAND(ILI9341_FRMCTR1, 2, 0x00, 0x18)				   //
-	DEFINE_RB_COMMAND(ILI9341_DFUNCTR, 3, 0x08, 0x82, 0x27)			   // Display Function Control
-	DEFINE_RB_COMMAND(ILI9341_ENA3G, 1, 0x00)						   // 3Gamma Function Disable
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_GAMMA_CURVE, 1, 0x01)					   // Gamma curve selected
+DEFINE_RB_ARRAY(															 //
+	displayInitData,														 //
+	DEFINE_RB_COMMAND(Mipi::DCS_SOFT_RESET, 0)								 //
+	DEFINE_RB_DELAY(5)														 //
+	DEFINE_RB_COMMAND(ILI9341_PWCTRA, 5, 0x39, 0x2C, 0x00, 0x34, 0x02)		 //
+	DEFINE_RB_COMMAND(ILI9341_PWCTRB, 3, 0x00, 0XC1, 0X30)					 //
+	DEFINE_RB_COMMAND(ILI9341_DRVTMA, 3, 0x85, 0x00, 0x78)					 //
+	DEFINE_RB_COMMAND(ILI9341_DRVTMB, 2, 0x00, 0x00)						 //
+	DEFINE_RB_COMMAND(ILI9341_PWRSEQ, 4, 0x64, 0x03, 0X12, 0X81)			 //
+	DEFINE_RB_COMMAND(ILI9341_PMPRC, 1, 0x20)								 //
+	DEFINE_RB_COMMAND(ILI9341_PWCTR1, 1, 0x23)								 // Power control: VRH[5:0]
+	DEFINE_RB_COMMAND(ILI9341_PWCTR2, 1, 0x10)								 // Power control: SAP[2:0], BT[3:0]
+	DEFINE_RB_COMMAND(ILI9341_VMCTR1, 2, 0x3e, 0x28)						 // VCM control: Contrast
+	DEFINE_RB_COMMAND(ILI9341_VMCTR2, 1, 0x86)								 // VCM control2
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_ADDRESS_MODE, 1, MADCTL_MX | MADCTL_BGR) // Orientation = normal
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55)					 // 16 bits per pixel
+	DEFINE_RB_COMMAND(ILI9341_FRMCTR1, 2, 0x00, 0x18)						 //
+	DEFINE_RB_COMMAND(ILI9341_DFUNCTR, 3, 0x08, 0x82, 0x27)					 // Display Function Control
+	DEFINE_RB_COMMAND(ILI9341_ENA3G, 1, 0x00)								 // 3Gamma Function Disable
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_GAMMA_CURVE, 1, 0x01)					 // Gamma curve selected
 	DEFINE_RB_COMMAND_LONG(ILI9341_GMCTRP1, 15, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03,
 						   0x0E, 0x09, 0x00) // Set Gamma
 	DEFINE_RB_COMMAND_LONG(ILI9341_GMCTRN1, 15, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C,
-						   0x31, 0x36, 0x0F) // Set Gamma
-	DEFINE_RB_COMMAND(Mipi::DCS_EXIT_SLEEP_MODE, 0)	 //
-	DEFINE_RB_DELAY(120)					 //
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)	 //
+						   0x31, 0x36, 0x0F)		// Set Gamma
+	DEFINE_RB_COMMAND(Mipi::DCS_EXIT_SLEEP_MODE, 0) //
+	DEFINE_RB_DELAY(120)							//
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)  //
 )
 
 // Reading GRAM returns one byte per pixel for R/G/B (only top 6 bits are used, bottom 2 are clear)

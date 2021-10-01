@@ -182,9 +182,8 @@ public:
 	{
 	}
 
-	virtual bool begin(HSPI::PinSet pinSet, uint8_t chipSelect,
-			           uint8_t dcPin, uint8_t resetPin = PIN_NONE,
-			           uint32_t clockSpeed = 4000000) = 0;
+	virtual bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin = PIN_NONE,
+					   uint32_t clockSpeed = 4000000) = 0;
 
 	using HSPI::Device::getSpeed;
 
@@ -214,7 +213,6 @@ public:
 	// Surface* createSurface(size_t bufferSize = 0) override;
 
 protected:
-
 	static bool transferBeginEnd(HSPI::Request& request);
 
 	static bool staticRequestCallback(HSPI::Request& request);
