@@ -32,42 +32,8 @@ namespace Display
 {
 namespace
 {
-#define ILI9341_NOP 0x00
-#define ILI9341_SWRESET 0x01
-#define ILI9341_RDDID 0x04
-#define ILI9341_RDDST 0x09
 
-#define ILI9341_SLPIN 0x10
-#define ILI9341_SLPOUT 0x11
-#define ILI9341_PTLON 0x12
-#define ILI9341_NORON 0x13
-
-#define ILI9341_RDMODE 0x0A
-#define ILI9341_RDMADCTL 0x0B
-#define ILI9341_RDPIXFMT 0x0C
-#define ILI9341_RDIMGFMT 0x0D
-#define ILI9341_RDSIGMODE 0x0E
-#define ILI9341_RDSELFDIAG 0x0F
-
-#define ILI9341_INVOFF 0x20
-#define ILI9341_INVON 0x21
-#define ILI9341_GAMMASET 0x26
-#define ILI9341_DISPOFF 0x28
-#define ILI9341_DISPON 0x29
-
-#define ILI9341_CASET 0x2A
-#define ILI9341_PASET 0x2B
-#define ILI9341_RAMWR 0x2C
-#define ILI9341_COLSET 0x2D
-#define ILI9341_RAMRD 0x2E
-#define ILI9341_RAMRD_CONT 0x3E
-
-#define ILI9341_PTLAR 0x30	///< Partial Area
-#define ILI9341_VSCRDEF 0x33  ///< Vertical Scrolling Definition
-#define ILI9341_MADCTL 0x36   ///< Memory Access Control
-#define ILI9341_VSCRSADD 0x37 ///< Vertical Scrolling Start Address
-#define ILI9341_PIXFMT 0x3A   ///< COLMOD: Pixel Format Set
-
+//  Manufacturer Command Set (MCS)
 #define ILI9341_FRMCTR1 0xB1
 #define ILI9341_FRMCTR2 0xB2
 #define ILI9341_FRMCTR3 0xB3
@@ -115,17 +81,17 @@ namespace
 #define MADCTL_MH 0x04
 
 const SpiDisplayList::Commands commands{
-	.setColumn = ILI9341_CASET,
-	.setRow = ILI9341_PASET,
-	.readStart = ILI9341_RAMRD,
-	.read = ILI9341_RAMRD_CONT,
-	.writeStart = ILI9341_RAMWR,
+	.setColumn = Mipi::DCS_SET_COLUMN_ADDRESS,
+	.setRow = Mipi::DCS_SET_PAGE_ADDRESS,
+	.readStart = Mipi::DCS_READ_MEMORY_START,
+	.read = Mipi::DCS_READ_MEMORY_CONTINUE,
+	.writeStart = Mipi::DCS_WRITE_MEMORY_START,
 };
 
 // Command(1), length(2) data(length)
 DEFINE_RB_ARRAY(													   //
 	displayInitData,												   //
-	DEFINE_RB_COMMAND(ILI9341_SWRESET, 0)							   //
+	DEFINE_RB_COMMAND(Mipi::DCS_SOFT_RESET, 0)						   //
 	DEFINE_RB_DELAY(5)												   //
 	DEFINE_RB_COMMAND(ILI9341_PWCTRA, 5, 0x39, 0x2C, 0x00, 0x34, 0x02) //
 	DEFINE_RB_COMMAND(ILI9341_PWCTRB, 3, 0x00, 0XC1, 0X30)			   //
@@ -137,19 +103,19 @@ DEFINE_RB_ARRAY(													   //
 	DEFINE_RB_COMMAND(ILI9341_PWCTR2, 1, 0x10)						   // Power control: SAP[2:0], BT[3:0]
 	DEFINE_RB_COMMAND(ILI9341_VMCTR1, 2, 0x3e, 0x28)				   // VCM control: Contrast
 	DEFINE_RB_COMMAND(ILI9341_VMCTR2, 1, 0x86)						   // VCM control2
-	DEFINE_RB_COMMAND(ILI9341_MADCTL, 1, MADCTL_MX | MADCTL_BGR)	   // Orientation = normal
-	DEFINE_RB_COMMAND(ILI9341_PIXFMT, 1, 0x55)						   // 16 bits per pixel
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_ADDRESS_MODE, 1, MADCTL_MX | MADCTL_BGR)	   // Orientation = normal
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55)						   // 16 bits per pixel
 	DEFINE_RB_COMMAND(ILI9341_FRMCTR1, 2, 0x00, 0x18)				   //
 	DEFINE_RB_COMMAND(ILI9341_DFUNCTR, 3, 0x08, 0x82, 0x27)			   // Display Function Control
 	DEFINE_RB_COMMAND(ILI9341_ENA3G, 1, 0x00)						   // 3Gamma Function Disable
-	DEFINE_RB_COMMAND(ILI9341_GAMMASET, 1, 0x01)					   // Gamma curve selected
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_GAMMA_CURVE, 1, 0x01)					   // Gamma curve selected
 	DEFINE_RB_COMMAND_LONG(ILI9341_GMCTRP1, 15, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03,
 						   0x0E, 0x09, 0x00) // Set Gamma
 	DEFINE_RB_COMMAND_LONG(ILI9341_GMCTRN1, 15, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C,
 						   0x31, 0x36, 0x0F) // Set Gamma
-	DEFINE_RB_COMMAND(ILI9341_SLPOUT, 0)	 //
+	DEFINE_RB_COMMAND(Mipi::DCS_EXIT_SLEEP_MODE, 0)	 //
 	DEFINE_RB_DELAY(120)					 //
-	DEFINE_RB_COMMAND(ILI9341_DISPON, 0)	 //
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)	 //
 )
 
 // Reading GRAM returns one byte per pixel for R/G/B (only top 6 bits are used, bottom 2 are clear)
@@ -416,24 +382,11 @@ bool ILI9341::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint
 	return true;
 }
 
-bool IRAM_ATTR ILI9341::transferBeginEnd(HSPI::Request& request)
-{
-	if(request.busy) {
-		auto device = reinterpret_cast<ILI9341*>(request.device);
-		auto newState = (request.cmdLen == 0);
-		if(device->dcState != newState) {
-			digitalWrite(device->dcPin, newState);
-			device->dcState = newState;
-		}
-	}
-	return true;
-}
-
 bool ILI9341::setOrientation(Orientation orientation)
 {
 	auto setMadCtl = [&](uint8_t value) -> bool {
 		SpiDisplayList list(commands, addrWindow, 16);
-		list.writeCommand(ILI9341_MADCTL, value, 1);
+		list.writeCommand(Mipi::DCS_SET_ADDRESS_MODE, value, 1);
 		execute(list);
 		this->orientation = orientation;
 		return true;
@@ -456,56 +409,6 @@ bool ILI9341::setOrientation(Orientation orientation)
 Surface* ILI9341::createSurface(size_t bufferSize)
 {
 	return new ILI9341Surface(*this, bufferSize ?: 512U);
-}
-
-uint32_t ILI9341::readRegister(uint8_t cmd, uint8_t byteCount)
-{
-	HSPI::Request req;
-	req.setCommand8(cmd);
-	req.dummyLen = (byteCount > 2);
-	req.in.set32(0, byteCount);
-	execute(req);
-	return req.in.data32;
-}
-
-uint32_t ILI9341::readDisplayId()
-{
-	return readRegister(ILI9341_RDDID, 4) >> 8;
-}
-
-uint32_t ILI9341::readDisplayStatus()
-{
-	return readRegister(ILI9341_RDDST, 4);
-}
-
-uint8_t ILI9341::readPowerMode()
-{
-	return readRegister(ILI9341_RDMODE, 1);
-}
-
-uint8_t ILI9341::readMADCTL()
-{
-	return readRegister(ILI9341_RDMADCTL, 1);
-}
-
-uint8_t ILI9341::readPixelFormat()
-{
-	return readRegister(ILI9341_RDPIXFMT, 1);
-}
-
-uint8_t ILI9341::readImageFormat()
-{
-	return readRegister(ILI9341_RDIMGFMT, 1);
-}
-
-uint8_t ILI9341::readSignalMode()
-{
-	return readRegister(ILI9341_RDSIGMODE, 1);
-}
-
-uint8_t ILI9341::readSelfDiag()
-{
-	return readRegister(ILI9341_RDSELFDIAG, 1);
 }
 
 uint16_t ILI9341::readNvMemStatus()

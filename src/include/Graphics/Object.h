@@ -739,6 +739,9 @@ protected:
 class RenderTarget
 {
 public:
+	virtual ~RenderTarget()
+	{}
+
 	/**
 	 * @brief Get target dimensions
 	 */
