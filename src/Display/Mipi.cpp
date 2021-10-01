@@ -17,46 +17,6 @@ uint32_t Base::readRegister(uint8_t cmd, uint8_t byteCount)
 	return req.in.data32;
 }
 
-uint32_t Base::readDisplayId()
-{
-	return readRegister(DCS_GET_DISPLAY_ID, 4) >> 8;
-}
-
-uint32_t Base::readDisplayStatus()
-{
-	return readRegister(DCS_GET_DISPLAY_STATUS, 4);
-}
-
-uint8_t Base::readPowerMode()
-{
-	return readRegister(DCS_GET_POWER_MODE, 1);
-}
-
-uint8_t Base::readMADCTL()
-{
-	return readRegister(DCS_GET_ADDRESS_MODE, 1);
-}
-
-uint8_t Base::readPixelFormat()
-{
-	return readRegister(DCS_GET_PIXEL_FORMAT, 1);
-}
-
-uint8_t Base::readImageFormat()
-{
-	return readRegister(DCS_GET_DISPLAY_MODE, 1);
-}
-
-uint8_t Base::readSignalMode()
-{
-	return readRegister(DCS_GET_DISPLAY_MODE, 1);
-}
-
-uint8_t Base::readSelfDiag()
-{
-	return readRegister(DCS_GET_DIAGNOSTIC_RESULT, 1);
-}
-
 // Protected methods
 
 bool IRAM_ATTR Base::transferBeginEnd(HSPI::Request& request)

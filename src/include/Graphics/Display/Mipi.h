@@ -28,8 +28,8 @@ namespace Mipi
 {
 /* Defines for Mobile Industry Processor Interface (MIPI)  */
 
-/* MIPI Display Serila Interface (DSI) commands. See: https://en.wikipedia.org/wiki/Display_Serial_Interface */
-enum {
+/* MIPI Display Serial Interface (DSI) commands. See: https://en.wikipedia.org/wiki/Display_Serial_Interface */
+enum SerialInterfaceCommand {
 	DSI_V_SYNC_START = 0x01,
 	DSI_V_SYNC_END = 0x11,
 	DSI_H_SYNC_START = 0x21,
@@ -82,7 +82,7 @@ enum {
 };
 
 /* MIPI DSI Peripheral-to-Processor transaction types */
-enum {
+enum SerialTransactionType {
 	DSI_RX_ACKNOWLEDGE_AND_ERROR_REPORT = 0x02,
 	DSI_RX_END_OF_TRANSMISSION = 0x08,
 	DSI_RX_GENERIC_SHORT_READ_RESPONSE_1BYTE = 0x11,
@@ -102,7 +102,7 @@ enum {
  * See: https://en.wikipedia.org/wiki/Display_Serial_Interface
  * See: https://www.mipi.org/specifications/display-command-set
  */
-enum {
+enum DisplayCommandSet {
 	DCS_NOP = 0x00,
 	DCS_SOFT_RESET = 0x01,
 	DCS_GET_COMPRESSION_MODE = 0x03,
@@ -166,21 +166,19 @@ enum {
 };
 
 /* MIPI DCS pixel formats */
-constexpr uint8_t DCS_PIXEL_FMT_24BIT = 7;
-constexpr uint8_t DCS_PIXEL_FMT_18BIT = 6;
-constexpr uint8_t DCS_PIXEL_FMT_16BIT = 5;
-constexpr uint8_t DCS_PIXEL_FMT_12BIT = 3;
-constexpr uint8_t DCS_PIXEL_FMT_8BIT = 2;
-constexpr uint8_t DCS_PIXEL_FMT_3BIT = 1;
+enum DcsPixelFormat {
+	DCS_PIXEL_FMT_24BIT = 7,
+	DCS_PIXEL_FMT_18BIT = 6,
+	DCS_PIXEL_FMT_16BIT = 5,
+	DCS_PIXEL_FMT_12BIT = 3,
+	DCS_PIXEL_FMT_8BIT = 2,
+	DCS_PIXEL_FMT_3BIT = 1,
+};
 
 class Base : public SpiDisplay
 {
 public:
 	using SpiDisplay::SpiDisplay;
-
-	virtual ~Base()
-	{
-	}
 
 	virtual bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin = PIN_NONE,
 					   uint32_t clockSpeed = 4000000) = 0;
@@ -189,21 +187,45 @@ public:
 
 	uint32_t readRegister(uint8_t cmd, uint8_t byteCount);
 
-	uint32_t readDisplayId();
+	uint32_t readDisplayId()
+	{
+		return readRegister(DCS_GET_DISPLAY_ID, 4) >> 8;
+	}
 
-	uint32_t readDisplayStatus();
+	uint32_t readDisplayStatus()
+	{
+		return readRegister(DCS_GET_DISPLAY_STATUS, 4);
+	}
 
-	uint8_t readPowerMode();
+	uint8_t readPowerMode()
+	{
+		return readRegister(DCS_GET_POWER_MODE, 1);
+	}
 
-	uint8_t readMADCTL();
+	uint8_t readMADCTL()
+	{
+		return readRegister(DCS_GET_ADDRESS_MODE, 1);
+	}
 
-	uint8_t readPixelFormat();
+	uint8_t readPixelFormat()
+	{
+		return readRegister(DCS_GET_PIXEL_FORMAT, 1);
+	}
 
-	uint8_t readImageFormat();
+	uint8_t readImageFormat()
+	{
+		return readRegister(DCS_GET_DISPLAY_MODE, 1);
+	}
 
-	uint8_t readSignalMode();
+	uint8_t readSignalMode()
+	{
+		return readRegister(DCS_GET_DISPLAY_MODE, 1);
+	}
 
-	uint8_t readSelfDiag();
+	uint8_t readSelfDiag()
+	{
+		return readRegister(DCS_GET_DIAGNOSTIC_RESULT, 1);
+	}
 
 	/* Device */
 	// bool setOrientation(Orientation orientation) override;
@@ -219,9 +241,6 @@ protected:
 
 	uint8_t dcPin{PIN_NONE};
 	bool dcState{};
-
-	uint8_t listIndex{0}; ///< Next display list to write to
-	void* param{nullptr};
 };
 
 } // namespace Mipi
