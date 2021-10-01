@@ -293,6 +293,9 @@ bool DisplayList::readEntry(Entry& entry)
 	case Code::read:
 		read(&entry.data, sizeof(entry.data));
 		return true;
+	case Code::delay:
+		entry.value = buffer[offset++];
+		break;
 	default:
 		return false;
 	}

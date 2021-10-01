@@ -172,6 +172,10 @@ bool IRAM_ATTR SpiDisplayList::fillRequest()
 		code = Code::none;
 		dbgint("read %u", datalen);
 		break;
+	case Code::delay:
+		// Ignore
+		++offset;
+		return fillRequest();
 	default:
 		return false;
 	}
