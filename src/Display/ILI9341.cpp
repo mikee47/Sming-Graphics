@@ -24,9 +24,7 @@
  ****/
 
 #include <Graphics/Display/ILI9341.h>
-#include <Graphics/Renderer.h>
 #include <Platform/System.h>
-#include <Clock.h>
 
 namespace Graphics
 {
@@ -127,6 +125,8 @@ const SpiDisplayList::Commands commands{
 // Command(1), length(2) data(length)
 DEFINE_RB_ARRAY(													   //
 	displayInitData,												   //
+	DEFINE_RB_COMMAND(ILI9341_SWRESET, 0)							   //
+	DEFINE_RB_DELAY(5)												   //
 	DEFINE_RB_COMMAND(ILI9341_PWCTRA, 5, 0x39, 0x2C, 0x00, 0x34, 0x02) //
 	DEFINE_RB_COMMAND(ILI9341_PWCTRB, 3, 0x00, 0XC1, 0X30)			   //
 	DEFINE_RB_COMMAND(ILI9341_DRVTMA, 3, 0x85, 0x00, 0x78)			   //
@@ -148,6 +148,8 @@ DEFINE_RB_ARRAY(													   //
 	DEFINE_RB_COMMAND_LONG(ILI9341_GMCTRN1, 15, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C,
 						   0x31, 0x36, 0x0F) // Set Gamma
 	DEFINE_RB_COMMAND(ILI9341_SLPOUT, 0)	 //
+	DEFINE_RB_DELAY(120)					 //
+	DEFINE_RB_COMMAND(ILI9341_DISPON, 0)	 //
 )
 
 // Reading GRAM returns one byte per pixel for R/G/B (only top 6 bits are used, bottom 2 are clear)
@@ -220,8 +222,8 @@ struct ReadPixelInfo {
 class ILI9341Surface : public Surface
 {
 public:
-	ILI9341Surface(ILI9341& device, size_t bufferSize)
-		: device(device), displayList(commands, device.addrWindow, bufferSize)
+	ILI9341Surface(ILI9341& display, size_t bufferSize)
+		: display(display), displayList(commands, display.addrWindow, bufferSize)
 	{
 	}
 
@@ -245,12 +247,12 @@ public:
 
 	Size getSize() const override
 	{
-		return device.getSize();
+		return display.getSize();
 	}
 
 	PixelFormat getPixelFormat() const override
 	{
-		return device.getPixelFormat();
+		return display.getPixelFormat();
 	}
 
 	bool setAddrWindow(const Rect& rect) override
@@ -302,7 +304,7 @@ public:
 			debug_w("[readDataBuffer] pixelCount == 0");
 			return 0;
 		}
-		auto& addrWindow = device.addrWindow;
+		auto& addrWindow = display.addrWindow;
 		if(addrWindow.bounds.h == 0) {
 			debug_w("[readDataBuffer] addrWindow.bounds.h == 0");
 			return 0;
@@ -388,23 +390,20 @@ public:
 			// debug_d("displayList EMPTY, surface %p", this);
 			return false;
 		}
-		device.execute(displayList, callback, param);
+		display.execute(displayList, callback, param);
 		return true;
 	}
 
 private:
-	ILI9341& device;
+	ILI9341& display;
 	SpiDisplayList displayList;
 };
 
 bool ILI9341::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin, uint32_t clockSpeed)
 {
-	if(!HSPI::Device::begin(pinSet, chipSelect, clockSpeed)) {
+	if(!SpiDisplay::begin(pinSet, chipSelect, resetPin, clockSpeed)) {
 		return false;
 	}
-	setBitOrder(MSBFIRST);
-	setClockMode(HSPI::ClockMode::mode0);
-	setIoMode(HSPI::IoMode::SPI);
 
 	this->dcPin = dcPin;
 	pinMode(dcPin, OUTPUT);
@@ -412,25 +411,7 @@ bool ILI9341::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint
 	dcState = true;
 	onTransfer(transferBeginEnd);
 
-	this->resetPin = resetPin;
-	if(resetPin != PIN_NONE) {
-		pinMode(resetPin, OUTPUT);
-		reset(false);
-		reset(true);
-		delayMicroseconds(10000);
-		reset(false);
-		delayMicroseconds(1000);
-	}
-
-	SpiDisplayList list(commands, addrWindow, displayInitData);
-	execute(list);
-
-	// Final 'exit sleep' command takes a while
-	delayMicroseconds(120000);
-
-	HSPI::Request req;
-	req.setCommand8(ILI9341_DISPON);
-	execute(req);
+	execute(commands, displayInitData);
 
 	return true;
 }

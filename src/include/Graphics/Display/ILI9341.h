@@ -21,10 +21,7 @@
 
 #pragma once
 
-#include "../Device.h"
-#include <HSPI/Device.h>
-#include "../SpiDisplayList.h"
-#include <Digital.h>
+#include "../SpiDisplay.h"
 
 namespace Graphics
 {
@@ -32,19 +29,15 @@ namespace Display
 {
 class ILI9341Surface;
 
-class ILI9341 : private HSPI::Device, public Device, public RenderTarget
+class ILI9341 : public SpiDisplay
 {
 public:
 	static constexpr Size nativeSize{240, 320};
 
-	ILI9341(HSPI::Controller& spi) : HSPI::Device(spi)
-	{
-	}
+	using SpiDisplay::SpiDisplay;
 
 	bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin = PIN_NONE,
 			   uint32_t clockSpeed = 4000000);
-
-	using HSPI::Device::getSpeed;
 
 	uint32_t readRegister(uint8_t cmd, uint8_t byteCount);
 
@@ -89,38 +82,10 @@ public:
 private:
 	friend class ILI9341Surface;
 
-	using HSPI::Device::execute;
-
-	void execute(SpiDisplayList& list, DisplayList::Callback callback = nullptr, void* param = nullptr)
-	{
-		list.prepare(callback, param);
-		list.fillRequest();
-		execute(list.request);
-	}
-
 	static bool transferBeginEnd(HSPI::Request& request);
-
-	void reset(bool state)
-	{
-		if(resetPin == PIN_NONE) {
-			return;
-		}
-		digitalWrite(resetPin, !state);
-	}
-
-	HSPI::IoModes getSupportedIoModes() const override
-	{
-		return HSPI::IoMode::SPI;
-	}
-
-	static bool staticRequestCallback(HSPI::Request& request);
 
 	uint8_t dcPin{PIN_NONE};
 	bool dcState{};
-	uint8_t resetPin{PIN_NONE};
-	uint8_t listIndex{0}; ///< Next display list to write to
-	void* param{nullptr};
-	AddressWindow addrWindow{};
 };
 
 } // namespace Display
