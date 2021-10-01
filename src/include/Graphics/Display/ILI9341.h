@@ -115,13 +115,9 @@ private:
 		return HSPI::IoMode::SPI;
 	}
 
-	static bool staticRequestCallback(HSPI::Request& request);
-
 	uint8_t dcPin{PIN_NONE};
 	bool dcState{};
 	uint8_t resetPin{PIN_NONE};
-	uint8_t listIndex{0}; ///< Next display list to write to
-	void* param{nullptr};
 	AddressWindow addrWindow{};
 };
 
