@@ -127,6 +127,8 @@ const SpiDisplayList::Commands commands{
 // Command(1), length(2) data(length)
 DEFINE_RB_ARRAY(													   //
 	displayInitData,												   //
+	DEFINE_RB_COMMAND(ILI9341_SWRESET, 0)							   //
+	DEFINE_RB_DELAY(5)												   //
 	DEFINE_RB_COMMAND(ILI9341_PWCTRA, 5, 0x39, 0x2C, 0x00, 0x34, 0x02) //
 	DEFINE_RB_COMMAND(ILI9341_PWCTRB, 3, 0x00, 0XC1, 0X30)			   //
 	DEFINE_RB_COMMAND(ILI9341_DRVTMA, 3, 0x85, 0x00, 0x78)			   //
@@ -148,6 +150,8 @@ DEFINE_RB_ARRAY(													   //
 	DEFINE_RB_COMMAND_LONG(ILI9341_GMCTRN1, 15, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C,
 						   0x31, 0x36, 0x0F) // Set Gamma
 	DEFINE_RB_COMMAND(ILI9341_SLPOUT, 0)	 //
+	DEFINE_RB_DELAY(120)					 //
+	DEFINE_RB_COMMAND(ILI9341_DISPON, 0)	 //
 )
 
 // Reading GRAM returns one byte per pixel for R/G/B (only top 6 bits are used, bottom 2 are clear)
@@ -422,17 +426,37 @@ bool ILI9341::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint
 		delayMicroseconds(1000);
 	}
 
-	SpiDisplayList list(commands, addrWindow, displayInitData);
-	execute(list);
-
-	// Final 'exit sleep' command takes a while
-	delayMicroseconds(120000);
-
-	HSPI::Request req;
-	req.setCommand8(ILI9341_DISPON);
-	execute(req);
+	execute(commands, displayInitData);
 
 	return true;
+}
+
+void ILI9341::execute(const SpiDisplayList::Commands& commands, const FSTR::ObjectBase& data)
+{
+	SpiDisplayList src(commands, addrWindow, data);
+
+	uint32_t start{0};
+	uint32_t current{0};
+
+	auto sendList = [&]() {
+		auto len = current - start;
+		if(len != 0) {
+			SpiDisplayList list(commands, addrWindow, src.getContent() + start, len);
+			execute(list);
+		}
+		current = start = src.readOffset();
+	};
+
+	DisplayList::Entry entry;
+	while(src.readEntry(entry)) {
+		if(entry.code == DisplayList::Code::delay) {
+			sendList();
+			os_delay_us(entry.value * 1000);
+			continue;
+		}
+		current = src.readOffset();
+	}
+	sendList();
 }
 
 bool IRAM_ATTR ILI9341::transferBeginEnd(HSPI::Request& request)

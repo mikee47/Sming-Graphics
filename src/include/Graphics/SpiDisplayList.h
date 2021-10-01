@@ -48,13 +48,8 @@ public:
 		uint8_t writeStart;
 	};
 
-	SpiDisplayList(const Commands& commands, AddressWindow& addrWindow, size_t bufferSize)
-		: DisplayList(addrWindow, bufferSize), commands(commands)
-	{
-	}
-
-	SpiDisplayList(const Commands& commands, AddressWindow& addrWindow, const FSTR::ObjectBase& data)
-		: DisplayList(addrWindow, data), commands(commands)
+	template<typename... Params> SpiDisplayList(const Commands& commands, Params&&... params)
+		: DisplayList(params...), commands(commands)
 	{
 	}
 

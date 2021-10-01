@@ -98,6 +98,8 @@ private:
 		execute(list.request);
 	}
 
+	void execute(const SpiDisplayList::Commands& commands, const FSTR::ObjectBase& data);
+
 	static bool transferBeginEnd(HSPI::Request& request);
 
 	void reset(bool state)

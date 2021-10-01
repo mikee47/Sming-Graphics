@@ -31,6 +31,7 @@
 #define DEFINE_RB_COMMAND(cmd, len, ...) uint8_t(uint8_t(DisplayList::Code::command) | (len << 4)), cmd, ##__VA_ARGS__,
 #define DEFINE_RB_COMMAND_LONG(cmd, len, ...)                                                                          \
 	uint8_t(uint8_t(DisplayList::Code::command) | 0xf0), len, cmd, ##__VA_ARGS__,
+#define DEFINE_RB_DELAY(ms) uint8_t(DisplayList::Code::delay), ms,
 #define DEFINE_RB_ARRAY(name, ...) DEFINE_FSTR_ARRAY_LOCAL(name, uint8_t, ##__VA_ARGS__)
 
 namespace Graphics
@@ -53,7 +54,8 @@ namespace Graphics
 	XX(writeDataBuffer, 1 + 2 + sizeof(void*), "Write data: cmd, len, dataptr")                                        \
 	XX(readStart, 2 + sizeof(void*), "Read data: len, bufptr (first packet after setting address)")                    \
 	XX(read, 2 + sizeof(void*), "Read data: len, bufptr (Second and subsequent packets)")                              \
-	XX(callback, 2 + sizeof(void*) + 3, "Callback: paramlen, callback, ALIGN4, params")
+	XX(callback, 2 + sizeof(void*) + 3, "Callback: paramlen, callback, ALIGN4, params")                                \
+	XX(delay, 1, "Wait n milliseconds before continuing")
 
 /**
  * @brief Supports DisplayList blend operations
@@ -226,7 +228,7 @@ public:
 	}
 
 	/**
-	 * @brief Create pre-defined display list
+	 * @brief Create pre-defined display list from flash data
 	 *
 	 * Used for initialisation data
 	 */
@@ -234,6 +236,17 @@ public:
 	{
 		data.read(0, buffer.get(), data.size());
 		size = data.length();
+	}
+
+	/**
+	 * @brief Create initialised display list from RAM data
+	 *
+	 * Used for initialisation data
+	 */
+	DisplayList(AddressWindow& addrWindow, const void* data, size_t length) : DisplayList(addrWindow, length)
+	{
+		memcpy(buffer.get(), data, length);
+		size = length;
 	}
 
 	/**
