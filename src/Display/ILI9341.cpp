@@ -24,9 +24,7 @@
  ****/
 
 #include <Graphics/Display/ILI9341.h>
-#include <Graphics/Renderer.h>
 #include <Platform/System.h>
-#include <Clock.h>
 
 namespace Graphics
 {
@@ -224,8 +222,8 @@ struct ReadPixelInfo {
 class ILI9341Surface : public Surface
 {
 public:
-	ILI9341Surface(ILI9341& device, size_t bufferSize)
-		: device(device), displayList(commands, device.addrWindow, bufferSize)
+	ILI9341Surface(ILI9341& display, size_t bufferSize)
+		: display(display), displayList(commands, display.addrWindow, bufferSize)
 	{
 	}
 
@@ -249,12 +247,12 @@ public:
 
 	Size getSize() const override
 	{
-		return device.getSize();
+		return display.getSize();
 	}
 
 	PixelFormat getPixelFormat() const override
 	{
-		return device.getPixelFormat();
+		return display.getPixelFormat();
 	}
 
 	bool setAddrWindow(const Rect& rect) override
@@ -306,7 +304,7 @@ public:
 			debug_w("[readDataBuffer] pixelCount == 0");
 			return 0;
 		}
-		auto& addrWindow = device.addrWindow;
+		auto& addrWindow = display.addrWindow;
 		if(addrWindow.bounds.h == 0) {
 			debug_w("[readDataBuffer] addrWindow.bounds.h == 0");
 			return 0;
@@ -392,23 +390,20 @@ public:
 			// debug_d("displayList EMPTY, surface %p", this);
 			return false;
 		}
-		device.execute(displayList, callback, param);
+		display.execute(displayList, callback, param);
 		return true;
 	}
 
 private:
-	ILI9341& device;
+	ILI9341& display;
 	SpiDisplayList displayList;
 };
 
 bool ILI9341::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin, uint32_t clockSpeed)
 {
-	if(!HSPI::Device::begin(pinSet, chipSelect, clockSpeed)) {
+	if(!SpiDisplay::begin(pinSet, chipSelect, resetPin, clockSpeed)) {
 		return false;
 	}
-	setBitOrder(MSBFIRST);
-	setClockMode(HSPI::ClockMode::mode0);
-	setIoMode(HSPI::IoMode::SPI);
 
 	this->dcPin = dcPin;
 	pinMode(dcPin, OUTPUT);
@@ -416,47 +411,9 @@ bool ILI9341::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint
 	dcState = true;
 	onTransfer(transferBeginEnd);
 
-	this->resetPin = resetPin;
-	if(resetPin != PIN_NONE) {
-		pinMode(resetPin, OUTPUT);
-		reset(false);
-		reset(true);
-		delayMicroseconds(10000);
-		reset(false);
-		delayMicroseconds(1000);
-	}
-
 	execute(commands, displayInitData);
 
 	return true;
-}
-
-void ILI9341::execute(const SpiDisplayList::Commands& commands, const FSTR::ObjectBase& data)
-{
-	SpiDisplayList src(commands, addrWindow, data);
-
-	uint32_t start{0};
-	uint32_t current{0};
-
-	auto sendList = [&]() {
-		auto len = current - start;
-		if(len != 0) {
-			SpiDisplayList list(commands, addrWindow, src.getContent() + start, len);
-			execute(list);
-		}
-		current = start = src.readOffset();
-	};
-
-	DisplayList::Entry entry;
-	while(src.readEntry(entry)) {
-		if(entry.code == DisplayList::Code::delay) {
-			sendList();
-			os_delay_us(entry.value * 1000);
-			continue;
-		}
-		current = src.readOffset();
-	}
-	sendList();
 }
 
 bool IRAM_ATTR ILI9341::transferBeginEnd(HSPI::Request& request)
