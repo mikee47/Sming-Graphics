@@ -27,7 +27,6 @@ namespace Graphics
 {
 namespace Display
 {
-class ILI9341Surface;
 
 class ILI9341 : public Mipi::Base
 {
@@ -68,8 +67,6 @@ public:
 
 protected:
 	bool initialise() override;
-
-	friend class ILI9341Surface;
 };
 
 } // namespace Display

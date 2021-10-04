@@ -175,6 +175,14 @@ enum DcsPixelFormat {
 	DCS_PIXEL_FMT_3BIT = 1,
 };
 
+const SpiDisplayList::Commands commands{
+	.setColumn = DCS_SET_COLUMN_ADDRESS,
+	.setRow = DCS_SET_PAGE_ADDRESS,
+	.readStart = DCS_READ_MEMORY_START,
+	.read = DCS_READ_MEMORY_CONTINUE,
+	.writeStart = DCS_WRITE_MEMORY_START,
+};
+
 class Base : public SpiDisplay
 {
 public:
@@ -246,6 +254,124 @@ private:
 
 	uint8_t dcPin{PIN_NONE};
 	bool dcState{};
+};
+
+
+class Surface : public Graphics::Surface
+{
+public:
+	Surface(Base& display, size_t bufferSize)
+		: display(display), displayList(commands, display.getAddressWindow(), bufferSize)
+	{
+	}
+
+	Type getType() const
+	{
+		return Type::Device;
+	}
+
+	Stat stat() const override
+	{
+		return Stat{
+			.used = displayList.used(),
+			.available = displayList.freeSpace(),
+		};
+	}
+
+	void reset() override
+	{
+		displayList.reset();
+	}
+
+	Size getSize() const override
+	{
+		return display.getSize();
+	}
+
+	PixelFormat getPixelFormat() const override
+	{
+		return display.getPixelFormat();
+	}
+
+	bool setAddrWindow(const Rect& rect) override
+	{
+		return displayList.setAddrWindow(rect);
+	}
+
+	uint8_t* getBuffer(uint16_t minBytes, uint16_t& available) override
+	{
+		return displayList.getBuffer(minBytes, available);
+	}
+
+	void commit(uint16_t length) override
+	{
+		displayList.commit(length);
+	}
+
+	bool blockFill(const void* data, uint16_t length, uint32_t repeat) override
+	{
+		return displayList.blockFill(data, length, repeat);
+	}
+
+	bool writeDataBuffer(SharedBuffer& data, size_t offset, uint16_t length) override
+	{
+		return displayList.writeDataBuffer(data, offset, length);
+	}
+
+	bool setPixel(PackedColor color, Point pt) override
+	{
+		return displayList.setPixel(color, 2, pt);
+	}
+
+//	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param) override;
+
+	bool render(const Object& object, const Rect& location, std::unique_ptr<Renderer>& renderer) override
+	{
+		// Small fills can be handled without using a renderer
+		auto isSmall = [](const Rect& r) -> bool {
+			constexpr size_t maxFillPixels{32};
+			return (r.w * r.h) <= maxFillPixels;
+		};
+
+		switch(object.kind()) {
+		case Object::Kind::FilledRect: {
+			// Handle small transparent fills using display list
+			auto obj = reinterpret_cast<const FilledRectObject&>(object);
+			if(obj.radius != 0 || !obj.brush.isTransparent() || !isSmall(obj.rect)) {
+				break;
+			}
+			auto color = obj.brush.getPackedColor(PixelFormat::RGB565);
+			constexpr size_t bytesPerPixel{2};
+			Rect absRect = obj.rect + location.topLeft();
+			if(!absRect.clip(getSize())) {
+				return true;
+			}
+			// debug_i("[ILI] HWBLEND (%s), %s", absRect.toString().c_str(), toString(color).c_str());
+			return displayList.fill(absRect, color, bytesPerPixel, FillInfo::callbackRGB565);
+		}
+		default:;
+		}
+
+		return Graphics::Surface::render(object, location, renderer);
+	}
+
+	bool present(PresentCallback callback, void* param) override
+	{
+		if(displayList.isBusy()) {
+			debug_e("displayList BUSY, surface %p", this);
+			return true;
+		}
+		if(displayList.isEmpty()) {
+			// debug_d("displayList EMPTY, surface %p", this);
+			return false;
+		}
+		display.execute(displayList, callback, param);
+		return true;
+	}
+
+protected:
+	Base& display;
+	SpiDisplayList displayList;
 };
 
 } // namespace Mipi

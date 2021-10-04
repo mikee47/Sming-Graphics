@@ -25,7 +25,6 @@ namespace Graphics
 {
 namespace Display
 {
-class ST7789VSurface;
 
 class ST7789V : public Mipi::Base
 {
@@ -66,8 +65,6 @@ public:
 
 protected:
     bool initialise() override;
-
-	friend class ST7789VSurface;
 };
 
 } // namespace Display

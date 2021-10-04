@@ -40,9 +40,6 @@ public:
 
 	using HSPI::Device::getSpeed;
 
-protected:
-	using HSPI::Device::execute;
-
 	void execute(SpiDisplayList& list, DisplayList::Callback callback = nullptr, void* param = nullptr)
 	{
 		list.prepare(callback, param);
@@ -63,6 +60,14 @@ protected:
 	{
 		return HSPI::IoMode::SPI;
 	}
+
+	AddressWindow& getAddressWindow()
+	{
+		return addrWindow;
+	}
+
+protected:
+	using HSPI::Device::execute;
 
 	uint8_t resetPin{PIN_NONE};
 	AddressWindow addrWindow{};
