@@ -188,6 +188,10 @@ class Base : public SpiDisplay
 public:
 	using SpiDisplay::SpiDisplay;
 
+	Base(HSPI::Controller& spi, Size screenSize): SpiDisplay(spi), nativeSize(screenSize)
+	{
+	}
+
 	bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin = PIN_NONE,
 			   uint32_t clockSpeed = 4000000);
 
@@ -235,10 +239,27 @@ public:
 		return readRegister(DCS_GET_DIAGNOSTIC_RESULT, 1);
 	}
 
+	/**
+	 * @brief Sets the screen size. Must be called before calling ::begin()
+	 */
+	void setNativeSize(Size screenSize)
+	{
+		nativeSize = screenSize;
+	}
+
+	Size getNativeSize() const override
+	{
+		return nativeSize;
+	}
+
 	/* Device */
 	// bool setOrientation(Orientation orientation) override;
 
 	/* RenderTarget */
+	Size getSize() const override
+	{
+		return rotate(nativeSize, orientation);
+	}
 
 	// Surface* createSurface(size_t bufferSize = 0) override;
 
@@ -248,6 +269,8 @@ protected:
 	 * @retval bool true on success, false on failure
 	 */
 	virtual bool initialise() = 0;
+
+	Size nativeSize{0, 0};
 
 private:
 	static bool transferBeginEnd(HSPI::Request& request);

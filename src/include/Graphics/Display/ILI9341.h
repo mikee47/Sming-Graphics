@@ -31,9 +31,11 @@ namespace Display
 class ILI9341 : public Mipi::Base
 {
 public:
-	static constexpr Size nativeSize{240, 320};
-
 	using Mipi::Base::Base;
+
+	ILI9341(HSPI::Controller& spi, Size screenSize={320,240}): Mipi::Base(spi, screenSize)
+	{
+	}
 
 	uint16_t readNvMemStatus();
 
@@ -44,19 +46,9 @@ public:
 		return F("ILI9341");
 	}
 
-	Size getNativeSize() const override
-	{
-		return nativeSize;
-	}
-
 	bool setOrientation(Orientation orientation) override;
 
 	/* RenderTarget */
-
-	Size getSize() const override
-	{
-		return rotate(nativeSize, orientation);
-	}
 
 	PixelFormat getPixelFormat() const override
 	{

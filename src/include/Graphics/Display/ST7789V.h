@@ -29,9 +29,11 @@ namespace Display
 class ST7789V : public Mipi::Base
 {
 public:
-	static constexpr Size nativeSize{240, 320};
-
 	using Mipi::Base::Base;
+
+	ST7789V(HSPI::Controller& spi, Size screenSize={240,240}): Mipi::Base(spi, screenSize)
+	{
+	}
 
 	uint16_t readNvMemStatus();
 
@@ -42,19 +44,9 @@ public:
 		return F("ST7789V");
 	}
 
-	Size getNativeSize() const override
-	{
-		return nativeSize;
-	}
-
 	bool setOrientation(Orientation orientation) override;
 
 	/* RenderTarget */
-
-	Size getSize() const override
-	{
-		return rotate(nativeSize, orientation);
-	}
 
 	PixelFormat getPixelFormat() const override
 	{
