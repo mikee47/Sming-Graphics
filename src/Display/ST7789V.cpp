@@ -26,7 +26,6 @@ namespace Display
 {
 namespace
 {
-
 //  Manufacturer Command Set (MCS)
 #define ST7789V_RAMCTRL 0xB0
 #define ST7789V_FRMCTR1 0xB1
@@ -45,6 +44,7 @@ namespace
 #define ST7789V_PWCTR5 0xC4
 #define ST7789V_VMCTR1 0xC5
 #define ST7789V_FRCTRL2 0xC6
+#define ST7789V_CABCCTRL 0xC7
 
 #define ST7789V_PWCTRL1 0xD0
 #define ST7789V_RDID1   0xDA
@@ -69,14 +69,6 @@ namespace
 #define MADCTL_RGB 0x00
 #define MADCTL_BGR 0x08
 #define MADCTL_MH 0x04
-
-const SpiDisplayList::Commands commands{
-	.setColumn = Mipi::DCS_SET_COLUMN_ADDRESS,
-	.setRow = Mipi::DCS_SET_PAGE_ADDRESS,
-	.readStart = Mipi::DCS_READ_MEMORY_START,
-	.read = Mipi::DCS_READ_MEMORY_CONTINUE,
-	.writeStart = Mipi::DCS_WRITE_MEMORY_START,
-};
 
 // Command(1), length(2) data(length)
 DEFINE_RB_ARRAY(													   //
@@ -265,14 +257,14 @@ public:
 
 bool ST7789V::initialise()
 {
-	execute(commands, displayInitData);
+	execute(Mipi::commands, displayInitData);
 	return true;
 }
 
 bool ST7789V::setOrientation(Orientation orientation)
 {
 	auto setMadCtl = [&](uint8_t value) -> bool {
-		SpiDisplayList list(commands, addrWindow, 16);
+		SpiDisplayList list(Mipi::commands, addrWindow, 16);
 		list.writeCommand(Mipi::DCS_SET_ADDRESS_MODE, value, 1);
 		execute(list);
 		this->orientation = orientation;
@@ -300,9 +292,7 @@ Surface* ST7789V::createSurface(size_t bufferSize)
 
 uint16_t ST7789V::readNvMemStatus()
 {
-	// @TODO: Not ready yet...
-	return 0;
-//	return readRegister(ST7789V_NVMEMST, 3) >> 8;
+	return readRegister(ST7789V_NVMEMST, 3) >> 8;
 }
 
 } // namespace Display
