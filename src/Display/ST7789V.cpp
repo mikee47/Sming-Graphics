@@ -27,6 +27,10 @@ namespace Display
 namespace
 {
 //  Manufacturer Command Set (MCS)
+
+#define ST7789V_WRDISBV 0x51 // Write Display Brightness
+#define ST7789V_WRCTRLD 0x53
+
 #define ST7789V_RAMCTRL 0xB0
 #define ST7789V_FRMCTR1 0xB1
 #define ST7789V_FRMCTR2 0xB2
@@ -71,49 +75,37 @@ namespace
 #define MADCTL_MH 0x04
 
 // Command(1), length(2) data(length)
-DEFINE_RB_ARRAY(													   //
+DEFINE_RB_ARRAY(
 	displayInitData,
-	DEFINE_RB_COMMAND(Mipi::DCS_SOFT_RESET, 0)
-
-	DEFINE_RB_DELAY(200)
-	DEFINE_RB_COMMAND(Mipi::DCS_EXIT_SLEEP_MODE, 0)
-	DEFINE_RB_DELAY(120) //Delay 120ms
-	//------------------------------display and color format setting--------------------------------//
-    DEFINE_RB_COMMAND(Mipi::DCS_SET_ADDRESS_MODE, 1, 0x00)
-    DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, Mipi::DCS_PIXEL_FMT_16BIT)
-	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_INVERT_MODE, 0)
-	//--------------------------------ST7789V Frame rate setting------------------------------------//
-	DEFINE_RB_COMMAND(ST7789V_FRMCTR2, 5, 0x05, 0x05, 0x00, 0x33, 0x33)
-	DEFINE_RB_COMMAND(ST7789V_GCTRL, 1, 0x35)
-	//---------------------------------ST7789V Power setting----------------------------------------//
-	DEFINE_RB_COMMAND(ST7789V_GTADJ, 4, 0x2f, 0x2b, 0x2f, 0xBB)
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_PAGE_ADDRESS, 4, 0xc0, 0x2c, 0xc2, 0x01)
-	DEFINE_RB_COMMAND(ST7789V_PWCTR4, 1, 0x0b)
-	DEFINE_RB_COMMAND(ST7789V_PWCTR5, 1, 0x20)
-	DEFINE_RB_COMMAND(ST7789V_FRCTRL2, 1, 0x11)
-	DEFINE_RB_COMMAND(ST7789V_PWCTRL1, 2, 0xa4, 0xa1)
-	DEFINE_RB_COMMAND(ST7789V_PWCTRL2, 1, 0x03)
-	DEFINE_RB_COMMAND(ST7789V_EQCTRL, 3, 0x0d, 0x12, 0x00)
-	//-------------------------------ST7789V gamma setting-------------------------------------------//
-	DEFINE_RB_COMMAND_LONG(ST7789V_GMCTRP1, 14, 0xd0, 0x06, 0x0b, 0x0a, 0x09, 0x05, 0x2e, 0x43, 0x44, 0x09, 0x16, 0x15, 0x23, 0x27)
-
-	DEFINE_RB_COMMAND_LONG(ST7789V_GMCTRN1, 14, 0xd0, 0x06, 0x0b, 0x09, 0x08, 0x06, 0x2e, 0x44, 0x44, 0x3a, 0x15 ,0x15, 0x23, 0x26)
-	//-----------------Init RGB-Mode---------------
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55) //RGB 65K Colors, Control interface 16bit/pixel
-
-	DEFINE_RB_COMMAND(ST7789V_RAMCTRL, 2, 0x11, 0xE0) //RAM access control
-					//RGB interface access RAM, Display operation RGB interface
-					//16 Bit color format R7 -> R0, MSB first, 18 bit bus width,
-
-	DEFINE_RB_COMMAND(ST7789V_FRMCTR1, 3, 0xEF, 0x08, 0x14) //RGB interfacecontrol
-					//Direct RGB mode, RGB DE Mode, Control pins high active
-					//VSYNC Back porch setting
-					//HSYNC Back porch setting
-	//--------------Display on-------------------
 	DEFINE_RB_COMMAND(Mipi::DCS_EXIT_SLEEP_MODE, 0)
 	DEFINE_RB_DELAY(120)
 	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)
-	DEFINE_RB_DELAY(100)
+	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_NORMAL_MODE, 0) // Normal display mode on
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_ADDRESS_MODE, 1, MADCTL_RGB) // display and color format setting
+//	DEFINE_RB_COMMAND(0xB6, 2, 0x0A, 0x82)
+	DEFINE_RB_COMMAND(ST7789V_RAMCTRL, 2, 0x00, 0xE0)	// 5 to 6 bit conversion: r0 = r5, b0 = b5
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55)					 // 16 bits per pixel
+	DEFINE_RB_DELAY(10)
+	// ST7789V Frame rate setting
+	DEFINE_RB_COMMAND(ST7789V_FRMCTR2, 5, 0x0c, 0x0c, 0x00, 0x33, 0x33)
+	// Power Settings
+	DEFINE_RB_COMMAND(ST7789V_GCTRL, 1, 0x35) // Voltages: VGH / VGL
+	DEFINE_RB_COMMAND(ST7789V_VCOMS, 1, 0x28) // ST7789V Power setting
+	DEFINE_RB_COMMAND(ST7789V_PWCTR1, 1, 0x0C)
+	DEFINE_RB_COMMAND(ST7789V_PWCTR3, 1, 0x10)  // voltage VRHS
+	DEFINE_RB_COMMAND(ST7789V_PWCTR5, 1, 0x20)
+	DEFINE_RB_COMMAND(ST7789V_FRCTRL2, 1, 0x0f)
+	DEFINE_RB_COMMAND(ST7789V_PWCTRL1, 2, 0xa4, 0xa1)
+	// ST7789V gamma setting
+	DEFINE_RB_COMMAND_LONG(ST7789V_GMCTRP1, 14, 0xd0, 0x00, 0x02, 0x07, 0x0a, 0x28, 0x32, 0x44, 0x42, 0x06, 0x0e, 0x12, 0x14, 0x17)
+	DEFINE_RB_COMMAND_LONG(ST7789V_GMCTRN1, 14, 0xd0, 0x00, 0x02, 0x07, 0x0a, 0x28, 0x31, 0x54, 0x47, 0x0e, 0x1c, 0x17, 0x1b, 0x1e)
+	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_INVERT_MODE, 0)
+	// Column and Address
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_COLUMN_ADDRESS, 4, 0x00, 0x00, 0x00, 0xE5)
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_PAGE_ADDRESS, 4, 0x00, 0x00, 0x01, 0x3F)
+
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)
+	DEFINE_RB_DELAY(120)
 )
 
 // Reading GRAM returns one byte per pixel for R/G/B (only top 6 bits are used, bottom 2 are clear)
@@ -273,13 +265,13 @@ bool ST7789V::setOrientation(Orientation orientation)
 
 	switch(orientation) {
 	case Orientation::deg0:
-		return setMadCtl(MADCTL_MX | MADCTL_BGR);
+		return setMadCtl(MADCTL_MX | MADCTL_RGB);
 	case Orientation::deg90:
-		return setMadCtl(MADCTL_MV | MADCTL_BGR);
+		return setMadCtl(MADCTL_MV | MADCTL_RGB);
 	case Orientation::deg180:
-		return setMadCtl(MADCTL_MY | MADCTL_BGR);
+		return setMadCtl(MADCTL_MY | MADCTL_RGB);
 	case Orientation::deg270:
-		return setMadCtl(MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR);
+		return setMadCtl(MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_RGB);
 	default:
 		return false;
 	}
