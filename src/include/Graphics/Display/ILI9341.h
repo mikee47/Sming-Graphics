@@ -27,13 +27,12 @@ namespace Graphics
 {
 namespace Display
 {
-
 class ILI9341 : public Mipi::Base
 {
 public:
 	using Mipi::Base::Base;
 
-	ILI9341(HSPI::Controller& spi, Size screenSize={320,240}): Mipi::Base(spi, screenSize)
+	ILI9341(HSPI::Controller& spi, Size screenSize = {320, 240}) : Mipi::Base(spi, screenSize)
 	{
 	}
 

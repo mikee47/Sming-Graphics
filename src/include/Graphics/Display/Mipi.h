@@ -188,7 +188,7 @@ class Base : public SpiDisplay
 public:
 	using SpiDisplay::SpiDisplay;
 
-	Base(HSPI::Controller& spi, Size screenSize): SpiDisplay(spi), nativeSize(screenSize)
+	Base(HSPI::Controller& spi, Size screenSize) : SpiDisplay(spi), nativeSize(screenSize)
 	{
 	}
 
@@ -279,7 +279,6 @@ private:
 	bool dcState{};
 };
 
-
 class Surface : public Graphics::Surface
 {
 public:
@@ -346,7 +345,7 @@ public:
 		return displayList.setPixel(color, 2, pt);
 	}
 
-//	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param) override;
+	//	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param) override;
 
 	bool render(const Object& object, const Rect& location, std::unique_ptr<Renderer>& renderer) override
 	{

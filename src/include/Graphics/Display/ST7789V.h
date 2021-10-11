@@ -25,13 +25,12 @@ namespace Graphics
 {
 namespace Display
 {
-
 class ST7789V : public Mipi::Base
 {
 public:
 	using Mipi::Base::Base;
 
-	ST7789V(HSPI::Controller& spi, Size screenSize={240,240}): Mipi::Base(spi, screenSize)
+	ST7789V(HSPI::Controller& spi, Size screenSize = {240, 240}) : Mipi::Base(spi, screenSize)
 	{
 	}
 
@@ -56,7 +55,7 @@ public:
 	Surface* createSurface(size_t bufferSize = 0) override;
 
 protected:
-    bool initialise() override;
+	bool initialise() override;
 };
 
 } // namespace Display
