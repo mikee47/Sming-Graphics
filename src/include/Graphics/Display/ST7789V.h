@@ -28,9 +28,11 @@ namespace Display
 class ST7789V : public Mipi::Base
 {
 public:
+	static constexpr Size resolution{240, 320};
+
 	using Mipi::Base::Base;
 
-	ST7789V(HSPI::Controller& spi, Size screenSize = {240, 240}) : Mipi::Base(spi, screenSize)
+	ST7789V(HSPI::Controller& spi, Size screenSize = resolution) : Mipi::Base(spi, resolution, screenSize)
 	{
 	}
 
@@ -42,8 +44,6 @@ public:
 	{
 		return F("ST7789V");
 	}
-
-	bool setOrientation(Orientation orientation) override;
 
 	/* RenderTarget */
 

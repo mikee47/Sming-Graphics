@@ -65,26 +65,16 @@ namespace
 
 #define ST7789V_NVMEMST 0xFC
 
-// MADCTL register bits
-#define MADCTL_MY 0x80
-#define MADCTL_MX 0x40
-#define MADCTL_MV 0x20
-#define MADCTL_ML 0x10
-#define MADCTL_RGB 0x00
-#define MADCTL_BGR 0x08
-#define MADCTL_MH 0x04
-
 // Command(1), length(2) data(length)
-DEFINE_RB_ARRAY(												 //
-	displayInitData,											 //
-	DEFINE_RB_COMMAND(Mipi::DCS_EXIT_SLEEP_MODE, 0)				 //
-	DEFINE_RB_DELAY(120)										 //
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)				 //
-	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_NORMAL_MODE, 0)			 // Normal display mode on
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_ADDRESS_MODE, 1, MADCTL_BGR) // display and color format setting
-																 //	DEFINE_RB_COMMAND(0xB6, 2, 0x0A, 0x82)
-	DEFINE_RB_COMMAND(ST7789V_RAMCTRL, 2, 0x00, 0xE0)			 // 5 to 6 bit conversion: r0 = r5, b0 = b5
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55)		 // 16 bits per pixel
+DEFINE_RB_ARRAY(									  //
+	displayInitData,								  //
+	DEFINE_RB_COMMAND(Mipi::DCS_EXIT_SLEEP_MODE, 0)   //
+	DEFINE_RB_DELAY(120)							  //
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)	//
+	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_NORMAL_MODE, 0) // Normal display mode on
+	//	DEFINE_RB_COMMAND(0xB6, 2, 0x0A, 0x82)
+	DEFINE_RB_COMMAND(ST7789V_RAMCTRL, 2, 0x00, 0xE0)	  // 5 to 6 bit conversion: r0 = r5, b0 = b5
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55) // 16 bits per pixel
 	DEFINE_RB_DELAY(10)
 	// ST7789V Frame rate setting
 	DEFINE_RB_COMMAND(ST7789V_FRMCTR2, 5, 0x0c, 0x0c, 0x00, 0x33, 0x33)
@@ -102,9 +92,6 @@ DEFINE_RB_ARRAY(												 //
 	DEFINE_RB_COMMAND_LONG(ST7789V_GMCTRN1, 14, 0xd0, 0x00, 0x02, 0x07, 0x0a, 0x28, 0x31, 0x54, 0x47, 0x0e, 0x1c, 0x17,
 						   0x1b, 0x1e)				  //
 	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_INVERT_MODE, 0) //
-	// Column and Address
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_COLUMN_ADDRESS, 4, 0x00, 0x00, 0x00, 0xE5) //
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_PAGE_ADDRESS, 4, 0x00, 0x00, 0x01, 0x3F)   //
 
 	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0) //
 	DEFINE_RB_DELAY(120)						   //
@@ -250,32 +237,8 @@ public:
 
 bool ST7789V::initialise()
 {
-	execute(Mipi::commands, displayInitData);
+	sendInitData(displayInitData);
 	return true;
-}
-
-bool ST7789V::setOrientation(Orientation orientation)
-{
-	auto setMadCtl = [&](uint8_t value) -> bool {
-		SpiDisplayList list(Mipi::commands, addrWindow, 16);
-		list.writeCommand(Mipi::DCS_SET_ADDRESS_MODE, value, 1);
-		execute(list);
-		this->orientation = orientation;
-		return true;
-	};
-
-	switch(orientation) {
-	case Orientation::deg0:
-		return setMadCtl(MADCTL_MX | MADCTL_BGR);
-	case Orientation::deg90:
-		return setMadCtl(MADCTL_MV | MADCTL_BGR);
-	case Orientation::deg180:
-		return setMadCtl(MADCTL_MY | MADCTL_BGR);
-	case Orientation::deg270:
-		return setMadCtl(MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR);
-	default:
-		return false;
-	}
 }
 
 Surface* ST7789V::createSurface(size_t bufferSize)
@@ -286,6 +249,11 @@ Surface* ST7789V::createSurface(size_t bufferSize)
 uint16_t ST7789V::readNvMemStatus()
 {
 	return readRegister(ST7789V_NVMEMST, 3) >> 8;
+}
+
+__forceinline uint16_t swapBytes(uint16_t w)
+{
+	return (w >> 8) | (w << 8);
 }
 
 } // namespace Display

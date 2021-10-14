@@ -165,6 +165,19 @@ enum DisplayCommandSet {
 	DCS_READ_PPS_CONTINUE = 0xA9,
 };
 
+/* MIPI DCS Address Mode bits (also known as MADCTL) */
+enum DcsAddressMode {
+	DCS_ADDRESS_MODE_MIRROR_Y = 0x80,
+	DCS_ADDRESS_MODE_MIRROR_X = 0x40,
+	DCS_ADDRESS_MODE_SWAP_XY = 0x20,
+	DCS_ADDRESS_MODE_REFRESH_BT = 0x10, // Does not affect image
+	DCS_ADDRESS_MODE_BGR = 0x08,
+	DCS_ADDRESS_MODE_RGB = 0x00,
+	DCS_ADDRESS_MODE_LATCH_RL = 0x04, // Does not affect image
+	DCS_ADDRESS_MODE_FLIP_X = 0x02,
+	DCS_ADDRESS_MODE_FLIP_Y = 0x01,
+};
+
 /* MIPI DCS pixel formats */
 enum DcsPixelFormat {
 	DCS_PIXEL_FMT_24BIT = 7,
@@ -188,7 +201,8 @@ class Base : public SpiDisplay
 public:
 	using SpiDisplay::SpiDisplay;
 
-	Base(HSPI::Controller& spi, Size screenSize) : SpiDisplay(spi), nativeSize(screenSize)
+	Base(HSPI::Controller& spi, Size resolution, Size screenSize)
+		: SpiDisplay(spi), resolution(resolution), nativeSize(screenSize)
 	{
 	}
 
@@ -253,12 +267,20 @@ public:
 	}
 
 	/* Device */
-	// bool setOrientation(Orientation orientation) override;
+
+	bool setOrientation(Orientation orientation) override;
 
 	/* RenderTarget */
+
 	Size getSize() const override
 	{
 		return rotate(nativeSize, orientation);
+	}
+
+	// Used by Surface to adjust for screen orientation
+	Point getAddrOffset() const
+	{
+		return addrOffset;
 	}
 
 	// Surface* createSurface(size_t bufferSize = 0) override;
@@ -270,7 +292,51 @@ protected:
 	 */
 	virtual bool initialise() = 0;
 
-	Size nativeSize{0, 0};
+	/**
+	 * @brief Called by implementation to send fixed initialisation sequences
+	 */
+	void sendInitData(const FSTR::ObjectBase& data)
+	{
+		SpiDisplay::execute(commands, data);
+	}
+
+	/**
+	 * @brief Set default address mode setting
+	 *
+	 * The display may be attached to the controller in various ways,
+	 * resulting in a flipped or rotated display.
+	 *
+	 * Changing the default mode allows this to be corrected.
+	 *
+	 * For example, if the display is flipped horizontally, use:
+	 * 
+	 * 		setDefaultAddressMode(Graphics::Display::Mipi::DCS_ADDRESS_MODE_MIRROR_X);
+	 *
+	 * Flag values may be combined, for example:
+	 *
+	 * 		setDefaultAddressMode(
+	 * 			Graphics::Display::Mipi::DCS_ADDRESS_MODE_MIRROR_X |
+	 * 			Graphics::Display::Mipi::DCS_ADDRESS_MODE_MIRROR_Y
+	 * 		);
+	 *
+	 */
+	void setDefaultAddressMode(uint8_t mode)
+	{
+		mode |= DCS_ADDRESS_MODE_BGR;
+		if(mode == defaultAddressMode) {
+			return;
+		}
+
+		defaultAddressMode = mode;
+		if(isReady()) {
+			setOrientation(orientation);
+		}
+	}
+
+	Size resolution{};  ///< Controller resolution
+	Size nativeSize{};  ///< Size of attached screen
+	Point addrOffset{}; ///< Display orientation may require adjustment to address window position
+	uint8_t defaultAddressMode{DCS_ADDRESS_MODE_BGR};
 
 private:
 	static bool transferBeginEnd(HSPI::Request& request);
@@ -317,7 +383,7 @@ public:
 
 	bool setAddrWindow(const Rect& rect) override
 	{
-		return displayList.setAddrWindow(rect);
+		return displayList.setAddrWindow(rect + display.getAddrOffset());
 	}
 
 	uint8_t* getBuffer(uint16_t minBytes, uint16_t& available) override

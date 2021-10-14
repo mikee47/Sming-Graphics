@@ -29,7 +29,37 @@ bool Base::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t
 	dcState = true;
 	onTransfer(transferBeginEnd);
 
-	return initialise();
+	return initialise() && setOrientation(orientation);
+}
+
+bool Base::setOrientation(Orientation orientation)
+{
+	uint8_t mode = defaultAddressMode;
+	switch(orientation) {
+	case Orientation::deg0:
+		addrOffset = Point{};
+		break;
+	case Orientation::deg90:
+		mode ^= DCS_ADDRESS_MODE_MIRROR_X | DCS_ADDRESS_MODE_SWAP_XY;
+		addrOffset = Point{};
+		break;
+	case Orientation::deg180:
+		mode ^= DCS_ADDRESS_MODE_MIRROR_X | DCS_ADDRESS_MODE_MIRROR_Y;
+		addrOffset = Point(0, resolution.h - nativeSize.h);
+		break;
+	case Orientation::deg270:
+		mode ^= DCS_ADDRESS_MODE_SWAP_XY | DCS_ADDRESS_MODE_MIRROR_Y;
+		addrOffset = Point(resolution.h - nativeSize.h, 0);
+		break;
+	default:
+		return false;
+	}
+
+	SpiDisplayList list(Mipi::commands, addrWindow, 16);
+	list.writeCommand(Mipi::DCS_SET_ADDRESS_MODE, mode, 1);
+	execute(list);
+	this->orientation = orientation;
+	return true;
 }
 
 // Protected methods
