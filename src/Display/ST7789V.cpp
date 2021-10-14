@@ -81,7 +81,7 @@ DEFINE_RB_ARRAY(
 	DEFINE_RB_DELAY(120)
 	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)
 	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_NORMAL_MODE, 0) // Normal display mode on
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_ADDRESS_MODE, 1, MADCTL_RGB) // display and color format setting
+	DEFINE_RB_COMMAND(Mipi::DCS_SET_ADDRESS_MODE, 1, MADCTL_BGR) // display and color format setting
 //	DEFINE_RB_COMMAND(0xB6, 2, 0x0A, 0x82)
 	DEFINE_RB_COMMAND(ST7789V_RAMCTRL, 2, 0x00, 0xE0)	// 5 to 6 bit conversion: r0 = r5, b0 = b5
 	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55)					 // 16 bits per pixel
@@ -265,13 +265,13 @@ bool ST7789V::setOrientation(Orientation orientation)
 
 	switch(orientation) {
 	case Orientation::deg0:
-		return setMadCtl(MADCTL_MX | MADCTL_RGB);
+		return setMadCtl(MADCTL_MX | MADCTL_BGR);
 	case Orientation::deg90:
-		return setMadCtl(MADCTL_MV | MADCTL_RGB);
+		return setMadCtl(MADCTL_MV | MADCTL_BGR);
 	case Orientation::deg180:
-		return setMadCtl(MADCTL_MY | MADCTL_RGB);
+		return setMadCtl(MADCTL_MY | MADCTL_BGR);
 	case Orientation::deg270:
-		return setMadCtl(MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_RGB);
+		return setMadCtl(MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_BGR);
 	default:
 		return false;
 	}
