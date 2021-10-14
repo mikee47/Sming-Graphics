@@ -2,6 +2,8 @@
 #include <Graphics/LcdFont.h>
 #include <Graphics/Renderer.h>
 #include <Services/Profiling/MinMax.h>
+
+#define ENABLE_TTGO_WATCH
 #include <Graphics/SampleConfig.h>
 
 namespace
@@ -211,7 +213,7 @@ void setup()
 	Serial.println("Display start");
 	initDisplay();
 
-	tft.setOrientation(Orientation::deg270);
+	tft.setOrientation(Orientation::deg180);
 	tftSize = tft.getSize();
 	pixelFormat = tft.getPixelFormat();
 
