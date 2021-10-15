@@ -5,12 +5,14 @@
 
 #define ENABLE_TTGO_WATCH
 #include <Graphics/SampleConfig.h>
+#include "axp20x.h"
 
 namespace
 {
 // Demonstrate other stuff can be done whilst rendering proceeds
 SimpleTimer backgroundTimer;
 CpuCycleTimer interval;
+AXP20X_Class power;
 
 using namespace Graphics;
 
@@ -208,6 +210,79 @@ void renderFrame()
 	});
 }
 
+void initPower()
+{
+	Wire.begin(21, 22);
+
+	int ret = power.begin();
+	if(ret == AXP_FAIL) {
+		debug_e("AXP Power begin failed");
+		return;
+	}
+
+	//Change the shutdown time to 4 seconds
+	power.setShutdownTime(AXP_POWER_OFF_TIME_4S);
+	// Turn off the charging instructions, there should be no
+	power.setChgLEDMode(AXP20X_LED_OFF);
+	// Turn off external enable
+	power.setPowerOutPut(AXP202_EXTEN, false);
+	//axp202 allows maximum charging current of 1800mA, minimum 300mA
+	power.setChargeControlCur(300);
+
+	// #ifdef LILYGO_WATCH_HAS_SIM868
+	// 		//Setting gps power
+	// 		power.setPowerOutPut(AXP202_LDO3, false);
+	// 		power.setLDO3Mode(0);
+	// 		power.setLDO3Voltage(3300);
+	// #endif /*LILYGO_WATCH_HAS_SIM868*/
+
+	power.setLDO2Voltage(3300);
+
+	// #ifdef LILYGO_WATCH_2020_V1
+	//In the 2020V1 version, the ST7789 chip power supply
+	//is shared with the backlight, so LDO2 cannot be turned off
+	power.setPowerOutPut(AXP202_LDO2, AXP202_ON);
+	// #endif /*LILYGO_WATCH_2020_V1*/
+
+	// #ifdef LILYGO_WATCH_2020_V2
+	// 		// New features of Twatch V2
+	// 		power.limitingOff();
+
+	// 		//GPS power domain is AXP202 LDO4
+	// 		power.setPowerOutPut(AXP202_LDO4, false);
+	// 		power.setLDO4Voltage(AXP202_LDO4_3300MV);
+
+	// 		//Adding a hardware reset can reduce the current consumption of the capacitive touch
+	// 		power.setPowerOutPut(AXP202_EXTEN, true);
+	// 		delay(10);
+	// 		power.setPowerOutPut(AXP202_EXTEN, false);
+	// 		delay(8); //Trst Min = 5ms
+	// 		power.setPowerOutPut(AXP202_EXTEN, true);
+
+	// 		/*
+	//             In 2020V2, LDO3 is allocated to the display and touch screen power.
+	//             When ESP32 is set to sleep or other situations where power consumption needs to be saved,
+	//             LDO3 can be turned off
+	//             */
+	// 		power.setPowerOutPut(AXP202_LDO3, false);
+	// 		power.setLDO3Voltage(3300);
+	// 		power.setPowerOutPut(AXP202_LDO3, true);
+
+	// #endif /*LILYGO_WATCH_2020_V2*/
+
+	// #ifdef LILYGO_WATCH_2020_V3
+	// 		// New features of Twatch V3
+	// 		power.limitingOff();
+
+	// 		//Audio power domain is AXP202 LDO4
+	// 		power.setPowerOutPut(AXP202_LDO4, false);
+	// 		power.setLDO4Voltage(AXP202_LDO4_3300MV);
+	// 		power.setPowerOutPut(AXP202_LDO4, true);
+	// 		// No use
+	// 		power.setPowerOutPut(AXP202_LDO3, false);
+	// #endif /*LILYGO_WATCH_2020_V3*/
+}
+
 void setup()
 {
 	Serial.println("Display start");
@@ -251,6 +326,8 @@ void init()
 	WifiStation.enable(false);
 	WifiAccessPoint.enable(false);
 #endif
+
+	initPower();
 
 	System.onReady(setup);
 }
