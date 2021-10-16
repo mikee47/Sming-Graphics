@@ -21,20 +21,18 @@
 
 #pragma once
 
-#include "Mipi.h"
+#include "../MipiDisplay.h"
 
 namespace Graphics
 {
 namespace Display
 {
-class ILI9341 : public Mipi::Base
+class ILI9341 : public MipiDisplay
 {
 public:
 	static constexpr Size resolution{240, 320};
 
-	using Mipi::Base::Base;
-
-	ILI9341(HSPI::Controller& spi, Size screenSize = resolution) : Mipi::Base(spi, resolution, screenSize)
+	ILI9341(HSPI::Controller& spi, Size screenSize = resolution) : MipiDisplay(spi, resolution, screenSize)
 	{
 		setDefaultAddressMode(Mipi::DCS_ADDRESS_MODE_MIRROR_X);
 	}
@@ -47,15 +45,6 @@ public:
 	{
 		return F("ILI9341");
 	}
-
-	/* RenderTarget */
-
-	PixelFormat getPixelFormat() const override
-	{
-		return PixelFormat::RGB565;
-	}
-
-	Surface* createSurface(size_t bufferSize = 0) override;
 
 protected:
 	bool initialise() override;

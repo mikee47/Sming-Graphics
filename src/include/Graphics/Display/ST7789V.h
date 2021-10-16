@@ -19,20 +19,18 @@
 
 #pragma once
 
-#include "Mipi.h"
+#include "../MipiDisplay.h"
 
 namespace Graphics
 {
 namespace Display
 {
-class ST7789V : public Mipi::Base
+class ST7789V : public MipiDisplay
 {
 public:
 	static constexpr Size resolution{240, 320};
 
-	using Mipi::Base::Base;
-
-	ST7789V(HSPI::Controller& spi, Size screenSize = resolution) : Mipi::Base(spi, resolution, screenSize)
+	ST7789V(HSPI::Controller& spi, Size screenSize = resolution) : MipiDisplay(spi, resolution, screenSize)
 	{
 	}
 
@@ -44,15 +42,6 @@ public:
 	{
 		return F("ST7789V");
 	}
-
-	/* RenderTarget */
-
-	PixelFormat getPixelFormat() const override
-	{
-		return PixelFormat::RGB565;
-	}
-
-	Surface* createSurface(size_t bufferSize = 0) override;
 
 protected:
 	bool initialise() override;

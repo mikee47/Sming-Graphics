@@ -65,16 +65,18 @@ namespace
 
 #define ST7789V_NVMEMST 0xFC
 
+using namespace Mipi;
+
 // Command(1), length(2) data(length)
-DEFINE_RB_ARRAY(									  //
-	displayInitData,								  //
-	DEFINE_RB_COMMAND(Mipi::DCS_EXIT_SLEEP_MODE, 0)   //
-	DEFINE_RB_DELAY(120)							  //
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0)	//
-	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_NORMAL_MODE, 0) // Normal display mode on
+DEFINE_RB_ARRAY(								//
+	displayInitData,							//
+	DEFINE_RB_COMMAND(DCS_EXIT_SLEEP_MODE, 0)   //
+	DEFINE_RB_DELAY(120)						//
+	DEFINE_RB_COMMAND(DCS_SET_DISPLAY_ON, 0)	//
+	DEFINE_RB_COMMAND(DCS_ENTER_NORMAL_MODE, 0) // Normal display mode on
 	//	DEFINE_RB_COMMAND(0xB6, 2, 0x0A, 0x82)
-	DEFINE_RB_COMMAND(ST7789V_RAMCTRL, 2, 0x00, 0xE0)	  // 5 to 6 bit conversion: r0 = r5, b0 = b5
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_PIXEL_FORMAT, 1, 0x55) // 16 bits per pixel
+	DEFINE_RB_COMMAND(ST7789V_RAMCTRL, 2, 0x00, 0xE0) // 5 to 6 bit conversion: r0 = r5, b0 = b5
+	DEFINE_RB_COMMAND(DCS_SET_PIXEL_FORMAT, 1, 0x55)  // 16 bits per pixel
 	DEFINE_RB_DELAY(10)
 	// ST7789V Frame rate setting
 	DEFINE_RB_COMMAND(ST7789V_FRMCTR2, 5, 0x0c, 0x0c, 0x00, 0x33, 0x33)
@@ -90,150 +92,14 @@ DEFINE_RB_ARRAY(									  //
 	DEFINE_RB_COMMAND_LONG(ST7789V_GMCTRP1, 14, 0xd0, 0x00, 0x02, 0x07, 0x0a, 0x28, 0x32, 0x44, 0x42, 0x06, 0x0e, 0x12,
 						   0x14, 0x17) //
 	DEFINE_RB_COMMAND_LONG(ST7789V_GMCTRN1, 14, 0xd0, 0x00, 0x02, 0x07, 0x0a, 0x28, 0x31, 0x54, 0x47, 0x0e, 0x1c, 0x17,
-						   0x1b, 0x1e)				  //
-	DEFINE_RB_COMMAND(Mipi::DCS_ENTER_INVERT_MODE, 0) //
+						   0x1b, 0x1e)			//
+	DEFINE_RB_COMMAND(DCS_ENTER_INVERT_MODE, 0) //
 
-	DEFINE_RB_COMMAND(Mipi::DCS_SET_DISPLAY_ON, 0) //
-	DEFINE_RB_DELAY(120)						   //
+	DEFINE_RB_COMMAND(DCS_SET_DISPLAY_ON, 0) //
+	DEFINE_RB_DELAY(120)					 //
 )
 
-// Reading GRAM returns one byte per pixel for R/G/B (only top 6 bits are used, bottom 2 are clear)
-static constexpr size_t READ_PIXEL_SIZE{3};
-
-/**
- * @brief Manages completion of a `readDataBuffer` operation
- *
- * Performs format conversion, invokes callback (if provided) then releases shared buffer.
- *
- * @note Data is read back in RGB24 format, but written in RGB565.
- */
-struct ReadPixelInfo {
-	ReadBuffer buffer;
-	size_t bytesToRead;
-	ReadStatus* status;
-	Surface::ReadCallback callback;
-	void* param;
-
-	static void IRAM_ATTR transferCallback(void* param)
-	{
-		System.queueCallback(taskCallback, param);
-	}
-
-	static void taskCallback(void* param)
-	{
-		auto info = static_cast<ReadPixelInfo*>(param);
-		info->readComplete();
-	}
-
-	void readComplete()
-	{
-		if(buffer.format != PixelFormat::RGB24) {
-			auto srcptr = &buffer.data[buffer.offset];
-			auto dstptr = srcptr;
-			if(buffer.format == PixelFormat::RGB565) {
-				for(size_t i = 0; i < bytesToRead; i += READ_PIXEL_SIZE) {
-					PixelBuffer buf;
-					buf.rgb565.r = *srcptr++ >> 3;
-					buf.rgb565.g = *srcptr++ >> 2;
-					buf.rgb565.b = *srcptr++ >> 3;
-					*dstptr++ = buf.u8[1];
-					*dstptr++ = buf.u8[0];
-				}
-			} else {
-				for(size_t i = 0; i < bytesToRead; i += READ_PIXEL_SIZE) {
-					PixelBuffer buf;
-					buf.rgb24.r = *srcptr++;
-					buf.rgb24.g = *srcptr++;
-					buf.rgb24.b = *srcptr++;
-					dstptr += writeColor(dstptr, buf.color, buffer.format);
-				}
-			}
-			bytesToRead = dstptr - &buffer.data[buffer.offset];
-		}
-		if(status != nullptr) {
-			*status = ReadStatus{bytesToRead, buffer.format, true};
-		}
-
-		if(callback) {
-			callback(buffer, bytesToRead, param);
-		}
-
-		buffer.data.release();
-	}
-};
-
 } // namespace
-
-class ST7789VSurface : public Mipi::Surface
-{
-public:
-	using Mipi::Surface::Surface;
-
-	/*
-	 * The ST7789V is fussy when reading GRAM.
-	 *
-	 *  - Pixels are read in RGB24 format, but written in RGB565.
-	 * 	- The RAMRD command resets the read position to the start of the address window
-	 *    so is used only for the first packet
-	 *  - Second and subsequent packets use the RAMRD_CONT command
-	 *  - Pixels must not be split across SPI packets so each packet can be for a maximum of 63 bytes (21 pixels)
-	 */
-	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param) override
-	{
-		// ST7789V RAM read transactions must be in multiples of 3 bytes
-		static constexpr size_t packetPixelBytes{63};
-
-		auto pixelCount = (buffer.size() - buffer.offset) / READ_PIXEL_SIZE;
-		if(pixelCount == 0) {
-			debug_w("[readDataBuffer] pixelCount == 0");
-			return 0;
-		}
-		auto& addrWindow = display.getAddressWindow();
-		if(addrWindow.bounds.h == 0) {
-			debug_w("[readDataBuffer] addrWindow.bounds.h == 0");
-			return 0;
-		}
-
-		constexpr size_t hdrsize = DisplayList::codelen_readStart + DisplayList::codelen_read +
-								   DisplayList::codelen_callback + sizeof(ReadPixelInfo);
-		if(!displayList.require(hdrsize)) {
-			debug_w("[readDataBuffer] no space");
-			return -1;
-		}
-		if(!displayList.canLockBuffer()) {
-			return -1;
-		}
-		if(buffer.format == PixelFormat::None) {
-			buffer.format = PixelFormat::RGB24;
-		}
-		size_t maxPixels = (addrWindow.bounds.w * addrWindow.bounds.h) - addrWindow.column;
-		pixelCount = std::min(maxPixels, pixelCount);
-		ReadPixelInfo info{buffer, pixelCount * READ_PIXEL_SIZE, status, callback, param};
-		if(status != nullptr) {
-			*status = ReadStatus{};
-		}
-
-		auto bufptr = &buffer.data[buffer.offset];
-		if(addrWindow.mode == AddressWindow::Mode::read) {
-			displayList.readMem(bufptr, info.bytesToRead);
-		} else {
-			auto len = std::min(info.bytesToRead, packetPixelBytes);
-			displayList.readMem(bufptr, len);
-			if(len < info.bytesToRead) {
-				displayList.readMem(bufptr + len, info.bytesToRead - len);
-			}
-		}
-		addrWindow.seek(pixelCount);
-
-		info.buffer.data.addRef();
-		if(!displayList.writeCallback(info.transferCallback, &info, sizeof(info))) {
-			debug_e("[DL] CALLBACK NO SPACE");
-		}
-
-		displayList.lockBuffer(buffer.data);
-		return pixelCount;
-	}
-};
 
 bool ST7789V::initialise()
 {
@@ -241,19 +107,9 @@ bool ST7789V::initialise()
 	return true;
 }
 
-Surface* ST7789V::createSurface(size_t bufferSize)
-{
-	return new ST7789VSurface(*this, bufferSize ?: 512U);
-}
-
 uint16_t ST7789V::readNvMemStatus()
 {
 	return readRegister(ST7789V_NVMEMST, 3) >> 8;
-}
-
-__forceinline uint16_t swapBytes(uint16_t w)
-{
-	return (w >> 8) | (w << 8);
 }
 
 } // namespace Display
