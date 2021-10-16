@@ -21,34 +21,22 @@
 
 #pragma once
 
-#include "../SpiDisplay.h"
+#include "../MipiDisplay.h"
 
 namespace Graphics
 {
 namespace Display
 {
-class ILI9341Surface;
-
-class ILI9341 : public SpiDisplay
+class ILI9341 : public MipiDisplay
 {
 public:
-	static constexpr Size nativeSize{240, 320};
+	static constexpr Size resolution{240, 320};
 
-	using SpiDisplay::SpiDisplay;
+	ILI9341(HSPI::Controller& spi, Size screenSize = resolution) : MipiDisplay(spi, resolution, screenSize)
+	{
+		setDefaultAddressMode(Mipi::DCS_ADDRESS_MODE_MIRROR_X);
+	}
 
-	bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin = PIN_NONE,
-			   uint32_t clockSpeed = 4000000);
-
-	uint32_t readRegister(uint8_t cmd, uint8_t byteCount);
-
-	uint32_t readDisplayId();
-	uint32_t readDisplayStatus();
-	uint8_t readPowerMode();
-	uint8_t readMADCTL();
-	uint8_t readPixelFormat();
-	uint8_t readImageFormat();
-	uint8_t readSignalMode();
-	uint8_t readSelfDiag();
 	uint16_t readNvMemStatus();
 
 	/* Device */
@@ -58,34 +46,8 @@ public:
 		return F("ILI9341");
 	}
 
-	Size getNativeSize() const override
-	{
-		return nativeSize;
-	}
-
-	bool setOrientation(Orientation orientation) override;
-
-	/* RenderTarget */
-
-	Size getSize() const override
-	{
-		return rotate(nativeSize, orientation);
-	}
-
-	PixelFormat getPixelFormat() const override
-	{
-		return PixelFormat::RGB565;
-	}
-
-	Surface* createSurface(size_t bufferSize = 0) override;
-
-private:
-	friend class ILI9341Surface;
-
-	static bool transferBeginEnd(HSPI::Request& request);
-
-	uint8_t dcPin{PIN_NONE};
-	bool dcState{};
+protected:
+	bool initialise() override;
 };
 
 } // namespace Display

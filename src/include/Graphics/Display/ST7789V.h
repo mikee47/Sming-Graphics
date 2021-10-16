@@ -1,7 +1,5 @@
 /**
- * Drawing.cpp
- *
- * Copyright 2021 mikee47 <mike@sillyhouse.net>
+ * ST7789V.h
  *
  * This file is part of the Sming-Graphics Library
  *
@@ -15,13 +13,39 @@
  * You should have received a copy of the GNU General Public License along with this library.
  * If not, see <https://www.gnu.org/licenses/>.
  *
- * @author: May 2021 - mikee47 <mike@sillyhouse.net>
+ * @author: October 2021 - Slavey Karadzhov <slav@attachix.com>
  *
  ****/
 
+#pragma once
+
+#include "../MipiDisplay.h"
+
 namespace Graphics
 {
-namespace Drawing
+namespace Display
 {
-}
+class ST7789V : public MipiDisplay
+{
+public:
+	static constexpr Size resolution{240, 320};
+
+	ST7789V(HSPI::Controller& spi, Size screenSize = resolution) : MipiDisplay(spi, resolution, screenSize)
+	{
+	}
+
+	uint16_t readNvMemStatus();
+
+	/* Device */
+
+	String getName() const override
+	{
+		return F("ST7789V");
+	}
+
+protected:
+	bool initialise() override;
+};
+
+} // namespace Display
 } // namespace Graphics

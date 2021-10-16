@@ -48,7 +48,7 @@ namespace Resource
 {
 void init(IDataSourceStream* stream);
 IDataSourceStream* createSubStream(uint32_t offset, size_t size);
-}
+} // namespace Resource
 
 /**
  * @brief An asset is used to render an Object, but is not itself drawable

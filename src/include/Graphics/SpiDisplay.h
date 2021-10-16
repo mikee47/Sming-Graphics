@@ -35,12 +35,10 @@ public:
 	{
 	}
 
-	bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t resetPin = PIN_NONE, uint32_t clockSpeed = 4000000);
+	virtual bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t resetPin = PIN_NONE,
+					   uint32_t clockSpeed = 4000000);
 
 	using HSPI::Device::getSpeed;
-
-protected:
-	using HSPI::Device::execute;
 
 	void execute(SpiDisplayList& list, DisplayList::Callback callback = nullptr, void* param = nullptr)
 	{
@@ -62,6 +60,14 @@ protected:
 	{
 		return HSPI::IoMode::SPI;
 	}
+
+	AddressWindow& getAddressWindow()
+	{
+		return addrWindow;
+	}
+
+protected:
+	using HSPI::Device::execute;
 
 	uint8_t resetPin{PIN_NONE};
 	AddressWindow addrWindow{};
