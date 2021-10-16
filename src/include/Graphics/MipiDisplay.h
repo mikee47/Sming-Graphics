@@ -145,13 +145,13 @@ protected:
 	 *
 	 * For example, if the display is flipped horizontally, use:
 	 * 
-	 * 		setDefaultAddressMode(Graphics::Display::Mipi::Mipi::DCS_ADDRESS_MODE_MIRROR_X);
+	 * 		setDefaultAddressMode(Graphics::Mipi::DCS_ADDRESS_MODE_MIRROR_X);
 	 *
 	 * Flag values may be combined, for example:
 	 *
 	 * 		setDefaultAddressMode(
-	 * 			Graphics::Display::Mipi::Mipi::DCS_ADDRESS_MODE_MIRROR_X |
-	 * 			Graphics::Display::Mipi::Mipi::DCS_ADDRESS_MODE_MIRROR_Y
+	 * 			Graphics::Mipi::DCS_ADDRESS_MODE_MIRROR_X |
+	 * 			Graphics::Mipi::DCS_ADDRESS_MODE_MIRROR_Y
 	 * 		);
 	 *
 	 */
