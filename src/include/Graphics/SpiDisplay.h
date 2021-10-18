@@ -25,10 +25,11 @@
 #include <HSPI/Device.h>
 #include "SpiDisplayList.h"
 #include <Digital.h>
+#include "AbstractDisplay.h"
 
 namespace Graphics
 {
-class SpiDisplay : protected HSPI::Device, public Device, public RenderTarget
+class SpiDisplay : protected HSPI::Device, public AbstractDisplay
 {
 public:
 	SpiDisplay(HSPI::Controller& spi) : HSPI::Device(spi)
