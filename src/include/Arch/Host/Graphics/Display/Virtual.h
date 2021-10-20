@@ -23,6 +23,7 @@
 
 #include <Graphics/Device.h>
 #include <Graphics/AddressWindow.h>
+#include <Graphics/AbstractDisplay.h>
 
 class CSocket;
 
@@ -37,7 +38,7 @@ class VirtualSurface;
  * 
  * Talks to python virtual screen application via TCP
  */
-class Virtual : public Device, public RenderTarget
+class Virtual : public AbstractDisplay
 {
 public:
 	enum class Mode {
