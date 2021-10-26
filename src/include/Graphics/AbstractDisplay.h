@@ -1,4 +1,4 @@
-/**
+/****
  * AbstractDisplay.h
  *
  * Copyright 2021 mikee47 <mike@sillyhouse.net>
@@ -24,7 +24,6 @@
 
 namespace Graphics
 {
-
 /**
  * Use this class as a base for all types of display drivers.
  */

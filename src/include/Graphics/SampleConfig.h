@@ -1,4 +1,4 @@
-/**
+/****
  * SampleConfig.h
  *
  * Common definitions for sample applications

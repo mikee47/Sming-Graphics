@@ -1,4 +1,4 @@
-/**
+/****
  * Stream.h
  *
  * Copyright 2021 mikee47 <mike@sillyhouse.net>

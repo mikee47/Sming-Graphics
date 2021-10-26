@@ -1,4 +1,4 @@
-/**
+/****
  * glcdfont.cpp
  *
  * This is the 'classic' fixed-space bitmap font for Adafruit_GFX since 1.0.
