@@ -46,7 +46,26 @@ class Surface;
 
 namespace Resource
 {
+/**
+ * @brief Application calls this method to set source for graphics resourcess
+ * @param stream Where to obtain resource data from
+ *
+ * Graphics resource data such is compiled into a single binary file which the application must
+ * mount in some way (typically as a dedicated partition), then create a stream so the graphics
+ * library can access it.
+ *
+ */
 void init(IDataSourceStream* stream);
+
+/**
+ * @brief Graphics objects call this method to obtain access to resource data.
+ * @param offset Location within resource stream
+ * @param size Size of data BLOB
+ *
+ * The resource compiler generates a header file containing resource descriptions.
+ * The application passes this to the appropriate object constructor, which in turn
+ * calls this function to access the related binary data (e.g. font or image bitmaps).
+ */
 IDataSourceStream* createSubStream(uint32_t offset, size_t size);
 } // namespace Resource
 

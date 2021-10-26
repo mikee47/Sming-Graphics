@@ -75,12 +75,12 @@ Some definitions
     Applications do not need to be aware of this, however, and simply express colours in a 32-bit
     :cpp:class:`Graphics::Color` type. This includes an alpha channel, where 255 is fully opaque
     and 0 is fully transparent.
-    Conversion is handled in a single step (via `Graphics::pack()`) so further manipulation
+    Conversion is handled in a single step (via :cpp:func:`Graphics::pack`) so further manipulation
     (even byte-swapping) is not required by the display driver.
 
     Note that the ILI9341 display has another quirk in that display data is always read back in 24-bit format
     (18 significant bits). This detail is managed by the display driver which does the conversion during read
-    operations. See :cpp:method:`Graphics::Surface::readDataBuffer`.
+    operations. See :cpp:func:`Graphics::Surface::readDataBuffer`.
 
 :cpp:class:`Graphics::Blend`
     This is a virtual base class used to implement custom colour blending operations.
@@ -176,17 +176,19 @@ The following font classes are currently supported:
     GFX
         Adafruit GFX library font files.
         These are identified using a "gfx/" prefix for the font files.
-        See resource/fonts/GFX.
+        See ``resource/fonts/GFX``.
     Linux
         Linux console bitmap fonts. These are in .c format, identified by "linux/" path prefix.
-        See resource/fonts/Linux.
+        See ``resource/fonts/Linux``.
     PFI
         The ".pfi" file extension is a Portable Font Index.
         Font glyph bitmap information is contained in an associated .pbm file.
-        See resource/fonts/PFI.
+        See ``resource/fonts/PFI``.
     VLW
         Smoothed fonts produced by the https://processing.org/ library with a ".vlw" file extension.
         These are from the `TFT_eSPI <https://github.com/Bodmer/TFT_eSPI>`__ library.
+        See ``resource/fonts/VLW``.
+
         Note that TTF/OTF scalable vector fonts are supported directly by this library
         so is the preferred format for new fonts.
     freetype
@@ -197,7 +199,7 @@ The following font classes are currently supported:
                 OpenType
             .pcf, .pcf.gz
                 X11 bitmap font
-        The library supports other types so if required these are easily added.
+        The ``freetype`` library supports other types so if required these are easily added.
 
         These fonts have some additional parameters:
             "mono": <True/False>
@@ -212,7 +214,7 @@ Images
 
 Resource script entries look like this:
 
-.. code-block: json
+.. code-block:: json
 
     "image": {
         "<name>": {
@@ -220,13 +222,13 @@ Resource script entries look like this:
             "source": "filename" | "url",
             // Optional list of transformations to apply
             "transform": {
-                "width": target width, // Height will be auto-scaled
-                "height": target height, // Width will be auto-scaled
-                "crop": "width,height", // Crop image to given size from (0, 0)
-                "crop": "x,y,width,height", // Copy to selected area of image
-                "resize": "width,height", // Resize image
+                "width": target width,      // Height will be auto-scaled
+                "height": target height,    // Width will be auto-scaled
+                "crop": "width,height",     // Crop image to given size from (0, 0)
+                "crop": "x,y,width,height", // Crop to selected area of image
+                "resize": "width,height",   // Resize image
                 "flip": "left_right" | "top_bottom", // Flip the image horizontally or vertically
-                "rotate": angle in degrees // Rotate the image
+                "rotate": angle in degrees  // Rotate the image
             }
         }
     }
@@ -259,7 +261,7 @@ Note: Scenes are never modified during rendering so can be drawn multiple times 
 Rendering
 ---------
 
-This is the process of converting the scene objects into pixels which are then drawn into a :cpp:class:`Surface`.
+This is the process of converting the scene objects into pixels which are then drawn into a :cpp:class:`Graphics::Surface`.
 
 Computation and primitive rendering is done in small, manageable chunks via the task queue.
 Data is sent to the screen using the appropriate display driver.
@@ -279,7 +281,7 @@ Larger areas are handled by the appropriate renderer.
 Shapes such as rectangles, triangles, circles, etc. are described as a set of connected ``lines`` and ``points``
 which is then iterated through and rendered using ``fill`` operations.
 
-The standard :cpp:class:`Surface` implementation uses a standard set of renderers to do this work,
+The standard :cpp:class:`Graphics::Surface` implementation uses a standard set of renderers to do this work,
 however these can be overridden by display devices to make use of available hardware features.
 
 
@@ -293,8 +295,16 @@ However, even a small 240x320 pixel display would require 150kBytes with RGB565.
 
 The more general approach adopted by this library is to read a small block of pixels from the display,
 combine them with new data as required then write the block back to the display.
-The `Graphics::TextRenderer` does this by default. The algorithm also ensures that text can be rendered
+The :cpp:class:`Graphics::TextRenderer` does this by default. The algorithm also ensures that text can be rendered
 correctly with filled backgrounds (solid, transparent or custom brushes).
+
+.. note::
+
+   It may not be possible to read from some displays.
+   For example, a small 1-inch display is commonly available using the :cpp:class:`Graphics::Display::ST7789V`
+   controller connected in 4-wire mode, but with the SDO line unconnected internally.
+
+   In such cases transparency must be handled by the application using memory surfaces.
 
 
 Display driver
@@ -487,3 +497,4 @@ API
 ---
 
 .. doxygennamespace:: Graphics
+   :members:
