@@ -60,6 +60,16 @@ public:
 		return orientation;
 	}
 
+	virtual bool setScrollMargins(uint16_t top, uint16_t bottom)
+	{
+		return false;
+	}
+
+	virtual bool scroll(int16_t y)
+	{
+		return false;
+	}
+
 protected:
 	Orientation orientation{};
 };

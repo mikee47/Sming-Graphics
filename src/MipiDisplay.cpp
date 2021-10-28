@@ -162,6 +162,37 @@ bool IRAM_ATTR MipiDisplay::transferBeginEnd(HSPI::Request& request)
 	return true;
 }
 
+bool MipiDisplay::setScrollMargins(uint16_t top, uint16_t bottom)
+{
+	// TFA + VSA + BFA == 320
+	if(top + bottom > resolution.h) {
+		return false;
+	}
+	uint16_t data[]{
+		swapBytes(top),
+		swapBytes(resolution.h - (top + bottom)),
+		swapBytes(bottom),
+	};
+	SpiDisplayList list(commands, addrWindow, 16);
+	list.writeCommand(Mipi::DCS_SET_SCROLL_AREA, data, sizeof(data));
+	execute(list);
+	return true;
+}
+
+bool MipiDisplay::scroll(int16_t y)
+{
+	y = scrollOffset - y;
+	while(y < 0) {
+		y += resolution.h;
+	}
+	y %= resolution.h;
+	SpiDisplayList list(commands, addrWindow, 16);
+	list.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(y), 2);
+	execute(list);
+	scrollOffset = y;
+	return true;
+}
+
 /*
  * MipiSurface
  */
