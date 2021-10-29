@@ -560,6 +560,32 @@ bool Virtual::setOrientation(Orientation orientation)
 	return sizeChanged();
 }
 
+bool Virtual::setScrollMargins(uint16_t top, uint16_t bottom)
+{
+	if(top + bottom >= nativeSize.h) {
+		debug_e("[VS] setScrollMargins(%u, %u) invalid parameters", top, bottom);
+		return false;
+	}
+
+	scrollMargins.top = top;
+	scrollMargins.bottom = bottom;
+
+	debug_d("[VS] setScrollMargins(%u, %u)", top, bottom);
+	return true;
+}
+
+bool Virtual::scroll(int16_t y)
+{
+	CommandList list(addrWindow, 32);
+	Rect area(0, scrollMargins.top, nativeSize.w, nativeSize.h - scrollMargins.top - scrollMargins.bottom);
+	Point shift(0, -y);
+	debug_d("[VS] Scroll(%s, %s)", area.toString().c_str(), shift.toString().c_str());
+	list.writeCommand(Command::Scroll{area, shift, false, true});
+	list.prepare();
+	thread->transfer(list);
+	return true;
+}
+
 Surface* Virtual::createSurface(size_t bufferSize)
 {
 	return new VirtualSurface(*this, bufferSize ?: 512U);

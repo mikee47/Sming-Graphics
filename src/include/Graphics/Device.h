@@ -60,15 +60,20 @@ public:
 		return orientation;
 	}
 
-	virtual bool setScrollMargins(uint16_t top, uint16_t bottom)
-	{
-		return false;
-	}
+	/**
+	 * @brief Set margins for hardware scrolling
+	 * @param top Number of fixed pixels at top of screen
+	 * @param bottom Number of fixed pixels at bottom of screen
+	 * 
+	 * Area between top/bottom can be scrolled using `scroll()` method.
+	 */
+	virtual bool setScrollMargins(uint16_t top, uint16_t bottom) = 0;
 
-	virtual bool scroll(int16_t y)
-	{
-		return false;
-	}
+	/**
+	 * @brief Scroll region of display up or down using hardware scrolling
+	 * @param y Number of lines to scroll. Positive values scroll content down, negative values scroll up.
+	 */
+	virtual bool scroll(int16_t y) = 0;
 
 protected:
 	Orientation orientation{};
