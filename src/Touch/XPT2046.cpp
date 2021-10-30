@@ -91,9 +91,9 @@ bool XPT2046::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t irqPin)
 
 	this->irqPin = irqPin;
 	if(irqPin != PIN_NONE) {
+		isrTouch = this;
 		pinMode(irqPin, INPUT);
 		attachInterrupt(irqPin, isr, FALLING);
-		isrTouch = this;
 	}
 
 	return true;
