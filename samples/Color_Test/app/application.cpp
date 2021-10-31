@@ -1,7 +1,5 @@
 #include <SmingCore.h>
 #include <Graphics.h>
-#include <Graphics/Debug.h>
-#include <Graphics/Drawing/Macros.h>
 #include <Graphics/SampleConfig.h>
 
 using Color = Graphics::Color;
