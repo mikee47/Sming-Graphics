@@ -70,6 +70,17 @@ public:
 		return write(&c, 1);
 	}
 
+	bool setScrollMargins(uint16_t top, uint16_t bottom)
+	{
+		if(!display.setScrollMargins(top, bottom)) {
+			return false;
+		}
+		topMargin = top;
+		bottomMargin = bottom;
+		cursor.y = topMargin;
+		return true;
+	}
+
 private:
 	void update();
 
@@ -80,6 +91,8 @@ private:
 	std::unique_ptr<SceneObject> scene;
 	Point cursor{};
 	bool paused{false};
+	uint16_t topMargin{0};
+	uint16_t bottomMargin{0};
 };
 
 } // namespace Graphics
