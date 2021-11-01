@@ -18,14 +18,14 @@ void test()
 
 	console.setScrollMargins(50, 50);
 	console.clear();
-	console.moveTo(Section::top);
+	console.setSection(Section::top);
 	console.println("This is the top section");
-	console.moveTo(Section::bottom);
+	console.setSection(Section::bottom);
 	console.println("This is the bottom section");
-	console.moveTo(Section::middle);
-	for(unsigned i = 0; i < 10; ++i) {
-		console.printf("%u This is the middle section\r\n", system_get_time());
-	}
+	console.setSection(Section::middle);
+
+	timer.initializeMs<1000>([]() { console.printf("%u This is the middle section\r\n", system_get_time()); });
+	timer.start();
 }
 
 } // namespace
