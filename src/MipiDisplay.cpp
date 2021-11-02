@@ -214,16 +214,15 @@ MipiSurface::MipiSurface(MipiDisplay& display, size_t bufferSize)
 }
 
 /*
-	 * So far tested only on ILI9341 displays. Other MIPI displays look very similar.
-	 *
-	 * The ILI9341 is fussy when reading GRAM:
-	 *
-	 *  - Pixels are read in RGB24 format, but written in RGB565.
-	 * 	- The RAMRD command resets the read position to the start of the address window
-	 *    so is used only for the first packet
-	 *  - Second and subsequent packets use the RAMRD_CONT command
-	 *  - Pixels must not be split across SPI packets so each packet can be for a maximum of 63 bytes (21 pixels)
-	 */
+ * When reading GRAM:
+ *
+ *  - Pixels are read in RGB24 format, but written in RGB565.
+ * 	- DCS_READ_MEMORY_START resets the read position to the start of the address window
+ *    so is used only for the first packet
+ *  - Second and subsequent packets use the DCS_READ_MEMORY_CONTINUE command
+ *  - Pixels must not be split across SPI packets so for the ESP8266 each packet can be for
+ *    a maximum of 63 bytes (21 pixels). ESP32 uses DMA so longer packets can be sent unbroken.
+ */
 int MipiSurface::readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param)
 {
 	// RAM read transactions must be in multiples of 3 bytes
