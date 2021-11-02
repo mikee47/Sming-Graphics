@@ -33,16 +33,6 @@
 
 namespace Graphics
 {
-__forceinline uint16_t swapBytes(uint16_t w)
-{
-	return (w >> 8) | (w << 8);
-}
-
-__forceinline uint32_t makeWord(uint16_t w1, uint16_t w2)
-{
-	return uint32_t(swapBytes(w1)) | (swapBytes(w2) << 16);
-}
-
 bool IRAM_ATTR SpiDisplayList::fillRequest()
 {
 	request.cmdLen = 0;

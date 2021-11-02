@@ -96,6 +96,14 @@ public:
 		return nativeSize;
 	}
 
+	Size getResolution() const
+	{
+		return resolution;
+	}
+
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
+	bool scroll(int16_t y) override;
+
 	/* Device */
 
 	bool setOrientation(Orientation orientation) override;
@@ -119,6 +127,11 @@ public:
 	}
 
 	Surface* createSurface(size_t bufferSize = 0) override;
+
+	uint16_t getScrollOffset() const
+	{
+		return scrollOffset;
+	}
 
 protected:
 	/**
@@ -178,6 +191,7 @@ private:
 
 	uint8_t dcPin{PIN_NONE};
 	bool dcState{};
+	uint16_t scrollOffset{0};
 };
 
 class MipiSurface : public Graphics::Surface
@@ -215,7 +229,14 @@ public:
 
 	bool setAddrWindow(const Rect& rect) override
 	{
-		return displayList.setAddrWindow(rect + display.getAddrOffset());
+		Rect r = rect;
+		r.y -= display.getScrollOffset();
+		r += display.getAddrOffset();
+		while(r.y < 0) {
+			r.y += display.getResolution().h;
+		}
+		r.y %= display.getResolution().h;
+		return displayList.setAddrWindow(r);
 	}
 
 	uint8_t* getBuffer(uint16_t minBytes, uint16_t& available) override

@@ -86,6 +86,9 @@ public:
 		return PixelFormat::BGR24;
 	}
 
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
+	bool scroll(int16_t y) override;
+
 	Surface* createSurface(size_t bufferSize = 0) override;
 
 private:
@@ -93,11 +96,17 @@ private:
 	friend NetworkThread;
 	friend VirtualSurface;
 
+	struct ScrollMargins {
+		uint16_t top;
+		uint16_t bottom;
+	};
+
 	bool sizeChanged();
 
 	std::unique_ptr<NetworkThread> thread;
 	Size nativeSize{};
 	AddressWindow addrWindow{};
+	ScrollMargins scrollMargins;
 	Mode mode;
 };
 
