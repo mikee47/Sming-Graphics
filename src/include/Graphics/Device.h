@@ -64,16 +64,17 @@ public:
 	 * @brief Set margins for hardware scrolling
 	 * @param top Number of fixed pixels at top of screen
 	 * @param bottom Number of fixed pixels at bottom of screen
-	 * 
-	 * Area between top/bottom can be scrolled using `scroll()` method.
 	 */
 	virtual bool setScrollMargins(uint16_t top, uint16_t bottom) = 0;
 
 	/**
-	 * @brief Scroll region of display up or down using hardware scrolling
-	 * @param y Number of lines to scroll. Positive values scroll content down, negative values scroll up.
+	 * @brief Set hardware scrolling offset
+	 * @param line Offset of first line to display within scrolling region
+	 *
+	 * Caller must manage rendering when using hardware scrolling to avoid wrapping
+	 * into unintended regions. See :cpp:class:`Graphics::Console`.
 	 */
-	virtual bool scroll(int16_t y) = 0;
+	virtual void setScrollOffset(uint16_t line) = 0;
 
 protected:
 	Orientation orientation{};

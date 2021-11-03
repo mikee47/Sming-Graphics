@@ -101,13 +101,11 @@ public:
 		return resolution;
 	}
 
-	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
-	void setScrollOffset(uint16_t line);
-	bool scroll(int16_t y) override;
-
 	/* Device */
 
 	bool setOrientation(Orientation orientation) override;
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
+	void setScrollOffset(uint16_t line) override;
 
 	/* RenderTarget */
 
@@ -122,11 +120,6 @@ public:
 	}
 
 	Surface* createSurface(size_t bufferSize = 0) override;
-
-	uint16_t getScrollOffset() const
-	{
-		return scrollOffset;
-	}
 
 protected:
 	friend class MipiSurface;
@@ -190,9 +183,6 @@ private:
 
 	uint8_t dcPin{PIN_NONE};
 	bool dcState{};
-	uint16_t topMargin{0};
-	uint16_t bottomMargin{0};
-	uint16_t scrollOffset{0};
 };
 
 class MipiSurface : public Graphics::Surface
