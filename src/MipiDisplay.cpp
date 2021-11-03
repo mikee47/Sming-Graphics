@@ -176,10 +176,11 @@ bool MipiDisplay::setScrollMargins(uint16_t top, uint16_t bottom)
 	};
 	SpiDisplayList list(commands, addrWindow, 16);
 	list.writeCommand(Mipi::DCS_SET_SCROLL_AREA, data, sizeof(data));
+	list.writeCommand(Mipi::DCS_SET_SCROLL_START, uint32_t{0}, 2);
 	execute(list);
 	topMargin = top;
 	bottomMargin = bottom;
-	setScrollOffset(0);
+	scrollOffset = 0;
 	return true;
 }
 
