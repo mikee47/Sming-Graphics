@@ -440,6 +440,16 @@ public:
 		return list.setPixel(color, 3, pt);
 	}
 
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override
+	{
+		return list.writeCommand(Command::SetScrollMargins{top, bottom});
+	}
+
+	bool setScrollOffset(uint16_t line) override
+	{
+		return list.writeCommand(Command::SetScrollOffset{line});
+	}
+
 	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param)
 	{
 		if(buffer.format == PixelFormat::None) {
@@ -573,6 +583,8 @@ bool Virtual::sizeChanged()
 {
 	CommandList list(addrWindow, 32);
 	list.writeCommand(Command::SetSize{getSize()});
+	list.writeCommand(Command::SetScrollMargins{0, 0});
+	list.writeCommand(Command::SetScrollOffset{0});
 	list.prepare();
 	thread->transfer(list);
 	return true;
@@ -582,31 +594,6 @@ bool Virtual::setOrientation(Orientation orientation)
 {
 	this->orientation = orientation;
 	return sizeChanged();
-}
-
-bool Virtual::setScrollMargins(uint16_t top, uint16_t bottom)
-{
-	if(top + bottom >= nativeSize.h) {
-		debug_e("[VS] setScrollMargins(%u, %u) invalid parameters", top, bottom);
-		return false;
-	}
-
-	debug_d("[VS] setScrollMargins(%u, %u)", top, bottom);
-
-	CommandList list(addrWindow, 32);
-	list.writeCommand(Command::SetScrollMargins{top, bottom});
-	list.prepare();
-	thread->transfer(list);
-
-	return true;
-}
-
-void Virtual::setScrollOffset(uint16_t line)
-{
-	CommandList list(addrWindow, 32);
-	list.writeCommand(Command::SetScrollOffset{line});
-	list.prepare();
-	thread->transfer(list);
 }
 
 Surface* Virtual::createSurface(size_t bufferSize)

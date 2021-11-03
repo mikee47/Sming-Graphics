@@ -104,8 +104,6 @@ public:
 	/* Device */
 
 	bool setOrientation(Orientation orientation) override;
-	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
-	void setScrollOffset(uint16_t line) override;
 
 	/* RenderTarget */
 
@@ -244,6 +242,9 @@ public:
 	{
 		return displayList.setPixel(color, 2, pt);
 	}
+
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
+	bool setScrollOffset(uint16_t line) override;
 
 	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param) override;
 	bool render(const Object& object, const Rect& location, std::unique_ptr<Renderer>& renderer) override;

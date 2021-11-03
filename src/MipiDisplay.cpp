@@ -162,32 +162,6 @@ bool IRAM_ATTR MipiDisplay::transferBeginEnd(HSPI::Request& request)
 	return true;
 }
 
-bool MipiDisplay::setScrollMargins(uint16_t top, uint16_t bottom)
-{
-	if(top + bottom >= nativeSize.h) {
-		return false;
-	}
-	bottom += resolution.h - nativeSize.h;
-	auto scrollHeight = resolution.h - (top + bottom);
-	uint16_t data[]{
-		swapBytes(top),
-		swapBytes(scrollHeight),
-		swapBytes(bottom),
-	};
-	SpiDisplayList list(commands, addrWindow, 16);
-	list.writeCommand(Mipi::DCS_SET_SCROLL_AREA, data, sizeof(data));
-	list.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(top), 2);
-	execute(list);
-	return true;
-}
-
-void MipiDisplay::setScrollOffset(uint16_t line)
-{
-	SpiDisplayList list(commands, addrWindow, 16);
-	list.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(line), 2);
-	execute(list);
-}
-
 Rect MipiDisplay::adjustWindow(const Rect& rect)
 {
 	Rect r{rect};
@@ -213,6 +187,27 @@ bool MipiSurface::setAddrWindow(const Rect& rect)
 	return displayList.setAddrWindow(display.adjustWindow(rect));
 }
 
+bool MipiSurface::setScrollMargins(uint16_t top, uint16_t bottom)
+{
+	if(top + bottom >= display.nativeSize.h) {
+		debug_e("[MIPI] setScrollMargins(%u, %u) invalid parameters", top, bottom);
+		return false;
+	}
+	bottom += display.resolution.h - display.nativeSize.h;
+	auto scrollHeight = display.resolution.h - (top + bottom);
+	uint16_t data[]{
+		swapBytes(top),
+		swapBytes(scrollHeight),
+		swapBytes(bottom),
+	};
+	return displayList.writeCommand(Mipi::DCS_SET_SCROLL_AREA, data, sizeof(data));
+}
+
+bool MipiSurface::setScrollOffset(uint16_t line)
+{
+	return displayList.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(line), 2);
+}
+
 /*
  * When reading GRAM:
  *
@@ -230,19 +225,19 @@ int MipiSurface::readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCall
 
 	auto pixelCount = (buffer.size() - buffer.offset) / READ_PIXEL_SIZE;
 	if(pixelCount == 0) {
-		debug_w("[readDataBuffer] pixelCount == 0");
+		debug_w("[MIPI] readDataBuffer() pixelCount == 0");
 		return 0;
 	}
 	auto& addrWindow = display.getAddressWindow();
 	if(addrWindow.bounds.h == 0) {
-		debug_w("[readDataBuffer] addrWindow.bounds.h == 0");
+		debug_w("[MIPI] readDataBuffer() addrWindow.bounds.h == 0");
 		return 0;
 	}
 
 	constexpr size_t hdrsize = DisplayList::codelen_readStart + DisplayList::codelen_read +
 							   DisplayList::codelen_callback + sizeof(ReadPixelInfo);
 	if(!displayList.require(hdrsize)) {
-		debug_w("[readDataBuffer] no space");
+		debug_w("[MIPI] nreadDataBuffer() no space");
 		return -1;
 	}
 	if(!displayList.canLockBuffer()) {

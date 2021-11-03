@@ -75,8 +75,6 @@ public:
 		return nativeSize;
 	}
 	bool setOrientation(Orientation orientation) override;
-	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
-	void setScrollOffset(uint16_t line) override;
 
 	/* RenderTarget */
 

@@ -60,22 +60,6 @@ public:
 		return orientation;
 	}
 
-	/**
-	 * @brief Set margins for hardware scrolling
-	 * @param top Number of fixed pixels at top of screen
-	 * @param bottom Number of fixed pixels at bottom of screen
-	 */
-	virtual bool setScrollMargins(uint16_t top, uint16_t bottom) = 0;
-
-	/**
-	 * @brief Set hardware scrolling offset
-	 * @param line Offset of first line to display within scrolling region
-	 *
-	 * Caller must manage rendering when using hardware scrolling to avoid wrapping
-	 * into unintended regions. See :cpp:class:`Graphics::Console`.
-	 */
-	virtual void setScrollOffset(uint16_t line) = 0;
-
 protected:
 	Orientation orientation{};
 };

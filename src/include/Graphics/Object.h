@@ -52,7 +52,9 @@ namespace Graphics
 	XX(Reference)                                                                                                      \
 	XX(Surface)                                                                                                        \
 	XX(Copy)                                                                                                           \
-	XX(Scroll)
+	XX(Scroll)                                                                                                         \
+	XX(ScrollMargins)                                                                                                  \
+	XX(ScrollOffset)
 
 class MetaWriter;
 class Brush;
@@ -1168,6 +1170,58 @@ public:
 	bool wrapx;
 	bool wrapy;
 	Color fill;
+};
+
+/**
+ * @brief
+ */
+class ScrollMarginsObject : public ObjectTemplate<Object::Kind::ScrollMargins>
+{
+public:
+	ScrollMarginsObject(uint16_t top, uint16_t bottom) : top(top), bottom(bottom)
+	{
+	}
+
+	Renderer* createRenderer(const Location& location) const override
+	{
+		return nullptr;
+	}
+
+	/* Meta */
+
+	void write(MetaWriter& meta) const override
+	{
+		meta.write("top", top);
+		meta.write("bottom", bottom);
+	}
+
+	uint16_t top;
+	uint16_t bottom;
+};
+
+/**
+ * @brief
+ */
+class ScrollOffsetObject : public ObjectTemplate<Object::Kind::ScrollOffset>
+{
+public:
+	ScrollOffsetObject(uint16_t offset) : offset(offset)
+	{
+	}
+
+	Renderer* createRenderer(const Location& location) const override
+	{
+		return nullptr;
+	}
+
+	/* Meta */
+
+	void write(MetaWriter& meta) const override
+	{
+		meta.write("offset", offset);
+	}
+
+	uint16_t offset;
 };
 
 /**

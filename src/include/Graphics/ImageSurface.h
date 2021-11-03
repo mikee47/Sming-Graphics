@@ -75,6 +75,20 @@ public:
 	}
 	bool setPixel(PackedColor color, Point pt) override;
 	bool writePixels(const void* data, uint16_t length) override;
+
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override
+	{
+		(void)top;
+		(void)bottom;
+		return false;
+	}
+
+	bool setScrollOffset(uint16_t line) override
+	{
+		(void)line;
+		return false;
+	}
+
 	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param) override;
 	void reset() override
 	{
