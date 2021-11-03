@@ -64,7 +64,7 @@ public:
 	{
 		if(delay != 0) {
 			debug_d("[SCH] delay(%u)", delay);
-			timer.setInterval(delay);
+			timer.setIntervalMs(delay);
 			timer.startOnce();
 			delay = 0;
 			return;
@@ -78,8 +78,8 @@ public:
 					if(delay != 0) {
 						run();
 					}
+					current = src.readOffset();
 				}
-				current = src.readOffset();
 				return;
 			}
 			current = src.readOffset();

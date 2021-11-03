@@ -99,6 +99,7 @@ DEFINE_RB_ARRAY(													   //
 	DEFINE_RB_COMMAND(DCS_EXIT_SLEEP_MODE, 0) //
 	DEFINE_RB_DELAY(120)					  //
 	DEFINE_RB_COMMAND(DCS_SET_DISPLAY_ON, 0)  //
+	DEFINE_RB_DELAY(5)					      //
 )
 
 } // namespace

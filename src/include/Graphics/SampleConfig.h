@@ -51,7 +51,7 @@ constexpr uint8_t TOUCH_CS_PIN{15};
 #endif
 #endif
 
-bool initDisplay()
+bool initDisplay(Graphics::SpiDisplay::ExecuteDone callback)
 {
 #ifdef ENABLE_VIRTUAL_SCREEN
 	if(!tft.begin()) {
@@ -73,7 +73,7 @@ bool initDisplay()
 	 * In practice, writes work at 40MHz, reads at 27MHz.
 	 * Attempting to read at 40MHz results in colour corruption.
 	 */
-	return tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 27000000);
+	return tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 27000000, callback);
 #endif
 }
 
