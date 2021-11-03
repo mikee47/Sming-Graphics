@@ -176,44 +176,21 @@ bool MipiDisplay::setScrollMargins(uint16_t top, uint16_t bottom)
 	};
 	SpiDisplayList list(commands, addrWindow, 16);
 	list.writeCommand(Mipi::DCS_SET_SCROLL_AREA, data, sizeof(data));
-	list.writeCommand(Mipi::DCS_SET_SCROLL_START, uint32_t{0}, 2);
+	list.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(top), 2);
 	execute(list);
-	topMargin = top;
-	bottomMargin = bottom;
-	scrollOffset = 0;
-	return true;
-}
-
-bool MipiDisplay::scroll(int16_t y)
-{
-	y = scrollOffset - y;
-	auto scrollHeight = resolution.h - (topMargin + bottomMargin);
-	while(y < 0) {
-		y += scrollHeight;
-	}
-	setScrollOffset(y);
 	return true;
 }
 
 void MipiDisplay::setScrollOffset(uint16_t line)
 {
-	auto scrollHeight = resolution.h - (topMargin + bottomMargin);
-	line %= scrollHeight;
 	SpiDisplayList list(commands, addrWindow, 16);
-	list.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(topMargin + line), 2);
+	list.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(line), 2);
 	execute(list);
-	scrollOffset = line;
 }
 
 Rect MipiDisplay::adjustWindow(const Rect& rect)
 {
 	Rect r{rect};
-	if(r.y >= topMargin && r.y + bottomMargin < nativeSize.h) {
-		r.y -= scrollOffset;
-		if(r.y < topMargin) {
-			r.y += resolution.h;
-		}
-	}
 	r += addrOffset;
 	while(r.y < 0) {
 		r.y += resolution.h;
