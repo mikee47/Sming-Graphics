@@ -204,6 +204,23 @@ void MipiDisplay::setScrollOffset(uint16_t line)
 	scrollOffset = line;
 }
 
+Rect MipiDisplay::adjustWindow(const Rect& rect)
+{
+	Rect r{rect};
+	if(r.y >= topMargin && r.y + bottomMargin < nativeSize.h) {
+		r.y -= scrollOffset;
+		if(r.y < topMargin) {
+			r.y += resolution.h;
+		}
+	}
+	r += addrOffset;
+	while(r.y < 0) {
+		r.y += resolution.h;
+	}
+	r.y %= resolution.h;
+	return r;
+}
+
 /*
  * MipiSurface
  */
@@ -211,6 +228,11 @@ void MipiDisplay::setScrollOffset(uint16_t line)
 MipiSurface::MipiSurface(MipiDisplay& display, size_t bufferSize)
 	: display(display), displayList(MipiDisplay::commands, display.getAddressWindow(), bufferSize)
 {
+}
+
+bool MipiSurface::setAddrWindow(const Rect& rect)
+{
+	return displayList.setAddrWindow(display.adjustWindow(rect));
 }
 
 /*
