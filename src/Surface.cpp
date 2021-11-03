@@ -93,6 +93,16 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 		return fillSmallRect(obj.pen, location, r);
 	}
 
+	case Object::Kind::ScrollMargins: {
+		auto obj = reinterpret_cast<const ScrollMarginsObject&>(object);
+		return setScrollMargins(obj.top, obj.bottom);
+	}
+
+	case Object::Kind::ScrollOffset: {
+		auto obj = reinterpret_cast<const ScrollOffsetObject&>(object);
+		return setScrollOffset(obj.offset);
+	}
+
 	default:; // Continue to use renderer
 	}
 

@@ -102,6 +102,19 @@ public:
 		return true;
 	}
 
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override
+	{
+		(void)top;
+		(void)bottom;
+		return true;
+	}
+
+	bool setScrollOffset(uint16_t line) override
+	{
+		(void)line;
+		return true;
+	}
+
 	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param)
 	{
 		auto& addrWindow = device.addrWindow;
