@@ -20,6 +20,8 @@ class Command(IntEnum):
     copyPixels = 1,
     scroll = 2,
     fill = 3,
+    setScrollMargins = 4,
+    setScrollOffset = 5,
 
 class DisplayList():
     def __init__(self, data):
