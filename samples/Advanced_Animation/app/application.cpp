@@ -206,9 +206,6 @@ void renderFrame()
 
 void setup()
 {
-	Serial.println("Display start");
-	initDisplay();
-
 	tft.setOrientation(Orientation::deg270);
 	tftSize = tft.getSize();
 	pixelFormat = tft.getPixelFormat();
@@ -248,5 +245,10 @@ void init()
 	WifiAccessPoint.enable(false);
 #endif
 
-	System.onReady(setup);
+	Serial.println("Display start");
+	initDisplay();
+
+	auto timer = new AutoDeleteTimer;
+	timer->initializeMs<500>(setup);
+	timer->startOnce();
 }

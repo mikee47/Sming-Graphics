@@ -32,6 +32,8 @@ namespace Graphics
 class SpiDisplay : protected HSPI::Device, public AbstractDisplay
 {
 public:
+	using ExecuteDone = Delegate<void()>;
+
 	SpiDisplay(HSPI::Controller& spi) : HSPI::Device(spi)
 	{
 	}
@@ -48,7 +50,7 @@ public:
 	}
 
 	void execute(const SpiDisplayList::Commands& commands, const FSTR::ObjectBase& data,
-				 Delegate<void> callback = nullptr);
+				 ExecuteDone callback = nullptr);
 
 	void reset(bool state)
 	{
