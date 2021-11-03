@@ -121,12 +121,6 @@ public:
 		return PixelFormat::RGB565;
 	}
 
-	// Used by Surface to adjust for screen orientation
-	Point getAddrOffset() const
-	{
-		return addrOffset;
-	}
-
 	Surface* createSurface(size_t bufferSize = 0) override;
 
 	uint16_t getScrollOffset() const
@@ -135,6 +129,8 @@ public:
 	}
 
 protected:
+	friend class MipiSurface;
+
 	/**
 	 * @brief Perform display-specific initialisation
 	 * @retval bool true on success, false on failure
@@ -181,6 +177,8 @@ protected:
 			setOrientation(orientation);
 		}
 	}
+
+	Rect adjustWindow(const Rect& rect);
 
 	Size resolution{};  ///< Controller resolution
 	Size nativeSize{};  ///< Size of attached screen
@@ -230,17 +228,7 @@ public:
 		return display.getPixelFormat();
 	}
 
-	bool setAddrWindow(const Rect& rect) override
-	{
-		Rect r = rect;
-		r.y -= display.getScrollOffset();
-		r += display.getAddrOffset();
-		while(r.y < 0) {
-			r.y += display.getResolution().h;
-		}
-		r.y %= display.getResolution().h;
-		return displayList.setAddrWindow(r);
-	}
+	bool setAddrWindow(const Rect& rect) override;
 
 	uint8_t* getBuffer(uint16_t minBytes, uint16_t& available) override
 	{
