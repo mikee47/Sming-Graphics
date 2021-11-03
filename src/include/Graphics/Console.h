@@ -166,6 +166,7 @@ private:
 	Point cursor{};
 	uint16_t topMargin{0};
 	uint16_t bottomMargin{0};
+	uint16_t scrollOffset{0};
 	bool paused{false};
 };
 
