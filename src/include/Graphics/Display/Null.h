@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <Graphics/Device.h>
+#include <Graphics/AbstractDisplay.h>
 #include <Graphics/AddressWindow.h>
 
 namespace Graphics
@@ -33,7 +33,7 @@ namespace Display
  * 
  * Used for testing performance and algorithms.
  */
-class NullDevice : public Device, public RenderTarget
+class NullDevice : public AbstractDisplay
 {
 public:
 	NullDevice(uint16_t width = 240, uint16_t height = 320, PixelFormat format = PixelFormat::RGB565)
@@ -66,6 +66,19 @@ public:
 	bool setOrientation(Orientation orientation) override
 	{
 		this->orientation = orientation;
+		return true;
+	}
+
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override
+	{
+		(void)top;
+		(void)bottom;
+		return true;
+	}
+
+	bool scroll(int16_t y) override
+	{
+		(void)y;
 		return true;
 	}
 

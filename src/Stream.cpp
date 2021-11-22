@@ -44,7 +44,7 @@ size_t ReadStream::read(uint32_t offset, void* buffer, size_t count)
 		start = stream.seekFrom(offset, SeekOrigin::Start);
 		length = stream.readBytes(data, size);
 	}
-	size_t len = std::min(count, start + length - offset);
+	size_t len = std::min(count, size_t(start + length - offset));
 	memcpy(buffer, &data[offset - start], len);
 	return len;
 }

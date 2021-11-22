@@ -72,7 +72,7 @@ public:
 			return;
 		}
 
-		size = std::min(size, sourceSize - offset);
+		size = std::min(size, size_t(sourceSize - offset));
 
 		source.seekFrom(offset, SeekOrigin::Start);
 	}

@@ -102,4 +102,4 @@
 	GDRAW_DEFINE_CHARS(0, len, __VA_ARGS__) GDRAW_SELECT_TEXT(0) GDRAW_CMD(Command::drawText)
 #define GDRAW_DRAW_TEXT(id) GDRAW_SELECT_TEXT(id) GDRAW_CMD(Command::drawText)
 #define GDRAW_FONT_STYLE(font_id, style_)                                                                              \
-	GDRAW_REG_UINT32(OpCode::store, style, GDRAW_MAKE_UINT32(unsigned(style_), font_id))
+	GDRAW_REG_UINT32(OpCode::store, style, GDRAW_MAKE_UINT32(uint32_t(style_), font_id))

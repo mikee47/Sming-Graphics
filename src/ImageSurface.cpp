@@ -152,7 +152,7 @@ void MemoryImageSurface::write(uint32_t offset, const void* data, size_t length)
 	if(offset > imageBytes) {
 		return;
 	}
-	length = std::min(length, imageBytes - offset);
+	length = std::min(length, size_t(imageBytes - offset));
 
 	if(blend == nullptr) {
 		memcpy(&imageData[offset], data, length);

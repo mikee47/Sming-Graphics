@@ -999,6 +999,7 @@ void surfaceTests2()
 
 	// A surface copy is linear so is an efficient way to store to file
 	bool exist = fileExist(TMPIMAGE_FILE);
+	(void)exist;
 	// auto fs = new FileStream(TMPIMAGE_FILE, File::Create | File::ReadWrite);
 	// auto image = new FileImageObject(fs, tftPixelFormat, {50, 50});
 	auto image = new MemoryImageObject(tftPixelFormat, {50, 50});
