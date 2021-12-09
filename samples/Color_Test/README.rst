@@ -1,7 +1,7 @@
 Color Test
 ==========
 
-Simple test that should draw from left to right rectanges with red, green, blue and white color. 
+Simple test that should draw from left to right rectangles with red, green, blue and white color. 
 
 Useful for display driver diagnostics.
 The TFT_eSPI project describes quite nicely the different switches that can affect the colors in MIPI displays::

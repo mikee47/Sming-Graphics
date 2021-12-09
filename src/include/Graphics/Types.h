@@ -128,7 +128,7 @@ constexpr inline Size rotate(Size size, Orientation orientation)
 }
 
 /**
- * @brief An (x, y) display co-ordinate
+ * @brief An (x, y) display coordinate
  */
 template <typename T> struct TPoint {
 	T x{0};

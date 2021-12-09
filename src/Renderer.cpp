@@ -877,7 +877,7 @@ void EllipseRenderer::final()
 
 /*
  *  To fill an axis-aligned ellipse, we use a scan-line algorithm.
- *  We walk downwards from the top Y co-ordinate, calculating
+ *  We walk downwards from the top Y coordinate, calculating
  *  the width of the ellipse using incremental integer arithmetic.
  *  To save calculation, we observe that the top and bottom halves
  *  of the ellipsoid are mirror-images, therefore we can draw the

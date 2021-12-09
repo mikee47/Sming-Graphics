@@ -274,7 +274,7 @@ More complex shapes (images, text, diagonal lines, rectangles, triangles, circle
 specific :cpp:class:`Graphics::Renderer` instance to do the work.
 
 Transparency (alpha-blending) involves a read-modify-write cycle.
-The ILI9341 driver can also handle small transparent rectangles (including indivudual pixels)
+The ILI9341 driver can also handle small transparent rectangles (including individual pixels)
 to assist with line drawing.
 Larger areas are handled by the appropriate renderer.
 
@@ -427,12 +427,11 @@ Brushes, Gradient fills, etc.
     This is the basis for Brush objects which would be used to render circles, rounded rectangles and glyphs.
     That would allow for all sorts of useful effects, including clipping images to other shapes.
 
-    Tiling an image can be done by filling a rectangle with an ImageBrush, which deals with co-ordinate
+    Tiling an image can be done by filling a rectangle with an ImageBrush, which deals with coordinate
     wrapping and returns the corresponding region from a source ImageObject.
 
 Cursors, sprites and priority drawing
-    Response to user input should be prioritised. For example, if a cursor or mouse pointer is present
-    on the screen then waiting for a complex screen update is going to affect useability.
+    Response to user input should be prioritised, such as movement of a cursor or mouse pointer.
 
     Cursors are drawn over everything else. Although some hardware may support cursors directly,
     for now we'll assume not.
