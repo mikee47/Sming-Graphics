@@ -74,4 +74,4 @@ Drawings are fitted to a specific screen size.
 
 Scalable graphics could be implemented by creating a high-resolution drawing
 and then scaling it down.
-This could be done by overriding the Drawing::Reader class to scale co-ordinates appropriately.
+This could be done by overriding the Drawing::Reader class to scale coordinates appropriately.

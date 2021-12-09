@@ -122,7 +122,7 @@ __forceinline uint32_t makeWord(uint16_t w1, uint16_t w2)
  *		- COMMAND_DATA_REPEAT (1 byte)
  *		- data length (1 or 2 bytes)
  *		- repeat count (1 or 2 bytes)
- *		- data (varible length)
+ *		- data (variable length)
  * 
  *
  * - **Read command**.
