@@ -431,8 +431,7 @@ Brushes, Gradient fills, etc.
     wrapping and returns the corresponding region from a source ImageObject.
 
 Cursors, sprites and priority drawing
-    Response to user input should be prioritised. For example, if a cursor or mouse pointer is present
-    on the screen then waiting for a complex screen update is going to affect usability.
+    Response to user input should be prioritised, such as movement of a cursor or mouse pointer.
 
     Cursors are drawn over everything else. Although some hardware may support cursors directly,
     for now we'll assume not.
