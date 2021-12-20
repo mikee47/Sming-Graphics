@@ -66,14 +66,14 @@ Some definitions
     Each renderer performs a single, specific-task. The renderers are created by the Surface which allows
     display devices to provide customised implementations.
 
-:cpp:class:`Graphics::PixelFormat`
+:cpp:enum:`Graphics::PixelFormat`
     Describes the format of pixel data required by a Surface.
 
     For example, the ILI9341 display uses RGB565 colours (2 bytes) with the MSB first.
     It can use other pixel formats (RGB 6:6:6), but this is how the driver sets the display up during initialisation.
 
     Applications do not need to be aware of this, however, and simply express colours in a 32-bit
-    :cpp:class:`Graphics::Color` type. This includes an alpha channel, where 255 is fully opaque
+    :cpp:enum:`Graphics::Color` type. This includes an alpha channel, where 255 is fully opaque
     and 0 is fully transparent.
     Conversion is handled in a single step (via :cpp:func:`Graphics::pack`) so further manipulation
     (even byte-swapping) is not required by the display driver.
@@ -114,7 +114,8 @@ Usage
     2.  Place any custom images, fonts, etc. into this directory
     3.  Create a resource script file, e.g. ``resource/graphics.rc``.
         See below for details on editing this file.
-    3.  Add an entry to the project ``component.mk`` file::
+    4.  Add an entry to the project ``component.mk`` file::
+
             RESOURCE_SCRIPT := resource/graphics.rc
 
 The general structure of a resource script is:
@@ -199,6 +200,7 @@ The following font classes are currently supported:
                 OpenType
             .pcf, .pcf.gz
                 X11 bitmap font
+
         The ``freetype`` library supports other types so if required these are easily added.
 
         These fonts have some additional parameters:
