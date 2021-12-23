@@ -118,7 +118,7 @@ public:
 	}
 
 	/**
-	 * @name Render an object
+	 * @brief Start rendering an object
 	 * @param object What to render
 	 * @param location Placement information
 	 * @param renderer If operation cannot be completed in hardware, create a renderer instance to manage the process
@@ -132,7 +132,7 @@ public:
 	virtual bool render(const Object& object, const Rect& location, std::unique_ptr<Renderer>& renderer);
 
 	/**
-	 * @brief Render this object to a surface
+	 * @brief Render an object in one cycle
 	 * @param surface Where to render the object to
 	 * @param location
 	 * @retval bool true on success
