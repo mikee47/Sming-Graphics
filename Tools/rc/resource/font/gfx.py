@@ -1,7 +1,24 @@
+#!/usr/bin/env python3
 #
-# Arduino GFX font parser
+# gfx.py - Arduino GFX font parser
 #
-# These are distributed as header files
+# Copyright 2021 mikee47 <mike@sillyhouse.net>
+#
+# This file is part of the Sming-Graphics Library
+#
+# This library is free software: you can redistribute it and/or modify it under the terms of the
+# GNU General Public License as published by the Free Software Foundation, version 3 or later.
+#
+# This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this library.
+# If not, see <https://www.gnu.org/licenses/>.
+#
+# @author: July 2021 - mikee47 <mike@sillyhouse.net>
+#
+# GFX fonts are distributed as header files
 #
 
 import re, resource.font
