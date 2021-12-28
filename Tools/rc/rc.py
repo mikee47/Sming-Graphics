@@ -24,19 +24,6 @@ from resource import *
 import resource.font
 import resource.image
 
-def openOutput(path):
-    if path == '-':
-        try:
-            stdout_binary = sys.stdout.buffer  # Python 3
-        except AttributeError:
-            stdout_binary = sys.stdout
-        return stdout_binary
-    status("Writing to '%s'" % path)
-    output_dir = os.path.abspath(os.path.dirname(path))
-    os.makedirs(output_dir, exist_ok=True)
-    return open(path, 'wb')
-
-
 def main():
     parser = argparse.ArgumentParser(description='Sming Resource Compiler')
 
@@ -63,8 +50,6 @@ def main():
 
 
 def openOutput(path, mode):
-    if path == '-':
-        return sys.stdout
     status("Writing to '%s'" % path)
     output_dir = os.path.abspath(os.path.dirname(path))
     os.makedirs(output_dir, exist_ok=True)

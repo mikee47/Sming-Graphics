@@ -30,7 +30,7 @@ COMPONENT_CXXFLAGS += -DENABLE_GRAPHICS_RAM_TRACKING=1
 endif
 
 # Resource compiler
-RC_TOOL_CMDLINE := $(PYTHON) $(COMPONENT_PATH)/Tools/rc/rc.py
+RC_TOOL_CMDLINE := $(PYTHON) -X utf8 $(COMPONENT_PATH)/Tools/rc/rc.py
 
 
 ##@Building
