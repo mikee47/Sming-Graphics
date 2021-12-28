@@ -62,12 +62,6 @@
                 "normal": "LineDraw6x10.pfi"
             },
             // FreeType
-            "DroidSans": {
-                "mono": true,
-                "size": 24,
-                "codepoints": "a-z,A-Z,0-9,0x4000-0x4050",
-                "normal": "DroidSansFallbackFull.ttf"
-            },
             "ISO8559": {
                 "mono": true,
                 "normal": "6x12-ISO8859-1.pcf.gz"
