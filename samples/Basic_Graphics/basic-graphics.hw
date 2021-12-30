@@ -1,16 +1,16 @@
 {
-    "name": "New Profile",
-    "base_config": "spiffs",
-    "options": [],
+    "name": "Basic Graphics",
+    "base_config": "spiffs-2m",
     "partitions": {
+        "spiffs0": {
+            "size": "352K"
+        },
         "resource": {
             "device": "spiFlash",
-            "address": "0x00280000",
-            "size": "1M",
+            "address": "0x00158000",
+            "size": "648K",
             "type": "user",
             "subtype": 1,
-            "readonly": false,
-            "encrypted": false,
             "filename": "$(OUT_BASE)/build/resource.bin"
         }
     }

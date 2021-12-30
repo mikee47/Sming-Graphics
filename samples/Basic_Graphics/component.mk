@@ -3,7 +3,7 @@ COMPONENT_DEPENDS := \
 	RapidXML \
 	malloc_count
 
-HWCONFIG := tft-ili9341
+HWCONFIG := basic-graphics
 SPIFF_FILES :=
 DISABLE_NETWORK := 1
 
