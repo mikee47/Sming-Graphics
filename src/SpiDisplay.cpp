@@ -34,7 +34,7 @@ bool SpiDisplay::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t resetPin
 	}
 	setBitOrder(MSBFIRST);
 	setClockMode(HSPI::ClockMode::mode0);
-	setIoMode(HSPI::IoMode::SPI);
+	setIoMode(HSPI::IoMode::SPIHD);
 
 	this->resetPin = resetPin;
 	if(resetPin != PIN_NONE) {

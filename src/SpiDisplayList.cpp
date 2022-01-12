@@ -82,7 +82,7 @@ bool IRAM_ATTR SpiDisplayList::fillRequest()
 		datalen = readVar();
 	}
 	request.dummyLen = 0;
-	request.maxTransactionSize = HSPI::Controller::hardwareBufferSize;
+	request.sizeAlign = 3; // R-G-B
 	request.out.clear();
 	request.in.clear();
 
@@ -157,7 +157,6 @@ bool IRAM_ATTR SpiDisplayList::fillRequest()
 		cmd = (hdr.code == Code::readStart) ? commands.readStart : commands.read;
 		read(&addr, sizeof(addr));
 		request.dummyLen = 8;
-		request.maxTransactionSize = 63;
 		request.in.set(addr, datalen);
 		code = Code::none;
 		dbgint("read %u", datalen);

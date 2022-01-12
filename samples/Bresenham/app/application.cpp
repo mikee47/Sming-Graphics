@@ -50,7 +50,7 @@ OneShotFastUs sceneRenderTime;
 
 void nextScene()
 {
-#ifdef ENABLE_HSPI_STATS
+#ifdef HSPI_ENABLE_STATS
 	debug_e("[SPI] requests %u, trans %u, wait cycles %u", spi.stats.requestCount, spi.stats.transCount,
 			spi.stats.waitCycles);
 #endif
@@ -165,6 +165,8 @@ void init()
 
 	Serial.println("Display start");
 	initDisplay();
+
+	System.setCpuFrequency(CpuCycleClockFast::cpuFrequency());
 
 	tftPixelFormat = tft.getPixelFormat();
 

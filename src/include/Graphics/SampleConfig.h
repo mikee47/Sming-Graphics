@@ -21,25 +21,20 @@ Graphics::Display::Virtual tft;
 HSPI::Controller spi;
 Graphics::Display::ILI9341 tft(spi);
 
-#ifdef ARCH_ESP32
+#if defined(ARCH_ESP32)
 constexpr HSPI::SpiBus spiBus{HSPI::SpiBus::DEFAULT};
 constexpr HSPI::PinSet TFT_PINSET{HSPI::PinSet::normal};
-#ifdef CONFIG_IDF_TARGET_ESP32
 constexpr uint8_t TFT_CS{2};
 constexpr uint8_t TFT_RESET_PIN{4};
 constexpr uint8_t TFT_DC_PIN{5};
 constexpr uint8_t TOUCH_CS_PIN{15};
-#elif defined CONFIG_IDF_TARGET_ESP32S2
-constexpr uint8_t TFT_CS{2};
+#elif defined(ARCH_RP2040)
+constexpr HSPI::SpiBus spiBus{HSPI::SpiBus::DEFAULT};
+constexpr HSPI::PinSet TFT_PINSET{HSPI::PinSet::normal};
+constexpr uint8_t TFT_CS{20};
 constexpr uint8_t TFT_RESET_PIN{4};
 constexpr uint8_t TFT_DC_PIN{5};
 constexpr uint8_t TOUCH_CS_PIN{15};
-#elif defined CONFIG_IDF_TARGET_ESP32C3
-constexpr uint8_t TFT_CS{2};
-constexpr uint8_t TFT_RESET_PIN{4};
-constexpr uint8_t TFT_DC_PIN{5};
-constexpr uint8_t TOUCH_CS_PIN{15};
-#endif
 #else
 // Pin setup
 constexpr HSPI::PinSet TFT_PINSET{HSPI::PinSet::overlap};
