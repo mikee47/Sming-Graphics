@@ -55,7 +55,7 @@ class Resource(object):
             out.write("// %s\n" % self.comment)
 
 resourcePaths = [
-    '${SMING_HOME}/Libraries/Graphics/resource',
+    '${GRAPHICS_LIB_ROOT}/resource',
 ]
 
 # Dictionary of registered resource type parsers

@@ -15,6 +15,8 @@ COMPONENT_INCDIRS := \
 
 COMPONENT_DOXYGEN_INPUT := src/include
 
+export GRAPHICS_LIB_ROOT := $(COMPONENT_PATH)
+
 #
 COMPONENT_RELINK_VARS += ENABLE_GRAPHICS_DEBUG
 ENABLE_GRAPHICS_DEBUG ?= 0
@@ -30,7 +32,7 @@ COMPONENT_CXXFLAGS += -DENABLE_GRAPHICS_RAM_TRACKING=1
 endif
 
 # Resource compiler
-RC_TOOL_CMDLINE := $(PYTHON) -X utf8 $(COMPONENT_PATH)/Tools/rc/rc.py
+RC_TOOL_CMDLINE := $(PYTHON) -X utf8 $(GRAPHICS_LIB_ROOT)/Tools/rc/rc.py
 
 
 ##@Building
@@ -66,7 +68,7 @@ APP_CFLAGS += -DENABLE_VIRTUAL_SCREEN=1
 HOST_PARAMETERS ?= vsaddr=$(VSADDR) vsport=$(VSPORT)
 endif
 
-VIRTUAL_SCREEN_PY := $(COMPONENT_PATH)/Tools/vs/screen.py
+VIRTUAL_SCREEN_PY := $(GRAPHICS_LIB_ROOT)/Tools/vs/screen.py
 VIRTUAL_SCREEN_CMDLINE := $(PYTHON) $(VIRTUAL_SCREEN_PY) --localport $(VSPORT)
 
 # When using WSL without an X server available, use native Windows python
