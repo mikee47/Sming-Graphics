@@ -523,7 +523,7 @@ void showFonts()
 		auto brush = new GradientBrush(BrushStyle::FullScreen, ColorRange::random(), ColorRange::random());
 		scene->addAsset(brush);
 		text.setColor(brush);
-		debug_i("Font: %s", font->name().c_str());
+		debug_i("showFont: %s", font->name().c_str());
 		text.println(font->name());
 	};
 
@@ -562,26 +562,26 @@ void showFonts()
 		delete scene;
 		showFonts();
 	};
-	renderQueue.render(scene, callback, 1000);
+	renderQueue.render(scene, callback, SHOWFONT_INTERVAL);
 }
 
-using GetFont = Font* (*)();
-GetFont getFont;
-
-void showFont()
+void showFontStyles()
 {
+	static uint8_t fontIndex;
 	static uint8_t state;
-	static Font* font;
-	if(state == 0) {
-		delete font;
-		font = getFont();
-		if(font == nullptr) {
-			return nextScene();
-		}
+	if(fontIndex >= Resource::fontTable.length()) {
+		fontIndex = 0;
+		return nextScene();
+	}
+
+	if(fontIndex == 0 && state == 0) {
+		tft.setOrientation(landscape);
 	}
 
 	auto scene = new SceneObject(tft, F("Show Font"));
 	scene->clear(Color::BLACK);
+	auto font = new ResourceFont(Resource::fontTable[fontIndex]);
+	scene->addAsset(font);
 
 	TextBuilder text(*scene);
 
@@ -639,8 +639,11 @@ void showFont()
 		printSet(FontStyle::VLine);
 		title += F(" VLine");
 		state = 0;
+		++fontIndex;
 		break;
 	}
+
+	debug_i("showFontStyle: %s (%u of %u)", title.c_str(), fontIndex, Resource::fontTable.length());
 
 	text.setFont(nullptr);
 	text.setColor(Color::White, Color::Brown);
@@ -652,22 +655,9 @@ void showFont()
 	text.commit(*scene);
 	auto callback = [](SceneObject* scene) {
 		delete scene;
-		showFont();
+		showFontStyles();
 	};
-	renderQueue.render(scene, callback, 1500);
-}
-
-void showResourceFonts()
-{
-	tft.setOrientation(landscape);
-
-	static uint8_t index;
-	index = 0;
-	getFont = []() -> Font* {
-		auto& def = Resource::fontTable[index++];
-		return def ? new ResourceFont(def) : nullptr;
-	};
-	showFont();
+	renderQueue.render(scene, callback, SHOWFONT_INTERVAL);
 }
 
 void drawLineTest(SceneObject* scene)
@@ -1650,7 +1640,7 @@ const InterruptCallback functionList[] PROGMEM{
 	startPage,
 	scrollTests,
 	showFonts,
-	showResourceFonts,
+	showFontStyles,
 	lineTests,
 	sceneTests,
 	memoryImageDrawing,
@@ -1681,6 +1671,13 @@ void run()
 
 	if(state >= ARRAY_SIZE(functionList)) {
 		state = 0;
+#ifdef MAX_LOOP_COUNT
+		static uint8_t loopCount;
+		++loopCount;
+		if(loopCount >= MAX_LOOP_COUNT) {
+			return System.restart();
+		}
+#endif
 	}
 	functionList[state++]();
 }
@@ -1765,6 +1762,6 @@ void init()
 	});
 	backgroundTimer.start();
 
-	guiTimer.initializeMs<5000>(run);
+	guiTimer.initializeMs<GUITIMER_INTERVAL>(run);
 	run();
 }
