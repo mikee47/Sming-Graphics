@@ -375,8 +375,15 @@ public:
 		assert(origin.x + glyph.xOffset >= 0);
 		uint16_t off = origin.x + glyph.xOffset;
 		auto y = origin.y + typeface.yAdvance + glyph.yOffset - fontDescent - 1;
+
+		if(y < 0) {
+			debug_w("WARNING: y %d, typeface.yAdvance %d, glyph.yOffset %d, fontDescent %d, glyph.height %d", y,
+					typeface.yAdvance, glyph.yOffset, fontDescent, glyph.height);
+		} else {
+			off += y * stride;
+		}
+
 		assert(y + glyph.height <= typeface.yAdvance);
-		off += y * stride;
 		auto bufptr = static_cast<uint8_t*>(buffer) + off;
 
 		if(glyph.flags[Resource::GlyphResource::Flag::alpha]) {
