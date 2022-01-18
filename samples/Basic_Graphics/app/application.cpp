@@ -498,8 +498,10 @@ void copyTests()
 void showFonts()
 {
 	static uint8_t fontIndex;
+	static Point cursor;
 	if(fontIndex >= Resource::fontTable.length()) {
 		fontIndex = 0;
+		cursor = {};
 		return nextScene();
 	}
 
@@ -513,7 +515,6 @@ void showFonts()
 	TextBuilder text(*scene);
 	text.setColor(brush);
 	text.setWrap(false);
-	static Point cursor;
 	text.setCursor(cursor);
 
 	auto print = [&](Font* font) {
