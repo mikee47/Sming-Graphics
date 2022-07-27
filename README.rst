@@ -118,6 +118,10 @@ Usage
 
             RESOURCE_SCRIPT := resource/graphics.rc
 
+    5.  Optionally, change the directory where compiled resources are written::
+
+            RESOURCE_OUTPUT := out
+
 The general structure of a resource script is:
 
 .. code-block:: json
@@ -324,6 +328,18 @@ so it may re-fill the first request buffer.
 
 Configuration variables
 -----------------------
+
+.. envvar:: RESOURCE_SCRIPT
+
+    Location of .rc resource script for your project, relative to project directory.
+    Define this in your project's ``component.mk`` file.
+
+
+.. envvar:: RESOURCE_OUTPUT
+
+    Path to directory where compiled resources will be written, relative to project directory.
+    Default is project build directory, e.g. ``out/Rp2040/debug/build``.
+
 
 .. envvar:: VSADDR
 
