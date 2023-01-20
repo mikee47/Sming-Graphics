@@ -763,7 +763,7 @@ void arcAnimation(SceneObject* scene = nullptr)
 
 	unsigned msRemain = timeout->remainingTime();
 	char s[10];
-	m_snprintf(&s[1], sizeof(s) - 1, "%-04u", msRemain);
+	m_snprintf(&s[1], sizeof(s) - 1, "%-4u", msRemain);
 	s[0] = s[1];
 	s[1] = '.';
 	text.write(s, 4);

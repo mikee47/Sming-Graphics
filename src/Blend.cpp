@@ -246,7 +246,7 @@ PackedColor BlendAlpha::transform(PixelFormat format, PackedColor src, PackedCol
 		auto fg = unpack(PixelBuffer{.packed = src}, format);
 		auto bg = unpack(PixelBuffer{.packed = dst}, format);
 		auto res = blendColor(fg, bg, src.alpha);
-		return pack(PixelBuffer{.packed = res}, format).packed;
+		return pack(PixelBuffer{.packed = res.packed}, format).packed;
 	}
 }
 
