@@ -35,6 +35,21 @@ public:
 		uint16_t pressure;
 	};
 
+	struct Calibration {
+		Point origin{0, 0};
+		Point num{1, 1};
+		Point den{1, 1};
+
+		Point translate(Point pt)
+		{
+			IntPoint p(pt);
+			p -= origin;
+			p *= num;
+			p /= den;
+			return Point(p);
+		}
+	};
+
 	/**
      * @brief Callback function
      */
@@ -88,9 +103,23 @@ public:
 		return orientation;
 	}
 
+	void setCalibration(const Calibration& cal)
+	{
+		calibration = cal;
+	}
+
+	/**
+	 * @brief Translate position into screen co-ordinates
+	 */
+	Point translate(Point rawPos)
+	{
+		return calibration.translate(rawPos);
+	}
+
 protected:
 	Device* device;
 	Orientation orientation{};
+	Calibration calibration;
 	Callback callback;
 };
 
