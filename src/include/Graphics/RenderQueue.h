@@ -77,6 +77,11 @@ public:
 		renderObject(object, {target.getSize()}, *reinterpret_cast<Completed*>(&callback), delayMs);
 	}
 
+	bool isActive() const
+	{
+		return !queue.isEmpty();
+	}
+
 private:
 	void renderObject(Object* object, const Location& location, Completed callback, uint16_t delayMs);
 	void renderDone(const Object* object) override;

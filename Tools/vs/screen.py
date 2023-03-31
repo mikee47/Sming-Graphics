@@ -4,7 +4,7 @@ from ctypes import *
 from pixels import *
 from Util import debug
 from DisplayList import DisplayList, Code, Command
-from Server import Server
+from Server import Server, TouchMagic
 from queue import Queue, Empty
 
 app_name = 'Virtual Screen'
@@ -65,6 +65,7 @@ class Screen:
         self.renderer = SDL_CreateRenderer(self.window, -1, 0)
         self.texture = None
         self.resize(320, 240)
+        self.mouse_active = False
 
     def __del__(self):
         SDL_DestroyRenderer(self.renderer)
@@ -149,22 +150,36 @@ class Screen:
         self.setTitle("%s @ %s:%s" % (app_name, self.server.local_ip, self.server.localport))
         self.update()
         event = SDL_Event()
+        wait_time = 0.1
         while True:
             try:
-                packet = self.packetQueue.get(timeout=0.1)
+                packet = self.packetQueue.get(timeout=wait_time)
                 self.processPacket(packet)
+                wait_time = 0.01
             except Empty:
-                pass
+                wait_time = 0.1
             except Exception as err:
                 debug(str(err))
-            if SDL_PollEvent(byref(event)) == 0:
-                continue
-            if event.type == SDL_QUIT:
-                break
-            if event.type == SDL_WINDOWEVENT:
-                if event.window.event in [SDL_WINDOWEVENT_RESIZED, SDL_WINDOWEVENT_SIZE_CHANGED, SDL_WINDOWEVENT_MOVED]:
-                    self.windowChanged()
-        self.server.terminate()
+            while SDL_PollEvent(byref(event)):
+                if event.type == SDL_QUIT:
+                    self.server.terminate()
+                    return
+                if event.type == SDL_WINDOWEVENT:
+                    if event.window.event in [SDL_WINDOWEVENT_RESIZED, SDL_WINDOWEVENT_SIZE_CHANGED, SDL_WINDOWEVENT_MOVED]:
+                        self.windowChanged()
+                elif event.type == SDL_MOUSEMOTION:
+                    self.mouseEvent(event.motion.state, event.motion.x, event.motion.y)
+                elif event.type in [SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP]:
+                    self.mouseEvent(SDL_GetMouseState(None, None), event.button.x, event.button.y)
+
+    def mouseEvent(self, state, x, y):
+        if self.mouse_active or state:
+            x = (x - self.destRect.x) * self.srcRect.w // self.destRect.w
+            y = (y - self.destRect.y) * self.srcRect.h // self.destRect.h
+            if x >= 0 and y >= 0 and x < self.srcRect.w and y < self.srcRect.h:
+                data = struct.pack("I2H", state, x, y)
+                self.server.send(data, TouchMagic)
+            self.mouse_active = state != 0
 
     # Called in TCP thread context
     def packetReceived(self, packet):

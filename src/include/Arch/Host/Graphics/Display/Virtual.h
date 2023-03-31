@@ -46,6 +46,8 @@ public:
 		Debug,  ///< Use standard software renderers, may run slower and less smoothly
 	};
 
+	using TouchCallback = Delegate<void(const void* buffer, size_t len)>;
+
 	Virtual();
 	~Virtual();
 
@@ -91,6 +93,11 @@ public:
 
 	Surface* createSurface(size_t bufferSize = 0) override;
 
+	void onTouch(TouchCallback callback)
+	{
+		touchCallback = callback;
+	}
+
 private:
 	class NetworkThread;
 	friend NetworkThread;
@@ -103,10 +110,18 @@ private:
 
 	bool sizeChanged();
 
+	void handleTouch(const void* buffer, size_t length)
+	{
+		if(touchCallback) {
+			touchCallback(buffer, length);
+		}
+	}
+
 	std::unique_ptr<NetworkThread> thread;
 	Size nativeSize{};
 	AddressWindow addrWindow{};
 	ScrollMargins scrollMargins;
+	TouchCallback touchCallback;
 	Mode mode;
 };
 

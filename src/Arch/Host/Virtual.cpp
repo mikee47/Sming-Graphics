@@ -219,6 +219,7 @@ public:
 protected:
 	struct Header {
 		static constexpr uint32_t packetMagic{0x3facbe5a};
+		static constexpr uint32_t touchMagic{0x3facbe5b};
 		uint32_t magic;
 		uint32_t len;
 
@@ -245,8 +246,12 @@ protected:
 			}
 
 			if(list == nullptr) {
-				sem.wait();
-				list = queue.pop();
+				if(sem.timedwait(100000)) {
+					list = queue.pop();
+				} else if(socket.available()) {
+					uint8_t buffer[16];
+					readPacket(buffer, sizeof(buffer), false);
+				}
 				continue;
 			}
 
@@ -319,23 +324,38 @@ protected:
 		return false;
 	}
 
-	size_t readPacket(void* buffer, size_t length)
+	size_t readPacket(void* buffer, size_t length, bool waitingForReply = true)
 	{
-		Header hdr{};
-		int res = socket.recv(&hdr, sizeof(hdr));
-		if(res != int(sizeof(hdr))) {
-			debug_e("[VS] Header read failed");
-		} else if(hdr.magic != hdr.packetMagic) {
-			debug_e("[VS] Bad magic");
-		} else if(hdr.len > length) {
-			debug_e("[VS] Bad packet length %u (expected %u)", hdr.len, length);
-		} else {
-			res = socket.recv(buffer, hdr.len);
-			if(res == int(hdr.len)) {
-				// debug_i("[VS] readPacket(%u)", hdr.len);
-				return hdr.len;
+		for(;;) {
+			Header hdr{};
+			int res = socket.recv(&hdr, sizeof(hdr));
+			if(res != int(sizeof(hdr))) {
+				debug_e("[VS] Header read failed");
+				break;
 			}
-			debug_e("[VS] Data read failed");
+			if(hdr.magic != hdr.packetMagic && hdr.magic != hdr.touchMagic) {
+				debug_e("[VS] Bad magic");
+				break;
+			}
+			if(hdr.len > length) {
+				debug_e("[VS] Read buffer too small, have %u require %u", length, hdr.len);
+				break;
+			}
+			res = socket.recv(buffer, hdr.len);
+			if(res != int(hdr.len)) {
+				debug_e("[VS] Data read failed");
+				break;
+			}
+			if(hdr.magic == hdr.touchMagic) {
+				interrupt_begin();
+				screen.handleTouch(buffer, hdr.len);
+				interrupt_end();
+				if(waitingForReply) {
+					continue;
+				}
+			}
+			// debug_i("[VS] readPacket(%u)", hdr.len);
+			return hdr.len;
 		}
 		socket.close();
 		return 0;
