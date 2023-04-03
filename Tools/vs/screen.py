@@ -256,8 +256,6 @@ class Screen:
             # debug("addr %s, column %u" % (self.addr, self.column))
         self.pixels.updateTexture(self.texture)
         self.update()
-        # Acknowledge the packet
-        self.server.send(b"@")
 
     def updateTexture(self, r = None):
         self.pixels.updateTexture(self.texture, r)

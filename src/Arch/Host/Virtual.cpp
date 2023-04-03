@@ -277,8 +277,8 @@ protected:
 		DisplayList::Entry entry;
 		size_t SMING_UNUSED offset{0};
 		while(list.readEntry(entry)) {
-			// debug_i("%p @ %u: %s(%p, %u)", static_cast<DisplayList*>(&list), offset, toString(entry.code).c_str(),
-			// 		entry.data, entry.length);
+			// host_printf("%p @ %u: %s(0x%x, %u)\r\n", static_cast<DisplayList*>(&list), offset,
+			// 			toString(entry.code).c_str(), entry.data, entry.length);
 			offset = list.readOffset();
 			switch(entry.code) {
 			case Code::writeDataBuffer:
@@ -299,11 +299,6 @@ protected:
 			default:;
 			}
 		}
-		uint8_t result[16];
-		if(readPacket(result, sizeof(result)) == 0) {
-			debug_e("[EEEEEEEEEEEEK]");
-			return false;
-		}
 
 		list.complete();
 		return true;
@@ -311,7 +306,7 @@ protected:
 
 	bool sendPacket(const void* data, size_t size)
 	{
-		// debug_i("[VS] sendPacket(%u)", size);
+		// host_printf("[VS] sendPacket %u\r\n", size);
 
 		Header hdr{size};
 		if(socket.send(&hdr, sizeof(hdr)) == int(sizeof(hdr))) {
@@ -354,7 +349,7 @@ protected:
 					continue;
 				}
 			}
-			// debug_i("[VS] readPacket(%u)", hdr.len);
+			// host_printf("[VS] readPacket %u\r\n", hdr.len);
 			return hdr.len;
 		}
 		socket.close();
@@ -545,7 +540,7 @@ bool Virtual::begin(uint16_t width, uint16_t height)
 	auto addr = params.find("vsaddr");
 	auto port = params.find("vsport");
 	if(!addr || !port) {
-		debug_e("Virtual screen requires vsaddr and vsport command-line parameters");
+		host_printf("Virtual screen requires vsaddr and vsport command-line parameters\r\n");
 		return false;
 	}
 
