@@ -448,8 +448,8 @@ bool PolylineRenderer::execute(Surface& surface)
 			return true;
 		}
 
-		line.pt1 = location.dest.topLeft() + object[index];
-		line.pt2 = location.dest.topLeft() + object[index + 1];
+		line.pt1 = object[index];
+		line.pt2 = object[index + 1];
 		if(!surface.render(line, location.dest, renderer)) {
 			return false;
 		}

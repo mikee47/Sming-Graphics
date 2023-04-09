@@ -315,9 +315,9 @@ public:
 
 	PolylineObject(Pen pen, const Rect& rect, uint8_t radius) : pen(pen)
 	{
+		auto pt1 = rect.topLeft();
+		auto pt2 = rect.bottomRight();
 		if(radius == 0) {
-			auto pt1 = rect.topLeft();
-			auto pt2 = rect.bottomRight();
 			points.reset(new Point[5]{
 				pt1,
 				{pt2.x, pt1.y},
@@ -329,14 +329,14 @@ public:
 		} else {
 			auto t = pen.width - 1;
 			points.reset(new Point[8]{
-				Point(rect.left() + radius, rect.top()),
-				Point(rect.right() - radius, rect.top()),
-				Point(rect.left() + radius, rect.bottom() - t),
-				Point(rect.right() - radius, rect.bottom() - t),
-				Point(rect.left(), rect.top() + radius),
-				Point(rect.left(), rect.bottom() - radius),
-				Point(rect.right() - t, rect.top() + radius),
-				Point(rect.right() - t, rect.bottom() - radius),
+				Point(pt1.x + radius, pt1.y),
+				Point(pt2.x - radius, pt1.y),
+				Point(pt1.x + radius, pt2.y - t),
+				Point(pt2.x - radius, pt2.y - t),
+				Point(pt1.x, pt1.y + radius),
+				Point(pt1.x, pt2.y - radius),
+				Point(pt2.x - t, pt1.y + radius),
+				Point(pt2.x - t, pt2.y - radius),
 			});
 			numPoints = 8;
 			connected = false;
