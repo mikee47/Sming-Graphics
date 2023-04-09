@@ -169,24 +169,28 @@ private:
 class SceneRenderer : public MultiRenderer
 {
 public:
-	SceneRenderer(const Location& location, const SceneObject& scene)
-		: MultiRenderer(location), nextObject(scene.objects.head())
+	SceneRenderer(const Location& location, const SceneObject& scene) : MultiRenderer(location), scene(scene)
 	{
 	}
 
 protected:
 	void renderDone(const Object* object) override
 	{
-		nextObject = nextObject->getNext();
 	}
 
 	const Object* getNextObject() override
 	{
+		if(nextObject) {
+			nextObject = nextObject->getNext();
+		} else {
+			nextObject = scene.objects.head();
+		}
 		return nextObject;
 	}
 
 private:
-	const Object* nextObject;
+	const SceneObject& scene;
+	const Object* nextObject{};
 };
 
 /**
