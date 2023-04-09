@@ -4,13 +4,15 @@ from ctypes import *
 from pixels import *
 from Util import debug
 from DisplayList import DisplayList, Code, Command
-from Server import Server
+from Server import Server, TouchMagic
 from queue import Queue, Empty
+from threading import Timer
 
 app_name = 'Virtual Screen'
 BYTES_PER_PIXEL = 3
 BORDER_THICKNESS = 3
 BORDER_SPACE = 8
+USEREVENT_MOUSETIMER = 2
 
 class AddressWindow:
     def __init__(self):
@@ -65,6 +67,10 @@ class Screen:
         self.renderer = SDL_CreateRenderer(self.window, -1, 0)
         self.texture = None
         self.resize(320, 240)
+        self.mouse_state = 0
+        self.mouse_pos = (0, 0)
+        self.mouse_timer = None # Rate-limit mouse messages
+        self.mouse_notify = False
 
     def __del__(self):
         SDL_DestroyRenderer(self.renderer)
@@ -149,22 +155,60 @@ class Screen:
         self.setTitle("%s @ %s:%s" % (app_name, self.server.local_ip, self.server.localport))
         self.update()
         event = SDL_Event()
+        wait_time = 0.1
         while True:
             try:
-                packet = self.packetQueue.get(timeout=0.1)
+                packet = self.packetQueue.get(timeout=wait_time)
                 self.processPacket(packet)
+                wait_time = 0.01
             except Empty:
-                pass
+                wait_time = 0.1
             except Exception as err:
                 debug(str(err))
-            if SDL_PollEvent(byref(event)) == 0:
-                continue
-            if event.type == SDL_QUIT:
-                break
-            if event.type == SDL_WINDOWEVENT:
-                if event.window.event in [SDL_WINDOWEVENT_RESIZED, SDL_WINDOWEVENT_SIZE_CHANGED, SDL_WINDOWEVENT_MOVED]:
-                    self.windowChanged()
-        self.server.terminate()
+            while SDL_PollEvent(byref(event)):
+                if event.type == SDL_QUIT:
+                    self.server.terminate()
+                    return
+                if event.type == SDL_WINDOWEVENT:
+                    if event.window.event in [SDL_WINDOWEVENT_RESIZED, SDL_WINDOWEVENT_SIZE_CHANGED, SDL_WINDOWEVENT_MOVED]:
+                        self.windowChanged()
+                elif event.type == SDL_MOUSEMOTION:
+                    self.mouseEvent(event.motion.state, event.motion.x, event.motion.y)
+                elif event.type in [SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP]:
+                    self.mouseEvent(SDL_GetMouseState(None, None), event.button.x, event.button.y)
+                elif event.type == SDL_USEREVENT and event.user.code == USEREVENT_MOUSETIMER:
+                    self.mouseNotify()
+
+
+    def mouseEvent(self, state, x, y):
+        if (self.mouse_state or state) == 0:
+            return
+        x = (x - self.destRect.x) * self.srcRect.w // self.destRect.w
+        y = (y - self.destRect.y) * self.srcRect.h // self.destRect.h
+        pos = (x, y)
+        if (self.mouse_state != state or self.mouse_pos != pos) and self.srcRect.contains(x, y):
+            self.mouse_state = state
+            self.mouse_pos = pos
+            self.mouseNotify()
+
+
+    def mouseNotify(self):
+        if self.mouse_timer:
+            self.mouse_notify = True
+            return
+        self.mouse_notify = False
+        data = struct.pack("I2H", self.mouse_state, self.mouse_pos[0], self.mouse_pos[1])
+        self.server.send(data, TouchMagic)
+        def callback():
+            self.mouse_timer = None
+            if self.mouse_notify:
+                event = SDL_Event()
+                event.type = SDL_USEREVENT
+                event.user.code = USEREVENT_MOUSETIMER
+                SDL_PushEvent(event)
+        self.mouse_timer = Timer(0.1, callback)
+        self.mouse_timer.start()
+
 
     # Called in TCP thread context
     def packetReceived(self, packet):
@@ -241,8 +285,6 @@ class Screen:
             # debug("addr %s, column %u" % (self.addr, self.column))
         self.pixels.updateTexture(self.texture)
         self.update()
-        # Acknowledge the packet
-        self.server.send(b"@")
 
     def updateTexture(self, r = None):
         self.pixels.updateTexture(self.texture, r)

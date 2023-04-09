@@ -2,11 +2,13 @@ import threading, socket, struct
 from Util import debug
 
 PacketMagic = 0x3facbe5a
+TouchMagic = 0x3facbe5b
 
 class Server:
     def __init__(self, screen):
         self.screen = screen
         self.terminated = False
+        self.client_socket = None
 
     def run(self, localport):
         self.localport = localport
@@ -26,9 +28,9 @@ class Server:
         self.terminated = True
         self.srv.close()
 
-    def send(self, data):
+    def send(self, data, magic = PacketMagic):
         if self.client_socket is not None:
-            hdr = struct.pack("2I", PacketMagic, len(data))
+            hdr = struct.pack("2I", magic, len(data))
             self.client_socket.send(hdr)
             self.client_socket.send(data)
 

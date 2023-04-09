@@ -219,6 +219,7 @@ public:
 protected:
 	struct Header {
 		static constexpr uint32_t packetMagic{0x3facbe5a};
+		static constexpr uint32_t touchMagic{0x3facbe5b};
 		uint32_t magic;
 		uint32_t len;
 
@@ -245,8 +246,12 @@ protected:
 			}
 
 			if(list == nullptr) {
-				sem.wait();
-				list = queue.pop();
+				if(sem.timedwait(100000)) {
+					list = queue.pop();
+				} else if(socket.available()) {
+					uint8_t buffer[16];
+					readPacket(buffer, sizeof(buffer), false);
+				}
 				continue;
 			}
 
@@ -272,8 +277,8 @@ protected:
 		DisplayList::Entry entry;
 		size_t SMING_UNUSED offset{0};
 		while(list.readEntry(entry)) {
-			// debug_i("%p @ %u: %s(%p, %u)", static_cast<DisplayList*>(&list), offset, toString(entry.code).c_str(),
-			// 		entry.data, entry.length);
+			// host_printf("%p @ %u: %s(0x%x, %u)\r\n", static_cast<DisplayList*>(&list), offset,
+			// 			toString(entry.code).c_str(), entry.data, entry.length);
 			offset = list.readOffset();
 			switch(entry.code) {
 			case Code::writeDataBuffer:
@@ -294,11 +299,6 @@ protected:
 			default:;
 			}
 		}
-		uint8_t result[16];
-		if(readPacket(result, sizeof(result)) == 0) {
-			debug_e("[EEEEEEEEEEEEK]");
-			return false;
-		}
 
 		list.complete();
 		return true;
@@ -306,7 +306,7 @@ protected:
 
 	bool sendPacket(const void* data, size_t size)
 	{
-		// debug_i("[VS] sendPacket(%u)", size);
+		// host_printf("[VS] sendPacket %u\r\n", size);
 
 		Header hdr{size};
 		if(socket.send(&hdr, sizeof(hdr)) == int(sizeof(hdr))) {
@@ -319,23 +319,38 @@ protected:
 		return false;
 	}
 
-	size_t readPacket(void* buffer, size_t length)
+	size_t readPacket(void* buffer, size_t length, bool waitingForReply = true)
 	{
-		Header hdr{};
-		int res = socket.recv(&hdr, sizeof(hdr));
-		if(res != int(sizeof(hdr))) {
-			debug_e("[VS] Header read failed");
-		} else if(hdr.magic != hdr.packetMagic) {
-			debug_e("[VS] Bad magic");
-		} else if(hdr.len > length) {
-			debug_e("[VS] Bad packet length %u (expected %u)", hdr.len, length);
-		} else {
-			res = socket.recv(buffer, hdr.len);
-			if(res == int(hdr.len)) {
-				// debug_i("[VS] readPacket(%u)", hdr.len);
-				return hdr.len;
+		for(;;) {
+			Header hdr{};
+			int res = socket.recv(&hdr, sizeof(hdr));
+			if(res != int(sizeof(hdr))) {
+				debug_e("[VS] Header read failed");
+				break;
 			}
-			debug_e("[VS] Data read failed");
+			if(hdr.magic != hdr.packetMagic && hdr.magic != hdr.touchMagic) {
+				debug_e("[VS] Bad magic");
+				break;
+			}
+			if(hdr.len > length) {
+				debug_e("[VS] Read buffer too small, have %u require %u", length, hdr.len);
+				break;
+			}
+			res = socket.recv(buffer, hdr.len);
+			if(res != int(hdr.len)) {
+				debug_e("[VS] Data read failed");
+				break;
+			}
+			if(hdr.magic == hdr.touchMagic) {
+				interrupt_begin();
+				screen.handleTouch(buffer, hdr.len);
+				interrupt_end();
+				if(waitingForReply) {
+					continue;
+				}
+			}
+			// host_printf("[VS] readPacket %u\r\n", hdr.len);
+			return hdr.len;
 		}
 		socket.close();
 		return 0;
@@ -525,7 +540,7 @@ bool Virtual::begin(uint16_t width, uint16_t height)
 	auto addr = params.find("vsaddr");
 	auto port = params.find("vsport");
 	if(!addr || !port) {
-		debug_e("Virtual screen requires vsaddr and vsport command-line parameters");
+		host_printf("Virtual screen requires vsaddr and vsport command-line parameters\r\n");
 		return false;
 	}
 

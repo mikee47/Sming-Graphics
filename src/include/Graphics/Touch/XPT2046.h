@@ -39,6 +39,11 @@ public:
 
 	XPT2046(HSPI::Controller& controller, Graphics::Device& device) : HSPI::Device(controller), Touch(&device)
 	{
+		setCalibration({
+			.origin = {224, 301},
+			.num = {280, 200},
+			.den = {3138, 3016},
+		});
 	}
 
 	~XPT2046()
