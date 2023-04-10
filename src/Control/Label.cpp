@@ -1,20 +1,23 @@
-#include <Graphics/Control/Button.h>
+#include <Graphics/Control/Label.h>
 #include <Graphics/TextBuilder.h>
 
 namespace Graphics
 {
-void Button::draw(SceneObject& scene) const
+void Label::draw(SceneObject& scene) const
 {
 	auto colors = getColors();
+
+	colors.back = Color::Black;
+
 	Rect r = bounds.size();
-	r.inflate(-1, -1);
-	scene.drawRect(Pen(colors.border, 4), r, 6);
-	r.inflate(-2, -2);
-	scene.fillRect(colors.back, r, 6);
+	// scene.drawRect(colors.border, r);
+	// r.inflate(-2, -2);
+	scene.fillRect(colors.back, r);
 	TextBuilder text(scene);
+	// text.setFont(&statusFont);
 	text.setColor(colors.text);
 	text.setBackColor(colors.back);
-	text.setTextAlign(Align::Centre);
+	// text.setTextAlign(Align::Centre);
 	text.setLineAlign(Align::Centre);
 	text.print(caption);
 	text.commit(scene);

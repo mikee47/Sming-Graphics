@@ -21,6 +21,12 @@ public:
 		dirty,	///< Requires repainting
 	};
 
+	struct Colors {
+		Color border;
+		Color back;
+		Color text;
+	};
+
 	Control() : bounds(0, 0, 100, 50)
 	{
 	}
@@ -99,6 +105,8 @@ public:
 	{
 		return flags[Flag::dirty];
 	}
+
+	Colors getColors() const;
 
 protected:
 	friend class Screen;
