@@ -1,23 +1,14 @@
 #include <SmingCore.h>
 
-#include <Graphics/Display/ILI9341.h>
-#include <Graphics/Touch/XPT2046.h>
 #include <Graphics/RenderQueue.h>
 #include <Graphics/TextBuilder.h>
 #include <Graphics/SampleConfig.h>
 
 namespace
 {
-Graphics::XPT2046 touch(spi, tft);
 Graphics::RenderQueue renderQueue(tft);
 
 using namespace Graphics;
-
-// Pin setup
-constexpr HSPI::PinSet TOUCH_PINSET{HSPI::PinSet::overlap};
-constexpr uint8_t TOUCH_CS{0};
-constexpr uint8_t TOUCH_IRQ_PIN{2};
-// constexpr uint8_t TOUCH_IRQ_PIN{PIN_NONE};
 
 SimpleTimer backgroundTimer;
 OneShotFastUs frameTimer;
@@ -27,41 +18,6 @@ IMPORT_FSTR(SMING_RAW, PROJECT_DIR "/resource/sming.raw")
 
 // Re-usable assets
 RawImageObject rawImage(SMING_RAW, PixelFormat::RGB565, {128, 128});
-
-class TouchCalibration
-{
-public:
-	TouchCalibration()
-	{
-	}
-
-	TouchCalibration(Point ref1, Point ref2, Point target1, Point target2)
-	{
-		touchOrigin = ref1;
-		targetOrigin = target1;
-		num = target2 - target1;
-		den = ref2 - ref1;
-	}
-
-	Point operator[](Point pt)
-	{
-		if(den.x == 0 || den.y == 0) {
-			return Point{};
-		}
-		IntPoint p(pt);
-		p -= touchOrigin;
-		p *= num;
-		p /= den;
-		p += targetOrigin;
-		return Point(p);
-	}
-
-private:
-	Point touchOrigin;
-	Point targetOrigin;
-	Point num;
-	Point den;
-};
 
 class TouchCalibrator
 {
@@ -73,15 +29,15 @@ public:
 		ready,
 	};
 
-	TouchCalibrator(RenderTarget& target, TouchCalibration& calib) : target(target), calib(calib)
+	TouchCalibrator(RenderTarget& target) : target(target)
 	{
 	}
 
 	void begin()
 	{
 		Rect r(target.getSize());
-		pt1 = r.topLeft() + cross;
-		pt2 = r.bottomRight() - cross;
+		pt1 = cross;
+		pt2 = Point(r.w - cross.x, r.h - cross.y);
 		surface.reset(target.createSurface(64));
 		drawCross(pt1);
 		ref1 = IntPoint{};
@@ -134,7 +90,10 @@ public:
 			surface->reset();
 			surface->clear();
 			surface->present();
-			calib = TouchCalibration(Point(ref1), Point(ref2), pt1, pt2);
+			Point num = Point(ref2 - ref1);
+			Point den = pt2 - pt1;
+			Point origin = pt1 - (ref1 * den / num);
+			calib = Touch::Calibration{origin, num, den};
 			state = State::ready;
 			break;
 		}
@@ -147,6 +106,10 @@ public:
 		}
 
 		return false;
+	}
+
+	operator const Touch::Calibration&() const {
+		return calib;
 	}
 
 private:
@@ -165,7 +128,7 @@ private:
 	}
 
 	RenderTarget& target;
-	TouchCalibration& calib;
+	Touch::Calibration calib;
 	std::unique_ptr<Surface> surface;
 	State state{};
 	static constexpr Point cross{20, 20};
@@ -177,8 +140,8 @@ private:
 	uint8_t sampleCount;
 };
 
-TouchCalibration calibration;
-TouchCalibrator* calibrator;
+Touch::Calibration calibration;
+std::unique_ptr<TouchCalibrator> calibrator;
 
 Point imgpos;
 std::unique_ptr<SceneObject> scene;
@@ -220,6 +183,7 @@ void updateScreen(Point newpos)
 	text.println(toString(touch.getState()) + "  ");
 	text.println(newpos.toString() + "  ");
 	text.println(lastFrameTime.toString());
+	// text.println(calibration);
 	// text.print(calib.pt1.toString().c_str());
 	// text.print(" -> ");
 	// text.println(calib.pt2.toString().c_str());
@@ -238,11 +202,16 @@ void touchChanged()
 {
 	// debug_i("touch changed: %s", toString(touch.getState()).c_str());
 	auto state = touch.getState();
-	if(calibrator != nullptr && calibrator->update(state.pos)) {
-		delete calibrator;
-		calibrator = nullptr;
+	if(state.pressure < 1000) {
+		return;
 	}
-	updateScreen(calibration[state.pos]);
+	if(calibrator && calibrator->update(state.pos)) {
+		touch.setCalibration(*calibrator);
+		Touch::Calibration calib = *calibrator;
+		Serial << "CALIB " << toString(calib.origin) << ", " << toString(calib.num) << ", " << toString(calib.den) << endl;
+		calibrator.reset();
+	}
+	updateScreen(touch.translate(state.pos));
 }
 
 Timer statusTimer;
@@ -263,11 +232,10 @@ void init()
 	Serial.println("Display start");
 	initDisplay();
 
-	touch.begin(TOUCH_PINSET, TOUCH_CS, TOUCH_IRQ_PIN);
-	touch.setOrientation(Orientation::deg270);
+	touch.setOrientation(Orientation::deg90);
 	touch.setCallback(touchChanged);
 
-	calibrator = new TouchCalibrator(tft, calibration);
+	calibrator.reset(new TouchCalibrator(tft));
 	calibrator->begin();
 
 	// statusTimer.initializeMs<1000>([&]() { debug_i("Max tasks: %u", System.getMaxTaskCount()); }).start();
