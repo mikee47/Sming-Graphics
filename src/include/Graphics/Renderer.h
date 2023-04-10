@@ -23,12 +23,11 @@
 
 #include "Scene.h"
 #include "Buffer.h"
+#include "Surface.h"
 #include <Delegate.h>
 
 namespace Graphics
 {
-class Surface;
-
 /**
  * @brief Fixed list of types
  * 
