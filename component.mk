@@ -41,18 +41,23 @@ DEBUG_VARS += RESOURCE_SCRIPT RESOURCE_OUTPUT
 
 ifdef RESOURCE_SCRIPT
 RESOURCE_OUTPUT ?= $(PROJECT_DIR)/$(BUILD_BASE)
-RESOURCE_FILES := $(RESDIR)/resource.h $(RESDIR)/resource.bin
+RESOURCE_FILES := $(RESOURCE_OUTPUT)/resource.h $(RESOURCE_OUTPUT)/resource.bin
 
 COMPONENT_PREREQUISITES := $(RESOURCE_FILES)
 COMPONENT_INCDIRS += $(RESOURCE_OUTPUT)
 
 $(RESOURCE_FILES): $(RESOURCE_SCRIPT)
-	@echo RC $< $(RESDIR)
+	@echo RC $< $(RESOURCE_OUTPUT)
 	$(Q) $(RC_TOOL_CMDLINE) $(if $(Q),--quiet) $< $(RESOURCE_OUTPUT)
 
 .PHONY: resource
 resource: ##Rebuild resource files
 	$(Q) rm -f $(RESOURCE_FILES); $(MAKE) $(RESOURCE_FILES)
+
+clean: graphics-clean
+
+graphics-clean:
+	$(Q) rm -f $(RESOURCE_FILES)
 
 endif
 
