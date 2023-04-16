@@ -66,8 +66,9 @@ void Screen::input(InputEvent event, Point pos)
 			if(ctrl && ctrl->isEnabled()) {
 				ctrl->setFlag(Control::Flag::active, true);
 				activeControl = ctrl;
-				debug_i("CLICK %s", ctrl->getCaption().c_str());
+				debug_i("ACTIVATE %s", ctrl->getCaption().c_str());
 				ctrlTimer.reset<CLICK_TIME>();
+				handleControlEvent(ControlEvent::activate, *ctrl);
 			}
 		}
 		flags += Flag::inputDown;
@@ -78,12 +79,13 @@ void Screen::input(InputEvent event, Point pos)
 	case InputEvent::up: {
 		if(activeControl) {
 			auto ctrl = findControl(pos);
-			if(ctrl == activeControl && ctrlTimer.expired()) {
-				debug_i("RELEASE %s", ctrl->getCaption().c_str());
-				activeControl->select(!activeControl->isSelected());
-			}
+			bool isActiveControl = (ctrl == activeControl);
 			activeControl->setFlag(Control::Flag::active, false);
 			activeControl = nullptr;
+			if(isActiveControl && ctrlTimer.expired()) {
+				debug_i("DECACTIVATE %s", ctrl->getCaption().c_str());
+				handleControlEvent(ControlEvent::deactivate, *ctrl);
+			}
 		}
 		flags -= Flag::inputDown;
 		update();
@@ -93,6 +95,22 @@ void Screen::input(InputEvent event, Point pos)
 	case InputEvent::move: {
 		break;
 	}
+	}
+}
+
+void Screen::handleControlEvent(ControlEvent event, Control& ctrl)
+{
+	if(controlMethod && !controlMethod(event, ctrl)) {
+		return;
+	}
+
+	switch(event) {
+	case ControlEvent::activate:
+		break;
+
+	case ControlEvent::deactivate:
+		ctrl.select(!ctrl.isSelected());
+		break;
 	}
 }
 

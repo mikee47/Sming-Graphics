@@ -13,10 +13,23 @@ enum class InputEvent {
 	up,
 };
 
+enum class ControlEvent {
+	activate,
+	deactivate,
+};
+
 class Screen
 {
 public:
 	using DrawMethod = Delegate<void(SceneObject& scene)>;
+
+	/**
+	 * @brief Invoked in response to user input
+	 * @param event
+	 * @param control
+	 * @retval bool Return true to continue default processing
+	 */
+	using ControlMethod = Delegate<bool(ControlEvent event, Control& control)>;
 
 	Screen(RenderTarget& target) : target(target), renderQueue(target), flags(Flag::redrawFull)
 	{
@@ -29,6 +42,11 @@ public:
 	void onDraw(DrawMethod method)
 	{
 		drawMethod = method;
+	}
+
+	void onControl(ControlMethod method)
+	{
+		controlMethod = method;
 	}
 
 	void addControl(Control& ctrl)
@@ -45,6 +63,7 @@ public:
 
 protected:
 	virtual void draw(SceneObject& scene);
+	virtual void handleControlEvent(ControlEvent event, Control& ctrl);
 
 private:
 	enum class Flag {
@@ -56,6 +75,7 @@ private:
 	RenderTarget& target;
 	RenderQueue renderQueue;
 	DrawMethod drawMethod;
+	ControlMethod controlMethod;
 	Control::List controls;
 	BitSet<uint8_t, Flag> flags;
 	Control* activeControl{};
