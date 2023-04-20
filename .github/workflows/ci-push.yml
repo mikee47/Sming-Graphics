@@ -5,3 +5,5 @@ on: [push]
 jobs:
   build:
     uses: SmingHub/Sming/.github/workflows/library.yml@develop
+    with:
+      alias: Graphics

@@ -16,3 +16,4 @@ jobs:
     with:
       sming_repo: ${{ inputs.sming_repo }}
       sming_branch: ${{ inputs.sming_branch }}
+      alias: Graphics
