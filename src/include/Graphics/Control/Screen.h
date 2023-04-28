@@ -21,7 +21,12 @@ enum class ControlEvent {
 class Screen
 {
 public:
-	using DrawMethod = Delegate<void(SceneObject& scene)>;
+	/**
+	 * @brief Invoked when screen is drawn
+	 * @param scene Where to compose screen
+	 * @retval bool Return true to continue default processing
+	 */
+	using DrawMethod = Delegate<bool(SceneObject& scene)>;
 
 	/**
 	 * @brief Invoked in response to user input

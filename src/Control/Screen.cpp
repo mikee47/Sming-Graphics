@@ -18,6 +18,9 @@ void Screen::update(bool fullRedraw)
 	auto scene = new SceneObject(target);
 	if(flags[Flag::redrawFull]) {
 		scene->clear();
+		for(auto& c: controls) {
+			c.flags += Control::Flag::dirty;
+		}
 	}
 
 	flags -= Flag::redraw | Flag::redrawFull;
@@ -34,8 +37,8 @@ void Screen::update(bool fullRedraw)
 
 void Screen::draw(SceneObject& scene)
 {
-	if(drawMethod) {
-		drawMethod(scene);
+	if(drawMethod && !drawMethod(scene)) {
+		return;
 	}
 
 	for(auto& c : controls) {
