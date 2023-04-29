@@ -13,6 +13,7 @@ public:
 	using Control::Control;
 
 	void draw(SceneObject& scene) const override;
+	Color getColor(Element element) const override;
 };
 
 } // namespace Graphics

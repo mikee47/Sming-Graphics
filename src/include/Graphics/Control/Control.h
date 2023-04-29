@@ -21,10 +21,10 @@ public:
 		dirty,	///< Requires repainting
 	};
 
-	struct Colors {
-		Color border;
-		Color back;
-		Color text;
+	enum class Element {
+		border,
+		back,
+		text,
 	};
 
 	Control() : bounds(0, 0, 100, 50)
@@ -106,7 +106,12 @@ public:
 		return flags[Flag::dirty];
 	}
 
-	Colors getColors() const;
+	void setDirty()
+	{
+		flags += Flag::dirty;
+	}
+
+	virtual Color getColor(Element element) const;
 
 protected:
 	friend class Screen;

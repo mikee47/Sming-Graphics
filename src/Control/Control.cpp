@@ -26,37 +26,21 @@ Renderer* Control::createRenderer(const Location& location) const
 	return renderer;
 }
 
-Control::Colors Control::getColors() const
+Color Control::getColor(Element element) const
 {
-	if(!flags[Flag::enabled]) {
-		return Colors{
-			.border = Color::Gray,
-			.back = Color::DarkGray,
-			.text = Color::Gray,
-		};
-	}
+	unsigned state = !flags[Flag::enabled] ? 0 : flags[Flag::active] ? 1 : flags[Flag::selected] ? 2 : 3;
 
-	if(flags[Flag::active]) {
-		return Colors{
-			.border = Color::Red,
-			.back = Color::LightGray,
-			.text = Color::Black,
-		};
-	}
-
-	if(flags[Flag::selected]) {
-		return Colors{
-			.border = Color::DarkRed,
-			.back = Color::Yellow,
-			.text = Color::Black,
-		};
-	}
-
-	return Colors{
-		.border = Color::DarkRed,
-		.back = Color::Gray,
-		.text = Color::White,
+	// Disabled, Active, Selected, Default
+	const Color colors[3][4]{
+		// border
+		{Color::Gray, Color::Red, Color::DarkRed, Color::DarkRed},
+		// back
+		{Color::DarkGray, Color::LightGray, Color::Yellow, Color::Gray},
+		// text
+		{Color::Gray, Color::Black, Color::Black, Color::White},
 	};
+
+	return colors[unsigned(element)][state];
 }
 
 } // namespace Graphics

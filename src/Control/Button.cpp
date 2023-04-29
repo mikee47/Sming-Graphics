@@ -5,15 +5,15 @@ namespace Graphics
 {
 void Button::draw(SceneObject& scene) const
 {
-	auto colors = getColors();
+	auto backColor = getColor(Element::back);
 	Rect r = bounds.size();
 	r.inflate(-1, -1);
-	scene.drawRect(Pen(colors.border, 4), r, 6);
+	scene.drawRect(Pen(getColor(Element::border), 4), r, 6);
 	r.inflate(-2, -2);
-	scene.fillRect(colors.back, r, 6);
+	scene.fillRect(backColor, r, 6);
 	TextBuilder text(scene);
-	text.setColor(colors.text);
-	text.setBackColor(colors.back);
+	text.setColor(getColor(Element::text));
+	text.setBackColor(backColor);
 	text.setTextAlign(Align::Centre);
 	text.setLineAlign(Align::Centre);
 	text.print(caption);
