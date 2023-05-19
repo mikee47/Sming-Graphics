@@ -12,7 +12,11 @@ namespace Graphics
 class Control : public CustomObject
 {
 public:
-	using List = LinkedObjectListTemplate<Control>;
+	class List : public LinkedObjectListTemplate<Control>
+	{
+	public:
+		Control* find(Point pos);
+	};
 
 	enum class Flag {
 		enabled,  ///< Can be interacted with

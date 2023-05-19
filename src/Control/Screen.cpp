@@ -48,24 +48,13 @@ void Screen::draw(SceneObject& scene)
 	}
 }
 
-Control* Screen::findControl(Point pos)
-{
-	for(auto& c : controls) {
-		if(c.getBounds().contains(pos)) {
-			return &c;
-		}
-	}
-
-	return nullptr;
-}
-
 void Screen::input(InputEvent event, Point pos)
 {
 	switch(event) {
 	case InputEvent::down: {
 		if(!flags[Flag::inputDown]) {
 			assert(!activeControl);
-			auto ctrl = findControl(pos);
+			auto ctrl = controls.find(pos);
 			if(ctrl && ctrl->isEnabled()) {
 				ctrl->setFlag(Control::Flag::active, true);
 				activeControl = ctrl;
@@ -81,7 +70,7 @@ void Screen::input(InputEvent event, Point pos)
 
 	case InputEvent::up: {
 		if(activeControl) {
-			auto ctrl = findControl(pos);
+			auto ctrl = controls.find(pos);
 			bool isActiveControl = (ctrl == activeControl);
 			activeControl->setFlag(Control::Flag::active, false);
 			activeControl = nullptr;

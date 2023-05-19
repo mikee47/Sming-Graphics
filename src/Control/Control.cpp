@@ -43,4 +43,15 @@ Color Control::getColor(Element element) const
 	return colors[unsigned(element)][state];
 }
 
+Control* Control::List::find(Point pos)
+{
+	for(auto& c : *this) {
+		if(c.getBounds().contains(pos)) {
+			return &c;
+		}
+	}
+
+	return nullptr;
+}
+
 } // namespace Graphics

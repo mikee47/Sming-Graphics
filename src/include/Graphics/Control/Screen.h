@@ -54,17 +54,7 @@ public:
 		controlMethod = method;
 	}
 
-	void addControl(Control& ctrl)
-	{
-		controls.add(&ctrl);
-	}
-
-	void removeControl(Control& ctrl)
-	{
-		controls.remove(&ctrl);
-	}
-
-	Control* findControl(Point pos);
+	Control::List controls;
 
 protected:
 	virtual void draw(SceneObject& scene);
@@ -81,7 +71,6 @@ private:
 	RenderQueue renderQueue;
 	DrawMethod drawMethod;
 	ControlMethod controlMethod;
-	Control::List controls;
 	BitSet<uint8_t, Flag> flags;
 	Control* activeControl{};
 	OneShotFastMs ctrlTimer;
