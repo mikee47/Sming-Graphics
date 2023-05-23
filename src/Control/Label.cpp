@@ -8,16 +8,17 @@ void Label::draw(SceneObject& scene) const
 	auto backColor = getColor(Element::back);
 
 	Rect r = bounds.size();
-	// scene.drawRect(colors.border, r);
+	// scene.drawRect(getColor(Element::border), r);
 	// r.inflate(-2, -2);
 	scene.fillRect(backColor, r);
 	TextBuilder text(scene);
-	// text.setFont(&statusFont);
+	text.setClip(r);
+	text.setFont(getFont());
 	text.setColor(getColor(Element::text));
 	text.setBackColor(backColor);
-	// text.setTextAlign(Align::Centre);
+	text.setTextAlign(getTextAlign());
 	text.setLineAlign(Align::Centre);
-	text.print(caption);
+	text.print(caption.c_str());
 	text.commit(scene);
 }
 

@@ -39,6 +39,10 @@ public:
 	{
 	}
 
+	Control(const Rect& bounds, const String& caption) : bounds(bounds), caption(caption)
+	{
+	}
+
 	Renderer* createRenderer(const Location& location) const override;
 
 	virtual void draw(SceneObject& scene) const = 0;
@@ -47,14 +51,14 @@ public:
 	{
 	}
 
-	const String& getCaption() const
+	String getCaption() const
 	{
-		return caption;
+		return caption.c_str();
 	}
 
 	void setCaption(const String& value)
 	{
-		if(value == caption) {
+		if(caption == value) {
 			return;
 		}
 		this->caption = value;
@@ -115,7 +119,17 @@ public:
 		flags += Flag::dirty;
 	}
 
+	virtual Font* getFont() const
+	{
+		return nullptr;
+	}
+
 	virtual Color getColor(Element element) const;
+
+	virtual Align getTextAlign() const
+	{
+		return Align::Near;
+	}
 
 protected:
 	friend class Screen;
@@ -130,7 +144,7 @@ protected:
 	}
 
 	Rect bounds;
-	String caption;
+	CString caption;
 	mutable BitSet<uint8_t, Flag> flags;
 };
 

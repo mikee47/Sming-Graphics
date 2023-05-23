@@ -16,7 +16,7 @@ void Button::draw(SceneObject& scene) const
 	text.setBackColor(backColor);
 	text.setTextAlign(Align::Centre);
 	text.setLineAlign(Align::Centre);
-	text.print(caption);
+	text.print(caption.c_str());
 	text.commit(scene);
 }
 
