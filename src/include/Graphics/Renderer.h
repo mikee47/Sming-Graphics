@@ -358,7 +358,7 @@ public:
 	}
 
 	FilledRectRenderer(const Location& location, const FilledRectObject& object)
-		: Renderer(location), brush(object.brush), rect(object.rect)
+		: Renderer(location), brush(object.brush), rect(object.rect + location.dest.topLeft())
 	{
 	}
 
