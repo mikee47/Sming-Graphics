@@ -2,7 +2,7 @@
 # Image resource parser
 #
 
-import PIL.Image, resource, os, io, requests
+import PIL.Image, PIL.ImageOps, resource, os, io, requests
 from resource import status
 
 class Image(resource.Resource):
@@ -119,6 +119,28 @@ def rotate_image(img, args):
     status('Rotate image %u degrees' % angle)
     return img.rotate(angle)
 
+
+def colorise_image(img, args):
+    status(f"args: {args}")
+    args = list(args.items())
+    if len(args) == 3:
+        black = args[0][0]
+        blackpoint = args[0][1]
+        mid = args[1][0]
+        midpoint = args[1][1]
+        white = args[2][0]
+        whitepoint = args[2][1]
+    else:
+        black = args[0][0]
+        blackpoint = args[0][1]
+        white = args[1][0]
+        whitepoint = args[1][1]
+        mid = None
+        midpoint = (whitepoint + blackpoint) / 2
+
+    gimg = PIL.ImageOps.grayscale(img)
+    return PIL.ImageOps.colorize(gimg, black, white, mid, blackpoint, whitepoint, midpoint)
+
 transforms = {
     'crop': crop_image,
     'resize': resize_image,
@@ -126,6 +148,7 @@ transforms = {
     'height': set_image_height,
     'flip': flip_image,
     'rotate': rotate_image,
+    'color': colorise_image,
 }
 
 def parse_item(item, name):

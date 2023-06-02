@@ -234,7 +234,12 @@ Resource script entries look like this:
                 "crop": "x,y,width,height", // Crop to selected area of image
                 "resize": "width,height",   // Resize image
                 "flip": "left_right" | "top_bottom", // Flip the image horizontally or vertically
-                "rotate": angle in degrees  // Rotate the image
+                "rotate": angle in degrees, // Rotate the image
+                "color": { // Convert image to grayscale then colorise it
+                    "black-color": blackpoint, // Color at blackpoint, e.g. "darkblue": 0
+                    "mid-color": midpoint,     // OPTIONAL
+                    "white-color": whitepoint  // Color at whitepoint, e.g. "lightred": 255
+                }
             }
         }
     }
