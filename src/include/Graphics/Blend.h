@@ -29,6 +29,7 @@ namespace Graphics
 	XX(Write, "Write normally")                                                                                        \
 	XX(Xor, "dst = dst XOR src0")                                                                                      \
 	XX(XNor, "dst = dst XOR (NOT src)")                                                                                \
+	XX(Mask, "dst = dst AND src")                                                                                      \
 	XX(Transparent, "Make nominated colour transparent")                                                               \
 	XX(Alpha, "Blend using alpha value")
 
@@ -57,45 +58,64 @@ public:
 
 using BlendMode = Blend::Mode;
 
-template <BlendMode blendMode> class BlendTemplate : public Blend
+template <class Class, BlendMode blendMode> class BlendTemplate : public Blend
 {
 public:
 	Mode mode() const override
 	{
 		return blendMode;
 	}
+
+	void transform(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length) const override
+	{
+		auto self = static_cast<const Class*>(this);
+		return self->blend(format, src, dstptr, length);
+	}
+
+	void transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const override
+	{
+		auto self = static_cast<const Class*>(this);
+		return self->blend(format, srcptr, dstptr, length);
+	}
 };
 
-class BlendWrite : public BlendTemplate<BlendMode::Write>
+class BlendWrite : public BlendTemplate<BlendWrite, BlendMode::Write>
 {
 public:
-	void transform(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length) const override
+	static void blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length)
 	{
 		writeColor(dstptr, src, format, length / getBytesPerPixel(format));
 	}
 
-	void transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const override
+	static void blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length)
 	{
 		(void)format;
 		memcpy(dstptr, srcptr, length);
 	}
 };
 
-class BlendXor : public BlendTemplate<BlendMode::Xor>
+class BlendXor : public BlendTemplate<BlendXor, BlendMode::Xor>
 {
 public:
-	void transform(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length) const override;
-	void transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const override;
+	static void blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length);
+	static void blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length);
 };
 
-class BlendXNor : public BlendTemplate<BlendMode::XNor>
+class BlendXNor : public BlendTemplate<BlendXNor, BlendMode::XNor>
 {
 public:
-	void transform(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length) const override;
-	void transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const override;
+	static void blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length);
+	static void blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length);
 };
 
-class BlendTransparent : public BlendTemplate<BlendMode::Transparent>
+class BlendMask : public BlendTemplate<BlendMask, BlendMode::Mask>
+{
+public:
+	static void blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length);
+	static void blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length);
+};
+
+class BlendTransparent : public BlendTemplate<BlendTransparent, BlendMode::Transparent>
 {
 public:
 	BlendTransparent(Color key) : key(key)
@@ -108,18 +128,23 @@ public:
 		meta.write("key", key);
 	}
 
-	void transform(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length) const override
+	static void blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length)
 	{
 		// Makes no sense for this blender
 	}
 
-	void transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const override;
+	static void blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length, Color key);
+
+	void blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const
+	{
+		blend(format, srcptr, dstptr, length, key);
+	}
 
 private:
 	Color key;
 };
 
-class BlendAlpha : public BlendTemplate<BlendMode::Alpha>
+class BlendAlpha : public BlendTemplate<BlendAlpha, BlendMode::Alpha>
 {
 public:
 	BlendAlpha(uint8_t alpha) : alpha(alpha)
@@ -140,7 +165,7 @@ public:
 		meta.write("alpha", alpha);
 	}
 
-	static PackedColor transform(PixelFormat format, PackedColor src, PackedColor dst);
+	static PackedColor blend(PixelFormat format, PackedColor src, PackedColor dst);
 	static void blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length);
 	static void blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length, uint8_t alpha);
 	static uint16_t IRAM_ATTR blendRGB565(uint16_t src, uint16_t dst, uint8_t alpha);
@@ -150,19 +175,14 @@ public:
 	static void blendRGB24(PackedColor src, uint8_t* dstptr, size_t length);
 	static PixelBuffer blendColor(PixelBuffer fg, PixelBuffer bg, uint8_t alpha);
 
+	void blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const
+	{
+		blend(format, srcptr, dstptr, length, alpha);
+	}
+
 	Color blendColor(Color fg, Color bg, uint8_t alpha) const
 	{
 		return blendColor(PixelBuffer{fg}, PixelBuffer{bg}, alpha).color;
-	}
-
-	void transform(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length) const override
-	{
-		return blend(format, src, dstptr, length);
-	}
-
-	void transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const override
-	{
-		return blend(format, srcptr, dstptr, length, alpha);
 	}
 
 private:

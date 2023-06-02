@@ -43,7 +43,7 @@ void Blend::write(MetaWriter& meta) const
 
 /* BlendXor */
 
-void BlendXor::transform(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length) const
+void BlendXor::blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length)
 {
 	auto srcptr = reinterpret_cast<uint8_t*>(&src);
 	switch(getBytesPerPixel(format)) {
@@ -68,7 +68,7 @@ void BlendXor::transform(PixelFormat format, PackedColor src, uint8_t* dstptr, s
 	}
 }
 
-void BlendXor::transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const
+void BlendXor::blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length)
 {
 	(void)format;
 	while(length-- != 0) {
@@ -78,13 +78,13 @@ void BlendXor::transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dst
 
 /* BlendXNor */
 
-void BlendXNor::transform(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length) const
+void BlendXNor::blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length)
 {
 	src.value = ~src.value;
 	BlendXor().transform(format, src, dstptr, length);
 }
 
-void BlendXNor::transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const
+void BlendXNor::blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length)
 {
 	(void)format;
 	while(length-- != 0) {
@@ -92,9 +92,44 @@ void BlendXNor::transform(PixelFormat format, const uint8_t* srcptr, uint8_t* ds
 	}
 }
 
+/* BlendMask */
+
+void BlendMask::blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length)
+{
+	auto srcptr = reinterpret_cast<uint8_t*>(&src);
+	switch(getBytesPerPixel(format)) {
+	case 1:
+		for(; length != 0; length -= 1) {
+			*dstptr++ &= srcptr[0];
+		}
+		break;
+	case 2:
+		for(; length != 0; length -= 2) {
+			*dstptr++ &= srcptr[0];
+			*dstptr++ &= srcptr[1];
+		}
+		break;
+	case 3:
+		for(; length != 0; length -= 3) {
+			*dstptr++ &= srcptr[0];
+			*dstptr++ &= srcptr[1];
+			*dstptr++ &= srcptr[2];
+		}
+		break;
+	}
+}
+
+void BlendMask::blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length)
+{
+	(void)format;
+	while(length-- != 0) {
+		*dstptr++ &= *srcptr++;
+	}
+}
+
 /* BlendTransparent */
 
-void BlendTransparent::transform(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length) const
+void BlendTransparent::blend(PixelFormat format, const uint8_t* srcptr, uint8_t* dstptr, size_t length, Color key)
 {
 	PixelBuffer ref{key};
 	ref = pack(ref, format);
@@ -222,7 +257,7 @@ PixelBuffer BlendAlpha::blendColor(PixelBuffer fg, PixelBuffer bg, uint8_t alpha
 	return dst;
 }
 
-PackedColor BlendAlpha::transform(PixelFormat format, PackedColor src, PackedColor dst)
+PackedColor BlendAlpha::blend(PixelFormat format, PackedColor src, PackedColor dst)
 {
 	if(src.alpha == 0) {
 		// Transparent - do nothing

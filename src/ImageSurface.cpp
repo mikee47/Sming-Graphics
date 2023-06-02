@@ -82,7 +82,7 @@ bool ImageSurface::setPixel(PackedColor color, Point pt)
 	if(color.alpha < 255) {
 		PackedColor cur;
 		read(offset, &cur, bytesPerPixel);
-		color = BlendAlpha::transform(pixelFormat, color, cur);
+		color = BlendAlpha::blend(pixelFormat, color, cur);
 	}
 	write(offset, &color, bytesPerPixel);
 	return true;
