@@ -77,7 +77,7 @@ bool initDisplay()
 	 * In practice, writes work at 40MHz, reads at 27MHz.
 	 * Attempting to read at 40MHz results in colour corruption.
 	 */
-	if(!tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 27000000)) {
+	if(!tft.begin(TFT_PINSET, TFT_CS, TFT_DC_PIN, TFT_RESET_PIN, 20000000)) {
 		return false;
 	}
 
