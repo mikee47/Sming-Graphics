@@ -492,13 +492,12 @@ bool FilledRectRenderer::execute(Surface& surface)
 	if(!buffer.status.readComplete) {
 		return false;
 	}
-	if(brush.isTransparent()) {
+	if(blender) {
 		auto color = brush.getPackedColor();
-		if(blender) {
-			blender->transform(buffer.format, color, buffer.data.get(), buffer.status.bytesRead);
-		} else {
-			BlendAlpha::blend(buffer.format, color, buffer.data.get(), buffer.status.bytesRead);
-		}
+		blender->transform(buffer.format, color, buffer.data.get(), buffer.status.bytesRead);
+	} else if(brush.isTransparent()) {
+		auto color = brush.getPackedColor();
+		BlendAlpha::blend(buffer.format, color, buffer.data.get(), buffer.status.bytesRead);
 	} else {
 		buffer.status.bytesRead = brush.writePixels({buffer.r, buffer.r}, buffer.data.get(), buffer.r.w);
 	}
@@ -524,7 +523,7 @@ int FilledRectRenderer::queueRead(Surface& surface)
 	auto w = std::min(blockSize.w, uint16_t(rect.w - pos.x));
 	auto h = std::min(blockSize.h, uint16_t(rect.h - pos.y));
 	buffer.r = Rect(rect.x + pos.x, rect.y + pos.y, w, h);
-	if(brush.isTransparent()) {
+	if(blender || brush.isTransparent()) {
 		if(!surface.setAddrWindow(buffer.r)) {
 			return -1;
 		}

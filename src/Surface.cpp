@@ -56,7 +56,7 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 	case Object::Kind::FilledRect: {
 		// Draw solid filled non-rounded rectangles
 		auto obj = reinterpret_cast<const FilledRectObject&>(object);
-		if(obj.radius != 0 || obj.brush.isTransparent()) {
+		if(obj.blender || obj.radius != 0 || obj.brush.isTransparent()) {
 			break;
 		}
 		if(!obj.brush.isSolid() && !isSmall(obj.rect)) {

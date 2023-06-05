@@ -281,7 +281,7 @@ bool MipiSurface::render(const Object& object, const Rect& location, std::unique
 	case Object::Kind::FilledRect: {
 		// Handle small transparent fills using display list
 		auto obj = reinterpret_cast<const FilledRectObject&>(object);
-		if(obj.radius != 0 || !obj.brush.isTransparent() || !isSmall(obj.rect)) {
+		if(obj.blender || obj.radius != 0 || !obj.brush.isTransparent() || !isSmall(obj.rect)) {
 			break;
 		}
 		auto color = obj.brush.getPackedColor(PixelFormat::RGB565);
