@@ -245,6 +245,7 @@ public:
 
 	Renderer* createRenderer(const Location& location) const override;
 
+	const Blend* blender{nullptr};
 	Brush brush;
 	Rect rect;
 	uint8_t radius{0};

@@ -61,6 +61,8 @@ protected:
 	virtual void handleControlEvent(ControlEvent event, Control& ctrl);
 
 private:
+	void doUpdate();
+
 	enum class Flag {
 		redraw,
 		redrawFull,

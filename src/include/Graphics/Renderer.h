@@ -352,13 +352,13 @@ private:
 class FilledRectRenderer : public Renderer
 {
 public:
-	FilledRectRenderer(const Location& location, const Brush& brush, const Rect& rect, std::unique_ptr<Blend> blender)
-		: Renderer(location), brush(brush), rect{rect}, blender(std::move(blender))
+	FilledRectRenderer(const Location& location, const Brush& brush, const Rect& rect, const Blend* blender = nullptr)
+		: Renderer(location), brush(brush), rect{rect}, blender(blender)
 	{
 	}
 
 	FilledRectRenderer(const Location& location, const FilledRectObject& object)
-		: Renderer(location), brush(object.brush), rect(object.rect + location.dest.topLeft())
+		: Renderer(location), brush(object.brush), rect(object.rect + location.dest.topLeft()), blender(object.blender)
 	{
 	}
 
@@ -392,7 +392,7 @@ private:
 	Rect rect;
 	Point pos{};
 	Size blockSize;
-	std::unique_ptr<Blend> blender;
+	const Blend* blender{nullptr};
 	Buffer buffers[2];
 	uint8_t index{0};
 	uint8_t busyCount{0};

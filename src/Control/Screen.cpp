@@ -11,10 +11,13 @@ void Screen::update(bool fullRedraw)
 		flags += Flag::redrawFull;
 	}
 
-	if(renderQueue.isActive()) {
-		return;
+	if(!renderQueue.isActive()) {
+		doUpdate();
 	}
+}
 
+void Screen::doUpdate()
+{
 	auto scene = new SceneObject(target);
 	if(flags[Flag::redrawFull]) {
 		scene->clear();
@@ -30,7 +33,7 @@ void Screen::update(bool fullRedraw)
 	renderQueue.render(scene, [this](SceneObject* scene) {
 		delete scene;
 		if(flags[Flag::redraw]) {
-			update(flags[Flag::redrawFull]);
+			doUpdate();
 		}
 	});
 }

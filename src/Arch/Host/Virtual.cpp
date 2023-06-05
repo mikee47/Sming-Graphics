@@ -478,7 +478,7 @@ public:
 			case Object::Kind::FilledRect: {
 				// Handle small transparent fills using display list
 				auto obj = reinterpret_cast<const FilledRectObject&>(object);
-				if(obj.radius != 0 || !obj.brush.isTransparent()) {
+				if(obj.blender || obj.radius != 0 || !obj.brush.isTransparent()) {
 					break;
 				}
 				Rect absRect = obj.rect + location.topLeft();
