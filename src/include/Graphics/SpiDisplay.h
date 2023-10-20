@@ -36,8 +36,7 @@ public:
 	{
 	}
 
-	virtual bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t resetPin = PIN_NONE,
-					   uint32_t clockSpeed = 4000000);
+	bool begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t resetPin = PIN_NONE, uint32_t clockSpeed = 4000000);
 
 	using HSPI::Device::getSpeed;
 

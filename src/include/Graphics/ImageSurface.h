@@ -83,6 +83,8 @@ public:
 
 	bool fillRect(PackedColor color, const Rect& rect) override;
 
+	using Surface::write;
+
 protected:
 	virtual void read(uint32_t offset, void* buffer, size_t length) = 0;
 	virtual void write(uint32_t offset, const void* data, size_t length) = 0;
