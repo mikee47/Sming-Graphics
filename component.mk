@@ -6,6 +6,7 @@ COMPONENT_SRCDIRS := \
 	src/Drawing \
 	src/Display \
 	src/Touch \
+	src/Control \
 	src/Arch/$(SMING_ARCH)
 
 COMPONENT_INCDIRS := \
