@@ -11,7 +11,7 @@
 #include <Graphics/Display/Virtual.h>
 #include <Graphics/Touch/VirtualTouch.h>
 #else
-#include <Graphics/Display/ILI9341.h>
+#include <Graphics/Display/ILI9488.h>
 #include <Graphics/Touch/XPT2046.h>
 #endif
 
@@ -54,7 +54,7 @@ constexpr uint8_t TOUCH_IRQ_PIN{2};
 #endif
 
 HSPI::Controller spi(spiBus, spiPins);
-Graphics::Display::ILI9341 tft(spi);
+Graphics::Display::ILI9488 tft(spi);
 Graphics::XPT2046 touch(spi, tft);
 #endif
 
