@@ -3,55 +3,133 @@ import os
 import sys
 import ctypes
 from sdl2 import *
+import sdl2.ext
+from sdl2.ext import Color
 from enum import Enum
+from random import randrange
+
+DISPLAY_WIDTH = 800
+DISPLAY_HEIGHT = 480
 
 class CaptureState(Enum):
     IDLE = 0
     DRAGGING = 1
     SIZING = 2
 
+class Element(Enum):
+    CORNER_NW = 1
+    CORNER_NE = 2
+    CORNER_SE = 3
+    CORNER_SW = 4
+    BODY = 5
+
 
 class Rect(SDL_Rect):
-    pass
+    def test(self, pt):
+        for e in Element:
+            if SDL_PointInRect(pt, self.element_rect(e)):
+                return e
+        return None
 
+    def element_pos(self, elem: Element):
+        if elem == Element.CORNER_NW or elem == Element.BODY:
+            return SDL_Rect(self.x, self.y)
+        if elem == Element.CORNER_NE:
+            return SDL_Rect(self.x + self.w, self.y)
+        if elem == Element.CORNER_SE:
+            return SDL_Rect(self.x + self.w, self.y + self.h)
+        if elem == Element.CORNER_SW:
+            return SDL_Rect(self.x, self.y + self.h)
+        return None
+
+
+    def element_rect(self, elem: Element):
+        HR = 4
+        if elem == Element.BODY:
+            return SDL_Rect(self.x - HR, self.y - HR, self.w + 2*HR, self.h + 2*HR)
+        pt = self.element_pos(elem)
+        return SDL_Rect(pt.x - HR, pt.y - HR, HR*2, HR*2) if pt else None
+
+        # if elem == Element.CORNER_NW:
+        #     return SDL_Rect(self.x - HR, self.y - HR, 2*HR, 2*HR)
+        # if elem == Element.CORNER_NE:
+        #     return SDL_Rect(self.x + self.w - HR, self.y - HR, 2*HR, 2*HR)
+        # if elem == Element.CORNER_SE:
+        #     return SDL_Rect(self.x + self.w - HR, self.y + self.h - HR, 2*HR, 2*HR)
+        # if elem == Element.CORNER_SW:
+        #     return SDL_Rect(self.x - HR, self.y + self.h - HR, 2*HR, 2*HR)
+        # if elem == Element.BODY:
+        #     return SDL_Rect(self.x - HR, self.y - HR, self.w + 2*HR, self.h + 2*HR)
+        # return None
+
+
+def inflate(rect, dx, dy = None):
+    if dy is None:
+        dy = dx
+    return Rect(rect.x - dx, rect.y - dy, rect.w + 2 * dx, rect.h + 2 * dy)
 
 def run():
-    SDL_Init(SDL_INIT_VIDEO)
-    window = SDL_CreateWindow(b"SDL2 Drag and Drop",
-                                   SDL_WINDOWPOS_CENTERED,
-                                   SDL_WINDOWPOS_CENTERED,
-                                   800, 480, SDL_WINDOW_SHOWN)
-    renderer = SDL_CreateRenderer(window, -1, 0)
+    sdl2.ext.init(SDL_INIT_VIDEO)
+    window = sdl2.ext.Window(b"SDL2 Drag and Drop", size=(DISPLAY_WIDTH, DISPLAY_HEIGHT))
+    window.show()
+
+    renderer = sdl2.ext.Renderer(window, flags=SDL_RENDERER_ACCELERATED)
 
     capture_state = CaptureState.IDLE
-    rect1 = Rect(288, 208, 100, 100)
-    rect2 = Rect(50, 50, 100, 80)
-    display_list = [rect1, rect2]
-    selected = None
+    display_list = []
+    for i in range(1, 10):
+        w_max = 200
+        h_max = 100
+        w = randrange(w_max)
+        h = randrange(h_max)
+        x = randrange(DISPLAY_WIDTH - w)
+        y = randrange(DISPLAY_HEIGHT - h)
+        r = Rect(x, y, w, h)
+        r.color = randrange(0xffffff)
+        display_list.append(r)
+    # rect1 = Rect(288, 208, 100, 100)
+    # rect2 = Rect(50, 50, 100, 80)
+    # display_list = [rect1, rect2]
+    sel_item = None
+    sel_elem = None
     mousePos = SDL_Point()
     clickOffset = SDL_Point()
 
     def hit_test():
-        for elem in display_list:
-            if SDL_PointInRect(mousePos, elem):
-                return elem
+        for item in display_list:
+            if SDL_PointInRect(mousePos, item.element_rect(Element.BODY)):
+                return item
         return None
 
     def render_display():
-            SDL_SetRenderDrawColor(renderer, 242, 242, 242, 255)
-            SDL_RenderClear(renderer)
-            for elem in display_list:
-                if selected and elem == selected:
-                    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255)
+        renderer.clear(0)
+        for item in display_list:
+            renderer.draw_rect(item, item.color)
+            if sel_item and item == sel_item:
+                r = inflate(item, 2)
+                if capture_state == CaptureState.IDLE:
+                    renderer.draw_rect(r, 0xa0a0a0)
+                    renderer.draw_rect(item.element_rect(Element.CORNER_NW), 0xa0a0a0)
+                    renderer.draw_rect(item.element_rect(Element.CORNER_NE), 0xa0a0a0)
+                    renderer.draw_rect(item.element_rect(Element.CORNER_SE), 0xa0a0a0)
+                    renderer.draw_rect(item.element_rect(Element.CORNER_SW), 0xa0a0a0)
                 else:
-                    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255)
-                SDL_RenderFillRect(renderer, elem)
-            SDL_RenderPresent(renderer);
+                    renderer.draw_rect(r, 0xffffff)
+        renderer.present()
+
+
+    def setCursor(sys_cur):
+        if sys_cur is None:
+            SDL_SetCursor(SDL_GetDefaultCursor())
+        else:
+            SDL_SetCursor(SDL_CreateSystemCursor(sys_cur))
+
 
     running = True
     event = SDL_Event()
     while running:
-        while SDL_PollEvent(ctypes.byref(event)) != 0:
+        events = sdl2.ext.get_events()
+        for event in events:
             if event.type == SDL_QUIT:
                 running = False
                 break
@@ -59,29 +137,44 @@ def run():
             if event.type == SDL_MOUSEBUTTONUP:
                 if capture_state != CaptureState.IDLE and event.button.button == SDL_BUTTON_LEFT:
                     capture_state = CaptureState.IDLE
-                    selected = None
+                    setCursor(None)
 
             elif event.type == SDL_MOUSEBUTTONDOWN:
                 if event.button.button == SDL_BUTTON_LEFT and capture_state == CaptureState.IDLE:
-                    elem = hit_test()
-                    if elem:
-                        clickOffset.x = mousePos.x - elem.x
-                        clickOffset.y = mousePos.y - elem.y
+                    sel_item = hit_test()
+                    if sel_item:
+                        clickOffset.x = mousePos.x - sel_item.x
+                        clickOffset.y = mousePos.y - sel_item.y
+                        sel_elem = sel_item.test(mousePos)
                         capture_state = CaptureState.DRAGGING
-                        selected = elem
+                        setCursor(SDL_SYSTEM_CURSOR_SIZEALL)
+                    else:
+                        sel_elem = None
 
             elif event.type == SDL_MOUSEMOTION:
                 mousePos = SDL_Point(event.motion.x, event.motion.y)
                 if capture_state == CaptureState.DRAGGING:
-                    selected.x = mousePos.x - clickOffset.x
-                    selected.y = mousePos.y - clickOffset.y
+                    if sel_elem == Element.BODY:
+                        sel_item.x = mousePos.x - clickOffset.x
+                        sel_item.y = mousePos.y - clickOffset.y
+                elif capture_state == CaptureState.IDLE:
+                    cur = None
+                    item = hit_test()
+                    if sel_item and item and sel_item == item:
+                        elem = item.test(mousePos)
+                        if elem in [Element.CORNER_NW, Element.CORNER_SE]:
+                            cur = SDL_SYSTEM_CURSOR_SIZENWSE
+                        elif elem in [Element.CORNER_NE, Element.CORNER_SW]:
+                            cur = SDL_SYSTEM_CURSOR_SIZENESW
+                        else:
+                            cur = SDL_SYSTEM_CURSOR_HAND
+                    setCursor(cur)
+
 
         render_display()
-
         SDL_Delay(10)
 
-    SDL_DestroyWindow(window)
-    SDL_Quit()
+    sdl2.ext.quit()
     return 0
 
 
