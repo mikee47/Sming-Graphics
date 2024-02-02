@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 from enum import Enum
 from random import randrange
 import pygame
@@ -7,12 +8,6 @@ from pygame import Rect
 
 
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
-
-
-class CaptureState(Enum):
-    IDLE = 0
-    DRAGGING = 1
-    SIZING = 2
 
 
 class Element(Enum):
@@ -58,6 +53,20 @@ class GElement(Rect):
         return Rect()
 
 
+    def adjust(self, elem, orig, off):
+        if elem == Element.BODY:
+            self.x, self.y = off
+            return
+        if elem in [Element.CORNER_N, Element.CORNER_NW, Element.CORNER_NE]:
+            self.y, self.h = off[1], orig.h + orig.y - off[1]
+        if elem in [Element.CORNER_E, Element.CORNER_NE, Element.CORNER_SE]:
+            self.w = off[0] - orig.x
+        if elem in [Element.CORNER_S, Element.CORNER_SE, Element.CORNER_SW]:
+            self.h = off[1] - orig.y
+        if elem in [Element.CORNER_W, Element.CORNER_NW, Element.CORNER_SW]:
+            self.x, self.w = off[0], orig.w + orig.x - off[0]
+
+
 class GRect(GElement):
     def draw(self, surface):
         pygame.draw.rect(surface, self.color, self, 1)
@@ -73,7 +82,7 @@ def run():
     screen = pygame.display.set_mode(DISPLAY_SIZE)
     clock = pygame.time.Clock()
 
-    capture_state = CaptureState.IDLE
+    mouse_captured = False
     display_list = []
     for i in range(1, 10):
         w_max = 200
@@ -92,6 +101,7 @@ def run():
 
     sel_item = None
     sel_elem = None
+    cap_item = None
     mousePos = None
     clickOffset = None
 
@@ -107,13 +117,13 @@ def run():
             item.draw(screen)
             if sel_item and item == sel_item:
                 r = item.inflate(4, 4)
-                if capture_state == CaptureState.IDLE:
+                if mouse_captured:
+                    pygame.draw.rect(screen, 0xffffff, r, 1)
+                else:
                     pygame.draw.rect(screen, 0xa0a0a0, r, 1)
                     for e in Element:
                         if e != Element.BODY:
                             pygame.draw.rect(screen, 0xa0a0a0, item.element_rect(e), 1)
-                else:
-                    pygame.draw.rect(screen, 0xffffff, r, 1)
         pygame.display.flip()
 
 
@@ -128,28 +138,28 @@ def run():
                 break
 
             if event.type == pygame.MOUSEBUTTONUP:
-                if capture_state != CaptureState.IDLE and event.button == pygame.BUTTON_LEFT:
-                    capture_state = CaptureState.IDLE
+                if mouse_captured and event.button == pygame.BUTTON_LEFT:
+                    mouse_captured = False
                     setCursor(None)
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == pygame.BUTTON_LEFT and capture_state == CaptureState.IDLE:
+                if event.button == pygame.BUTTON_LEFT and not mouse_captured:
                     sel_item = hit_test()
                     if sel_item:
-                        clickOffset = mousePos[0] - sel_item.x, mousePos[1] - sel_item.y
+                        cap_item = copy.copy(sel_item)
                         sel_elem = sel_item.test(mousePos)
-                        capture_state = CaptureState.DRAGGING
+                        pt = sel_item.element_pos(sel_elem)
+                        clickOffset = mousePos[0] - pt[0], mousePos[1] - pt[1]
+                        mouse_captured = True
                         setCursor(pygame.SYSTEM_CURSOR_SIZEALL)
                     else:
-                        sel_elem = None
+                        sel_elem = cap_item = None
 
             elif event.type == pygame.MOUSEMOTION:
                 mousePos = event.pos
-                if capture_state == CaptureState.DRAGGING:
-                    if sel_elem == Element.BODY:
-                        sel_item.x = mousePos[0] - clickOffset[0]
-                        sel_item.y = mousePos[1] - clickOffset[1]
-                elif capture_state == CaptureState.IDLE:
+                if mouse_captured:
+                    sel_item.adjust(sel_elem, cap_item, (mousePos[0] - clickOffset[0], mousePos[1] - clickOffset[1]))
+                else:
                     cur = None
                     item = hit_test()
                     if sel_item and item and sel_item == item:
