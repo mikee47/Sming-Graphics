@@ -74,7 +74,7 @@ class GElement(Rect):
             h = off[1] - orig.y
         if elem in [Element.CORNER_W, Element.CORNER_NW, Element.CORNER_SW]:
             x, w = off[0], orig.w + orig.x - off[0]
-        if w >= MIN_ELEMENT_WIDTH and h >= MIN_ELEMENT_HEIGHT:
+        if w >= MIN_ELEMENT_WIDTH + self.line_width*2 and h >= MIN_ELEMENT_HEIGHT + self.line_width*2:
             self.x, self.y, self.w, self.h = x, y, w, h
 
 
