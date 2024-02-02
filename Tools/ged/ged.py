@@ -2,24 +2,29 @@ import os
 import sys
 from enum import Enum
 from random import randrange
-
 import pygame
 from pygame import Rect
 
 
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
 
+
 class CaptureState(Enum):
     IDLE = 0
     DRAGGING = 1
     SIZING = 2
 
+
 class Element(Enum):
     CORNER_NW = 1
-    CORNER_NE = 2
-    CORNER_SE = 3
-    CORNER_SW = 4
-    BODY = 5
+    CORNER_N = 2
+    CORNER_NE = 3
+    CORNER_E = 4
+    CORNER_SE = 5
+    CORNER_S = 6
+    CORNER_SW = 7
+    CORNER_W = 8
+    BODY = 9
 
 
 class GElement(Rect):
@@ -30,15 +35,17 @@ class GElement(Rect):
         return None
 
     def element_pos(self, elem: Element):
-        if elem == Element.CORNER_NW or elem == Element.BODY:
-            return self.x, self.y
-        if elem == Element.CORNER_NE:
-            return self.x + self.w, self.y
-        if elem == Element.CORNER_SE:
-            return self.x + self.w, self.y + self.h
-        if elem == Element.CORNER_SW:
-            return self.x, self.y + self.h
-        return None
+        return {
+            Element.CORNER_NW: (self.x, self.y),
+            Element.CORNER_N: (self.x + self.w // 2, self.y),
+            Element.CORNER_NE: (self.x + self.w, self.y),
+            Element.CORNER_E: (self.x + self.w, self.y + self.h // 2),
+            Element.CORNER_SE: (self.x + self.w, self.y + self.h),
+            Element.CORNER_S: (self.x + self.w // 2, self.y + self.h),
+            Element.CORNER_SW: (self.x, self.y + self.h),
+            Element.CORNER_W: (self.x, self.y + self.h // 2),
+            Element.BODY: (self.x, self.y),
+        }.get(elem)
 
 
     def element_rect(self, elem: Element):
@@ -82,9 +89,7 @@ def run():
             r = GRect(x, y, w, h)
         r.color = randrange(0xffffff)
         display_list.append(r)
-    # rect1 = Rect(288, 208, 100, 100)
-    # rect2 = Rect(50, 50, 100, 80)
-    # display_list = [rect1, rect2]
+
     sel_item = None
     sel_elem = None
     mousePos = None
@@ -104,10 +109,9 @@ def run():
                 r = item.inflate(4, 4)
                 if capture_state == CaptureState.IDLE:
                     pygame.draw.rect(screen, 0xa0a0a0, r, 1)
-                    pygame.draw.rect(screen, 0xa0a0a0, item.element_rect(Element.CORNER_NW), 1)
-                    pygame.draw.rect(screen, 0xa0a0a0, item.element_rect(Element.CORNER_NE), 1)
-                    pygame.draw.rect(screen, 0xa0a0a0, item.element_rect(Element.CORNER_SE), 1)
-                    pygame.draw.rect(screen, 0xa0a0a0, item.element_rect(Element.CORNER_SW), 1)
+                    for e in Element:
+                        if e != Element.BODY:
+                            pygame.draw.rect(screen, 0xa0a0a0, item.element_rect(e), 1)
                 else:
                     pygame.draw.rect(screen, 0xffffff, r, 1)
         pygame.display.flip()
@@ -154,6 +158,10 @@ def run():
                             cur = pygame.SYSTEM_CURSOR_SIZENWSE
                         elif elem in [Element.CORNER_NE, Element.CORNER_SW]:
                             cur = pygame.SYSTEM_CURSOR_SIZENESW
+                        elif elem in [Element.CORNER_N, Element.CORNER_S]:
+                            cur = pygame.SYSTEM_CURSOR_SIZENS
+                        elif elem in [Element.CORNER_E, Element.CORNER_W]:
+                            cur = pygame.SYSTEM_CURSOR_SIZEWE
                         else:
                             cur = pygame.SYSTEM_CURSOR_HAND
                     setCursor(cur)
