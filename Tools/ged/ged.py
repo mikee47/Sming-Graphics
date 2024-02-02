@@ -8,7 +8,7 @@ from pygame import Rect
 
 
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
-
+MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 1
 
 class Element(Enum):
     CORNER_NW = 1
@@ -23,6 +23,14 @@ class Element(Enum):
 
 
 class GElement(Rect):
+    def __init__(self, x=0, y=0, w=0, h=0):
+        super().__init__(x, y, w, h)
+        self.init()
+
+    def init(self):
+        self.line_width = 1
+        self.color = 0xa0a0a0
+
     def test(self, pt):
         for e in Element:
             if self.element_rect(e).collidepoint(pt):
@@ -57,24 +65,31 @@ class GElement(Rect):
         if elem == Element.BODY:
             self.x, self.y = off
             return
+        x, y, w, h = self.x, self.y, self.w, self.h
         if elem in [Element.CORNER_N, Element.CORNER_NW, Element.CORNER_NE]:
-            self.y, self.h = off[1], orig.h + orig.y - off[1]
+            y, h = off[1], orig.h + orig.y - off[1]
         if elem in [Element.CORNER_E, Element.CORNER_NE, Element.CORNER_SE]:
-            self.w = off[0] - orig.x
+            w = off[0] - orig.x
         if elem in [Element.CORNER_S, Element.CORNER_SE, Element.CORNER_SW]:
-            self.h = off[1] - orig.y
+            h = off[1] - orig.y
         if elem in [Element.CORNER_W, Element.CORNER_NW, Element.CORNER_SW]:
-            self.x, self.w = off[0], orig.w + orig.x - off[0]
+            x, w = off[0], orig.w + orig.x - off[0]
+        if w >= MIN_ELEMENT_WIDTH and h >= MIN_ELEMENT_HEIGHT:
+            self.x, self.y, self.w, self.h = x, y, w, h
 
 
 class GRect(GElement):
+    def init(self):
+        super().init()
+        self.radius = 0
+
     def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self, 1)
+        pygame.draw.rect(surface, self.color, self, self.line_width, self.radius)
 
 
 class GEllipse(GElement):
     def draw(self, surface):
-        pygame.draw.ellipse(surface, self.color, self, 1)
+        pygame.draw.ellipse(surface, self.color, self, self.line_width)
 
 
 def run():
@@ -96,7 +111,9 @@ def run():
             r = GEllipse(x, y, w, h)
         else:
             r = GRect(x, y, w, h)
+            r.radius = randrange(0, 20)
         r.color = randrange(0xffffff)
+        r.line_width = randrange(5)
         display_list.append(r)
 
     sel_item = None
@@ -140,11 +157,13 @@ def run():
             if event.type == pygame.MOUSEBUTTONUP:
                 if mouse_captured and event.button == pygame.BUTTON_LEFT:
                     mouse_captured = False
+                    cap_item = None
                     setCursor(None)
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == pygame.BUTTON_LEFT and not mouse_captured:
-                    sel_item = hit_test()
+                    if not (sel_item and sel_item.test(mousePos)):
+                        sel_item = hit_test()
                     if sel_item:
                         cap_item = copy.copy(sel_item)
                         sel_elem = sel_item.test(mousePos)
