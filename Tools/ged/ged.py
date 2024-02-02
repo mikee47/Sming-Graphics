@@ -132,15 +132,18 @@ def run():
         screen.fill(0)
         for item in display_list:
             item.draw(screen)
-            if sel_item and item == sel_item:
-                r = item.inflate(4, 4)
-                if mouse_captured:
-                    pygame.draw.rect(screen, 0xffffff, r, 1)
-                else:
-                    pygame.draw.rect(screen, 0xa0a0a0, r, 1)
-                    for e in Element:
-                        if e != Element.BODY:
-                            pygame.draw.rect(screen, 0xa0a0a0, item.element_rect(e), 1)
+
+        # (re-)draw selected item last so it sits on top
+        if sel_item:
+            sel_item.draw(screen)
+            r = sel_item.inflate(4, 4)
+            if mouse_captured:
+                pygame.draw.rect(screen, 0xffffff, r, 1)
+            else:
+                pygame.draw.rect(screen, 0xa0a0a0, r, 1)
+                for e in Element:
+                    if e != Element.BODY:
+                        pygame.draw.rect(screen, 0xa0a0a0, sel_item.element_rect(e), 1)
         pygame.display.flip()
 
 
