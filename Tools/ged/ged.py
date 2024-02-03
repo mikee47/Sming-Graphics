@@ -51,6 +51,17 @@ class GElement(Rect):
             return pygame.SYSTEM_CURSOR_SIZEWE
         return pygame.SYSTEM_CURSOR_HAND
 
+    def draw_select(self, surface, captured):
+        r = self.inflate(4, 4)
+        if captured:
+            pygame.draw.rect(surface, 0xffffff, r, 1)
+        else:
+            pygame.draw.rect(surface, 0xa0a0a0, r, 1)
+            for e in Element:
+                if e != Element.BODY:
+                    pygame.draw.rect(surface, 0xa0a0a0, self.element_rect(e), 1)
+
+
     def element_pos(self, elem: Element):
         return {
             Element.CORNER_NW: (self.x, self.y),
@@ -137,27 +148,20 @@ def run():
     clickOffset = None
 
     def hit_test():
-        for item in display_list:
+        for item in reversed(display_list):
             if item.element_rect(Element.BODY).collidepoint(mousePos):
                 return item
         return None
 
     def render_display():
         screen.fill(0)
+        # Draw everything, in order, except selected item
         for item in display_list:
             item.draw(screen)
 
-        # (re-)draw selected item last so it sits on top
+        # draw selected item on top
         if sel_item:
-            sel_item.draw(screen)
-            r = sel_item.inflate(4, 4)
-            if mouse_captured:
-                pygame.draw.rect(screen, 0xffffff, r, 1)
-            else:
-                pygame.draw.rect(screen, 0xa0a0a0, r, 1)
-                for e in Element:
-                    if e != Element.BODY:
-                        pygame.draw.rect(screen, 0xa0a0a0, sel_item.element_rect(e), 1)
+            sel_item.draw_select(screen, mouse_captured)
         pygame.display.flip()
 
 
