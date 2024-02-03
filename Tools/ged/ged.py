@@ -117,9 +117,15 @@ class GEllipse(GElement):
         pygame.draw.ellipse(surface, self.color, self, self.line_width)
 
 
+def setCursor(sys_cur):
+    pygame.mouse.set_cursor(sys_cur or pygame.cursors.arrow)
+
+
 def run():
     pygame.init()
-    screen = pygame.display.set_mode(DISPLAY_SIZE)
+    screen = pygame.display.set_mode(DISPLAY_SIZE, pygame.SCALED | pygame.RESIZABLE)
+    pygame.display.set_caption('Graphical Display Editor')
+    print(pygame.display.Info())
     clock = pygame.time.Clock()
 
     mouse_captured = False
@@ -165,9 +171,6 @@ def run():
         pygame.display.flip()
 
 
-    def setCursor(sys_cur):
-        pygame.mouse.set_cursor(sys_cur or pygame.cursors.arrow)
-
     running = True
     while running:
         for event in pygame.event.get():
@@ -191,7 +194,6 @@ def run():
                         pt = sel_item.element_pos(sel_elem)
                         clickOffset = mousePos[0] - pt[0], mousePos[1] - pt[1]
                         mouse_captured = True
-                        setCursor(pygame.SYSTEM_CURSOR_SIZEALL)
                     else:
                         sel_elem = cap_item = None
 
