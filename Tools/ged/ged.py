@@ -5,6 +5,8 @@ from enum import IntEnum
 from random import randrange
 import pygame
 from pygame import Rect
+import pygame._sdl2
+import tkinter as tk
 
 
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
@@ -174,7 +176,17 @@ def get_random_shapes(display_list, count):
 
 
 def run():
-    pygame.init()
+    root = tk.Tk()
+    def btn_click():
+        print('Button clicked')
+    btn = tk.Button(root, text='Hello', command=btn_click)
+    btn.pack(side=tk.TOP)
+    embed_pygame = tk.Frame(root, width=DISPLAY_WIDTH, height=DISPLAY_HEIGHT)
+    embed_pygame.pack(side=tk.TOP)
+    root.update()
+
+    # os.environ['SDL_WINDOWID'] = str(embed_pygame.winfo_id())
+    pygame.display.init()
     screen = pygame.display.set_mode(DISPLAY_SIZE, pygame.SCALED | pygame.RESIZABLE)
     pygame.display.set_caption('Graphical Display Editor')
     print(pygame.display.Info())
@@ -250,6 +262,8 @@ def run():
 
 
         render_display()
+        root.update_idletasks()
+        root.update()
         clock.tick(30)
 
     pygame.quit()
