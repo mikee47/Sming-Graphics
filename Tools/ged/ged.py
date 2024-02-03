@@ -37,6 +37,20 @@ class GElement(Rect):
                 return e
         return None
 
+    def get_cursor(self, pt):
+        elem = self.test(pt)
+        if elem is None:
+            return None
+        if elem in [Element.CORNER_NW, Element.CORNER_SE]:
+            return pygame.SYSTEM_CURSOR_SIZENWSE
+        if elem in [Element.CORNER_NE, Element.CORNER_SW]:
+            return pygame.SYSTEM_CURSOR_SIZENESW
+        if elem in [Element.CORNER_N, Element.CORNER_S]:
+            return pygame.SYSTEM_CURSOR_SIZENS
+        if elem in [Element.CORNER_E, Element.CORNER_W]:
+            return pygame.SYSTEM_CURSOR_SIZEWE
+        return pygame.SYSTEM_CURSOR_HAND
+
     def element_pos(self, elem: Element):
         return {
             Element.CORNER_NW: (self.x, self.y),
@@ -181,22 +195,8 @@ def run():
                 mousePos = event.pos
                 if mouse_captured:
                     sel_item.adjust(sel_elem, cap_item, (mousePos[0] - clickOffset[0], mousePos[1] - clickOffset[1]))
-                else:
-                    cur = None
-                    item = hit_test()
-                    if sel_item and item and sel_item == item:
-                        elem = item.test(mousePos)
-                        if elem in [Element.CORNER_NW, Element.CORNER_SE]:
-                            cur = pygame.SYSTEM_CURSOR_SIZENWSE
-                        elif elem in [Element.CORNER_NE, Element.CORNER_SW]:
-                            cur = pygame.SYSTEM_CURSOR_SIZENESW
-                        elif elem in [Element.CORNER_N, Element.CORNER_S]:
-                            cur = pygame.SYSTEM_CURSOR_SIZENS
-                        elif elem in [Element.CORNER_E, Element.CORNER_W]:
-                            cur = pygame.SYSTEM_CURSOR_SIZEWE
-                        else:
-                            cur = pygame.SYSTEM_CURSOR_HAND
-                    setCursor(cur)
+                elif sel_item:
+                    setCursor(sel_item.get_cursor(mousePos))
 
 
         render_display()
