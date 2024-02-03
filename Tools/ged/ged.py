@@ -156,10 +156,10 @@ def setCursor(sys_cur):
 
 def get_random_shapes(display_list, count):
     for i in range(count):
-        w_max = 200
-        h_max = 100
-        w = randrange(w_max)
-        h = randrange(h_max)
+        w_min, w_max = 10, 200
+        h_min, h_max = 10, 100
+        w = randrange(w_min, w_max)
+        h = randrange(h_min, h_max)
         x = randrange(DISPLAY_WIDTH - w)
         y = randrange(DISPLAY_HEIGHT - h)
         kind = randrange(5)
@@ -182,7 +182,7 @@ def run():
 
     mouse_captured = False
     display_list = []
-    get_random_shapes(display_list, 10)
+    get_random_shapes(display_list, 20)
 
     sel_item = None
     sel_elem = None
