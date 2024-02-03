@@ -1,7 +1,7 @@
 import os
 import sys
 import copy
-from enum import Enum
+from enum import IntEnum
 from random import randrange
 import pygame
 from pygame import Rect
@@ -10,16 +10,52 @@ from pygame import Rect
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
 MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 1
 
-class Element(Enum):
-    CORNER_NW = 1
-    CORNER_N = 2
-    CORNER_NE = 3
-    CORNER_E = 4
-    CORNER_SE = 5
-    CORNER_S = 6
-    CORNER_SW = 7
-    CORNER_W = 8
-    BODY = 9
+# Top 4 bits identify hit class
+HIT_CLASS_MASK = 0xf0
+# Lower 4 bits for direction
+HIT_DIR_MASK = 0x0f
+# Hit mask for handles at corners and midpoints of bounding rect
+HIT_HANDLE = 0x10
+# Hit mask for edges of bounding rectangle
+HIT_EDGE = 0x20
+HIT_BODY = 0x30
+
+# Directions
+DIR_N = 0x01
+DIR_E = 0x02
+DIR_S = 0x04
+DIR_W = 0x08
+DIR_NE = DIR_N | DIR_E
+DIR_SE = DIR_S | DIR_E
+DIR_SW = DIR_S | DIR_W
+DIR_NW = DIR_N | DIR_W
+
+def hit_class(e):
+    return e & HIT_CLASS_MASK
+
+def hit_dir(e):
+    return e & HIT_DIR_MASK
+
+class Element(IntEnum):
+    HANDLE_N = HIT_HANDLE | DIR_N
+    HANDLE_NE = HIT_HANDLE | DIR_NE
+    HANDLE_E = HIT_HANDLE | DIR_E
+    HANDLE_SE = HIT_HANDLE | DIR_SE
+    HANDLE_S = HIT_HANDLE | DIR_S
+    HANDLE_SW = HIT_HANDLE | DIR_SW
+    HANDLE_W = HIT_HANDLE | DIR_W
+    HANDLE_NW = HIT_HANDLE | DIR_NW
+
+    EDGE_N = HIT_EDGE | DIR_N
+    EDGE_NE = HIT_EDGE | DIR_NE
+    EDGE_E = HIT_EDGE | DIR_E
+    EDGE_SE = HIT_EDGE | DIR_SE
+    EDGE_S = HIT_EDGE | DIR_S
+    EDGE_SW = HIT_EDGE | DIR_SW
+    EDGE_W = HIT_EDGE | DIR_W
+    EDGE_NW = HIT_EDGE | DIR_NW
+
+    BODY = HIT_BODY
 
 
 class GElement(Rect):
@@ -33,7 +69,8 @@ class GElement(Rect):
 
     def test(self, pt):
         for e in Element:
-            if self.element_rect(e).collidepoint(pt):
+            r = self.element_rect(e)
+            if r and r.collidepoint(pt):
                 return e
         return None
 
@@ -41,64 +78,60 @@ class GElement(Rect):
         elem = self.test(pt)
         if elem is None:
             return None
-        if elem in [Element.CORNER_NW, Element.CORNER_SE]:
+        if elem in [Element.HANDLE_NW, Element.HANDLE_SE]:
             return pygame.SYSTEM_CURSOR_SIZENWSE
-        if elem in [Element.CORNER_NE, Element.CORNER_SW]:
+        if elem in [Element.HANDLE_NE, Element.HANDLE_SW]:
             return pygame.SYSTEM_CURSOR_SIZENESW
-        if elem in [Element.CORNER_N, Element.CORNER_S]:
+        if elem in [Element.HANDLE_N, Element.HANDLE_S]:
             return pygame.SYSTEM_CURSOR_SIZENS
-        if elem in [Element.CORNER_E, Element.CORNER_W]:
+        if elem in [Element.HANDLE_E, Element.HANDLE_W]:
             return pygame.SYSTEM_CURSOR_SIZEWE
         return pygame.SYSTEM_CURSOR_HAND
 
     def draw_select(self, surface, captured):
-        r = self.inflate(4, 4)
+        r = self.element_rect(Element.BODY)
         if captured:
             pygame.draw.rect(surface, 0xffffff, r, 1)
         else:
             pygame.draw.rect(surface, 0xa0a0a0, r, 1)
             for e in Element:
-                if e != Element.BODY:
+                if hit_class(e) == HIT_HANDLE:
                     pygame.draw.rect(surface, 0xa0a0a0, self.element_rect(e), 1)
 
 
-    def element_pos(self, elem: Element):
+    def element_rect(self, elem):
+        HR = 8, 8
+        ER = 2, 2
         return {
-            Element.CORNER_NW: (self.x, self.y),
-            Element.CORNER_N: (self.x + self.w // 2, self.y),
-            Element.CORNER_NE: (self.x + self.w, self.y),
-            Element.CORNER_E: (self.x + self.w, self.y + self.h // 2),
-            Element.CORNER_SE: (self.x + self.w, self.y + self.h),
-            Element.CORNER_S: (self.x + self.w // 2, self.y + self.h),
-            Element.CORNER_SW: (self.x, self.y + self.h),
-            Element.CORNER_W: (self.x, self.y + self.h // 2),
-            Element.BODY: (self.x, self.y),
+            Element.HANDLE_N: Rect(self.x + self.w // 2, self.y, 1, 1).inflate(HR),
+            Element.HANDLE_NE: Rect(self.x + self.w, self.y, 1, 1).inflate(HR),
+            Element.HANDLE_E: Rect(self.x + self.w, self.y + self.h // 2, 1, 1).inflate(HR),
+            Element.HANDLE_SE: Rect(self.x + self.w, self.y + self.h, 1, 1).inflate(HR),
+            Element.HANDLE_S: Rect(self.x + self.w // 2, self.y + self.h, 1, 1).inflate(HR),
+            Element.HANDLE_SW: Rect(self.x, self.y + self.h, 1, 1).inflate(HR),
+            Element.HANDLE_W: Rect(self.x, self.y + self.h // 2, 1, 1).inflate(HR),
+            Element.HANDLE_NW: Rect(self.x, self.y, 1, 1).inflate(HR),
+            Element.EDGE_N: Rect(self.x, self.y, self.w, self.line_width).inflate(ER),
+            Element.EDGE_E: Rect(self.x + self.w - self.line_width, self.y, self.line_width, self.h).inflate(ER),
+            Element.EDGE_S: Rect(self.x, self.y + self.h - self.line_width, self.w, self.line_width).inflate(ER),
+            Element.EDGE_W: Rect(self.x, self.y, self.line_width, self.h).inflate(ER),
+            Element.BODY: Rect(self.x, self.y, self.w, self.h).inflate(ER),
         }.get(elem)
-
-
-    def element_rect(self, elem: Element):
-        HR = 4
-        if elem == Element.BODY:
-            return Rect(self.x - HR, self.y - HR, self.w + 2*HR, self.h + 2*HR)
-        pt = self.element_pos(elem)
-        if pt:
-            return Rect(pt[0] - HR, pt[1] - HR, HR*2, HR*2)
-        return Rect()
 
 
     def adjust(self, elem, orig, off):
         if elem == Element.BODY:
-            self.x, self.y = off
+            self.x, self.y = orig.x + off[0], orig.y + off[1]
             return
         x, y, w, h = self.x, self.y, self.w, self.h
-        if elem in [Element.CORNER_N, Element.CORNER_NW, Element.CORNER_NE]:
-            y, h = off[1], orig.h + orig.y - off[1]
-        if elem in [Element.CORNER_E, Element.CORNER_NE, Element.CORNER_SE]:
-            w = off[0] - orig.x
-        if elem in [Element.CORNER_S, Element.CORNER_SE, Element.CORNER_SW]:
-            h = off[1] - orig.y
-        if elem in [Element.CORNER_W, Element.CORNER_NW, Element.CORNER_SW]:
-            x, w = off[0], orig.w + orig.x - off[0]
+        if elem & DIR_N:
+            y, h = orig.y + off[1], orig.h - off[1]
+        if elem & DIR_E:
+            w = orig.w + off[0]
+        if elem & DIR_S:
+            h = orig.h + off[1]
+        if elem & DIR_W:
+            x, w = orig.x + off[0], orig.w - off[0]
         if w >= MIN_ELEMENT_WIDTH + self.line_width*2 and h >= MIN_ELEMENT_HEIGHT + self.line_width*2:
             self.x, self.y, self.w, self.h = x, y, w, h
 
@@ -121,16 +154,8 @@ def setCursor(sys_cur):
     pygame.mouse.set_cursor(sys_cur or pygame.cursors.arrow)
 
 
-def run():
-    pygame.init()
-    screen = pygame.display.set_mode(DISPLAY_SIZE, pygame.SCALED | pygame.RESIZABLE)
-    pygame.display.set_caption('Graphical Display Editor')
-    print(pygame.display.Info())
-    clock = pygame.time.Clock()
-
-    mouse_captured = False
-    display_list = []
-    for i in range(1, 10):
+def get_random_shapes(display_list, count):
+    for i in range(count):
         w_max = 200
         h_max = 100
         w = randrange(w_max)
@@ -147,17 +172,37 @@ def run():
         r.line_width = randrange(5)
         display_list.append(r)
 
+
+def run():
+    pygame.init()
+    screen = pygame.display.set_mode(DISPLAY_SIZE, pygame.SCALED | pygame.RESIZABLE)
+    pygame.display.set_caption('Graphical Display Editor')
+    print(pygame.display.Info())
+    clock = pygame.time.Clock()
+
+    mouse_captured = False
+    display_list = []
+    get_random_shapes(display_list, 10)
+
     sel_item = None
     sel_elem = None
     cap_item = None
-    mousePos = None
-    clickOffset = None
+    mouse_pos = None
+    sel_pos = None
 
     def hit_test():
+        # Items lower in Z-order can be selected through upper objects by clicking edges
+        body_hit = None
         for item in reversed(display_list):
-            if item.element_rect(Element.BODY).collidepoint(mousePos):
+            e = item.test(mouse_pos)
+            if not e:
+                continue
+            if e != Element.BODY:
                 return item
-        return None
+            if not body_hit:
+                body_hit = item
+        return body_hit
+
 
     def render_display():
         screen.fill(0)
@@ -186,23 +231,22 @@ def run():
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == pygame.BUTTON_LEFT and not mouse_captured:
-                    if not (sel_item and sel_item.test(mousePos)):
+                    if not (sel_item and sel_item.test(mouse_pos)):
                         sel_item = hit_test()
                     if sel_item:
                         cap_item = copy.copy(sel_item)
-                        sel_elem = sel_item.test(mousePos)
-                        pt = sel_item.element_pos(sel_elem)
-                        clickOffset = mousePos[0] - pt[0], mousePos[1] - pt[1]
+                        sel_elem = sel_item.test(mouse_pos)
+                        sel_pos = mouse_pos
                         mouse_captured = True
                     else:
                         sel_elem = cap_item = None
 
             elif event.type == pygame.MOUSEMOTION:
-                mousePos = event.pos
+                mouse_pos = event.pos
                 if mouse_captured:
-                    sel_item.adjust(sel_elem, cap_item, (mousePos[0] - clickOffset[0], mousePos[1] - clickOffset[1]))
+                    sel_item.adjust(sel_elem, cap_item, (mouse_pos[0] - sel_pos[0], mouse_pos[1] - sel_pos[1]))
                 elif sel_item:
-                    setCursor(sel_item.get_cursor(mousePos))
+                    setCursor(sel_item.get_cursor(mouse_pos))
 
 
         render_display()
