@@ -3,14 +3,45 @@ import sys
 import copy
 from enum import IntEnum
 from random import randrange
-import pygame
-from pygame import Rect
-import pygame._sdl2
 import tkinter as tk
 
 
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
 MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 1
+
+class Rect:
+    def __init__(self, x=0, y=0, w=0, h=0):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+
+    def inflate(self, off):
+        return Rect(self.x - off[0], self.y - off[1], self.w + off[0]*2, self.h + off[1]*2)
+
+    def pos(self, anchor=tk.NW):
+        if anchor == tk.N:
+            return (self.x + self.w // 2, self.y)
+        if anchor == tk.NE:
+            return (self.x + self.w, self.y)
+        if anchor == tk.E:
+            return (self.x + self.w, self.y + self.h // 2)
+        if anchor == tk.SE:
+            return (self.x + self.w, self.y + self.h)
+        if anchor == tk.S:
+            return (self.x + self.w // 2, self.y + self.h)
+        if anchor == tk.SW:
+            return (self.x, self.y + self.h)
+        if anchor == tk.W:
+            return (self.x, self.y + self.h // 2)
+        if anchor == tk.CENTER:
+            return (self.x + self.w // 2, self.y + self.h // 2)
+        # Default and NW
+        return (self.x, self.y)
+
+    def bounds(self):
+        return (self.x, self.y, self.x + self.w, self.y + self.h)
+
 
 # Top 4 bits identify hit class
 HIT_CLASS_MASK = 0xf0
@@ -76,34 +107,42 @@ class GElement(Rect):
                 return e
         return None
 
-    def get_cursor(self, pt):
-        elem = self.test(pt)
+    def get_tag(self):
+        return 'G%08x' % id(self)
+
+    def get_cursor(self, elem):
         if elem is None:
             return None
-        if elem in [Element.HANDLE_NW, Element.HANDLE_SE]:
-            return pygame.SYSTEM_CURSOR_SIZENWSE
-        if elem in [Element.HANDLE_NE, Element.HANDLE_SW]:
-            return pygame.SYSTEM_CURSOR_SIZENESW
-        if elem in [Element.HANDLE_N, Element.HANDLE_S]:
-            return pygame.SYSTEM_CURSOR_SIZENS
-        if elem in [Element.HANDLE_E, Element.HANDLE_W]:
-            return pygame.SYSTEM_CURSOR_SIZEWE
-        return pygame.SYSTEM_CURSOR_HAND
+        return {
+            Element.HANDLE_NW: 'top_left_corner',
+            Element.HANDLE_SE: 'bottom_right_corner',
+            Element.HANDLE_NE: 'top_right_corner',
+            Element.HANDLE_SW: 'bottom_left_corner',
+            Element.HANDLE_N: 'sb_v_double_arrow',
+            Element.HANDLE_S: 'sb_v_double_arrow',
+            Element.HANDLE_E: 'sb_h_double_arrow',
+            Element.HANDLE_W: 'sb_h_double_arrow',
+            Element.BODY: 'target',
+        }.get(elem)
 
-    def draw_select(self, surface, captured):
-        r = self.element_rect(Element.BODY)
-        if captured:
-            pygame.draw.rect(surface, 0xffffff, r, 1)
-        else:
-            pygame.draw.rect(surface, 0xa0a0a0, r, 1)
-            for e in Element:
-                if hit_class(e) == HIT_HANDLE:
-                    pygame.draw.rect(surface, 0xa0a0a0, self.element_rect(e), 1)
+    def hide_handles(self, canvas):
+        canvas.itemconfigure('handle', {'state': 'hidden'})
+
+    def remove_handles(self, canvas):
+        canvas.delete('handle')
+
+    def draw_handles(self, canvas):
+        for e in Element:
+            if hit_class(e) != HIT_HANDLE:
+                continue
+            r = self.element_rect(e).bounds()
+            tags = (self.get_tag(), str(e), 'handle')
+            canvas.create_rectangle(r[0], r[1], r[2], r[3], outline='white', width=1, tags=tags)
 
 
     def element_rect(self, elem):
-        HR = 8, 8
-        ER = 2, 2
+        HR = 4, 4
+        ER = 1, 1
         return {
             Element.HANDLE_N: Rect(self.x + self.w // 2, self.y, 1, 1).inflate(HR),
             Element.HANDLE_NE: Rect(self.x + self.w, self.y, 1, 1).inflate(HR),
@@ -138,63 +177,156 @@ class GElement(Rect):
             self.x, self.y, self.w, self.h = x, y, w, h
 
 
+    def update(self, canvas):
+        r = self.bounds()
+        canvas.coords(self.id, r[0], r[1], r[2], r[3])
+
+
 class GRect(GElement):
     def init(self):
         super().init()
         self.radius = 0
 
-    def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self, self.line_width, self.radius)
+    def draw(self, canvas):
+        # pygame.draw.rect(surface, self.color, self, self.line_width, self.radius)
+        x1, y1, x2, y2 = self.bounds()
+        color = '#%06x' % self.color
+        tags = (self.get_tag(), str(Element.BODY), 'item')
+        if self.line_width == 0:
+            self.id = canvas.create_rectangle(x1, y1, x2, y2, fill=color, tags=tags)
+        else:
+            self.id = canvas.create_rectangle(x1, y1, x2, y2, outline=color, width=self.line_width, tags=tags)
 
 
 class GEllipse(GElement):
-    def draw(self, surface):
-        pygame.draw.ellipse(surface, self.color, self, self.line_width)
-
-
-def setCursor(sys_cur):
-    pygame.mouse.set_cursor(sys_cur or pygame.cursors.arrow)
-
-
-def get_random_shapes(display_list, count):
-    for i in range(count):
-        w_min, w_max = 10, 200
-        h_min, h_max = 10, 100
-        w = randrange(w_min, w_max)
-        h = randrange(h_min, h_max)
-        x = randrange(DISPLAY_WIDTH - w)
-        y = randrange(DISPLAY_HEIGHT - h)
-        kind = randrange(5)
-        if kind == 1:
-            r = GEllipse(x, y, w, h)
+    def draw(self, canvas):
+        # pygame.draw.ellipse(surface, self.color, self, self.line_width)
+        x1, y1, x2, y2 = self.bounds()
+        color = '#%06x' % self.color
+        tags = (self.get_tag(), str(Element.BODY), 'item')
+        if self.line_width == 0:
+            self.id = canvas.create_oval(x1, y1, x2, y2, fill=color, tags=tags)
         else:
-            r = GRect(x, y, w, h)
-            r.radius = randrange(0, 20)
-        r.color = randrange(0xffffff)
-        r.line_width = randrange(5)
-        display_list.append(r)
+            self.id = canvas.create_oval(x1, y1, x2, y2, outline=color, width=self.line_width, tags=tags)
+
+
+class Handler:
+    def __init__(self):
+        self.canvas = None
+        self.display_list = []
+        self.sel_item = None
+        self.is_dragging = False
+
+    def get_random_shapes(self, count):
+        self.display_list = []
+        for i in range(count):
+            w_min, w_max = 10, 200
+            h_min, h_max = 10, 100
+            w = randrange(w_min, w_max)
+            h = randrange(h_min, h_max)
+            x = randrange(DISPLAY_WIDTH - w)
+            y = randrange(DISPLAY_HEIGHT - h)
+            kind = randrange(5)
+            if kind == 1:
+                r = GEllipse(x, y, w, h)
+            else:
+                r = GRect(x, y, w, h)
+                r.radius = randrange(0, 20)
+            r.color = randrange(0xffffff)
+            r.line_width = randrange(5)
+            self.display_list.append(r)
+
+    def build_canvas(self):
+        for e in self.display_list:
+            e.draw(self.canvas)
+        self.canvas.tag_bind('item', '<Enter>', self.elem_enter)
+        self.canvas.tag_bind('item', '<Leave>', self.elem_leave)
+        self.canvas.tag_bind('item', '<1>', self.elem_select)
+        self.canvas.tag_bind('item', '<B1-Motion>', self.elem_move)
+        self.canvas.tag_bind('item', '<ButtonRelease-1>', self.elem_end_move)
+
+        self.canvas.tag_bind('handle', '<Enter>', self.elem_enter)
+        self.canvas.tag_bind('handle', '<Leave>', self.elem_leave)
+        self.canvas.tag_bind('handle', '<1>', self.handle_select)
+        self.canvas.tag_bind('handle', '<B1-Motion>', self.elem_move)
+        self.canvas.tag_bind('handle', '<ButtonRelease-1>', self.elem_end_move)
+
+        self.canvas.bind('<1>', self.canvas_select)
+
+    def get_elem(self, tag):
+        return next(x for x in self.display_list if x.get_tag() == tag)
+
+    def get_current_elem(self):
+        tag = self.canvas.gettags('current')[0]
+        return self.get_elem(tag)
+
+    def elem_enter(self, evt):
+        if self.is_dragging:
+            return
+        self.orig_item = copy.copy(self.sel_item)
+        tags = self.canvas.gettags('current')
+        e = self.get_elem(tags[0])
+        csr = e.get_cursor(int(tags[1]))
+        if csr:
+            self.canvas.configure({'cursor': csr})
+
+    def elem_leave(self, evt):
+        if self.is_dragging:
+            return
+        self.canvas.configure({'cursor': ''})
+
+    def elem_select(self, evt):
+        if self.sel_item:
+            self.sel_item.remove_handles(self.canvas)
+        e = self.get_current_elem()
+        self.sel_item = e
+        self.orig_item = copy.copy(e)
+        self.sel_elem = Element.BODY
+        self.sel_pos = (evt.x, evt.y)
+        e.draw_handles(self.canvas)
+
+    def handle_select(self, evt):
+        tags = self.canvas.gettags('current')
+        self.orig_item = copy.copy(self.sel_item)
+        self.sel_elem = int(tags[1])
+        self.sel_pos = (evt.x, evt.y)
+
+    def canvas_select(self, evt):
+        e = self.sel_item
+        if not e or self.canvas.gettags('current'):
+            return
+        e.remove_handles(self.canvas)
+        self.sel_item = None
+
+    def elem_move(self, evt):
+        self.is_dragging = True
+        e = self.sel_item
+        e.hide_handles(self.canvas)
+        e.adjust(self.sel_elem, self.orig_item, (evt.x - self.sel_pos[0], evt.y - self.sel_pos[1]))
+        e.update(self.canvas)
+
+    def elem_end_move(self, evt):
+        self.is_dragging = False
+        e = self.sel_item
+        e.remove_handles(self.canvas)
+        e.draw_handles(self.canvas)
 
 
 def run():
-    root = tk.Tk()
+    root = tk.Tk(className='GED')
+    root.title('Graphical Layout Editor')
+    # root.geometry(f'{DISPLAY_WIDTH}x{DISPLAY_HEIGHT}')
     def btn_click():
         print('Button clicked')
     btn = tk.Button(root, text='Hello', command=btn_click)
     btn.pack(side=tk.TOP)
-    embed_pygame = tk.Frame(root, width=DISPLAY_WIDTH, height=DISPLAY_HEIGHT)
-    embed_pygame.pack(side=tk.TOP)
+    handler = Handler()
+    handler.canvas = tk.Canvas(root, width=DISPLAY_WIDTH, height=DISPLAY_HEIGHT, background='black')
+    handler.canvas.pack(side=tk.TOP)
     root.update()
 
-    # os.environ['SDL_WINDOWID'] = str(embed_pygame.winfo_id())
-    pygame.display.init()
-    screen = pygame.display.set_mode(DISPLAY_SIZE, pygame.SCALED | pygame.RESIZABLE)
-    pygame.display.set_caption('Graphical Display Editor')
-    print(pygame.display.Info())
-    clock = pygame.time.Clock()
-
-    mouse_captured = False
-    display_list = []
-    get_random_shapes(display_list, 20)
+    handler.get_random_shapes(20)
+    handler.build_canvas()
 
     sel_item = None
     sel_elem = None
@@ -202,74 +334,8 @@ def run():
     mouse_pos = None
     sel_pos = None
 
-    def hit_test():
-        # Items lower in Z-order can be selected through upper objects by clicking edges
-        body_hit = None
-        for item in reversed(display_list):
-            e = item.test(mouse_pos)
-            if not e:
-                continue
-            if e != Element.BODY:
-                return item
-            if not body_hit:
-                body_hit = item
-        return body_hit
-
-
-    def render_display():
-        screen.fill(0)
-        # Draw everything, in order, except selected item
-        for item in display_list:
-            item.draw(screen)
-
-        # draw selected item on top
-        if sel_item:
-            sel_item.draw_select(screen, mouse_captured)
-        pygame.display.flip()
-
-
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                break
-
-            if event.type == pygame.MOUSEBUTTONUP:
-                if mouse_captured and event.button == pygame.BUTTON_LEFT:
-                    mouse_captured = False
-                    cap_item = None
-                    setCursor(None)
-
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == pygame.BUTTON_LEFT and not mouse_captured:
-                    if not (sel_item and sel_item.test(mouse_pos)):
-                        sel_item = hit_test()
-                    if sel_item:
-                        cap_item = copy.copy(sel_item)
-                        sel_elem = sel_item.test(mouse_pos)
-                        sel_pos = mouse_pos
-                        mouse_captured = True
-                    else:
-                        sel_elem = cap_item = None
-
-            elif event.type == pygame.MOUSEMOTION:
-                mouse_pos = event.pos
-                if mouse_captured:
-                    sel_item.adjust(sel_elem, cap_item, (mouse_pos[0] - sel_pos[0], mouse_pos[1] - sel_pos[1]))
-                elif sel_item:
-                    setCursor(sel_item.get_cursor(mouse_pos))
-
-
-        render_display()
-        root.update_idletasks()
-        root.update()
-        clock.tick(30)
-
-    pygame.quit()
-    return 0
+    tk.mainloop()
 
 
 if __name__ == "__main__":
-    sys.exit(run())
-
+    run()
