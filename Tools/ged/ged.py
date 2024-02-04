@@ -112,7 +112,6 @@ class GElement(Rect):
             tags = (self.get_tag(), str(e), 'handle')
             canvas.create_rectangle(r[0], r[1], r[2], r[3], outline='white', width=1, tags=tags)
 
-
     def element_rect(self, elem):
         HR = 4, 4
         ER = 1, 1
@@ -128,6 +127,9 @@ class GElement(Rect):
             Element.BODY: Rect(self.x, self.y, self.w, self.h).inflate(ER),
         }.get(elem)
 
+    def get_min_size(self):
+        o = self.line_width * 2
+        return (MIN_ELEMENT_WIDTH + o, MIN_ELEMENT_HEIGHT + o)
 
     def adjust(self, canvas, elem, orig, off):
         x, y, w, h = self.x, self.y, self.w, self.h
@@ -142,15 +144,14 @@ class GElement(Rect):
                 h = orig.h + off[1]
             if elem & DIR_W:
                 x, w = orig.x + off[0], orig.w - off[0]
-            min_width = align(MIN_ELEMENT_WIDTH + self.line_width*2)
-            min_height = align(MIN_ELEMENT_HEIGHT + self.line_width*2)
-            w, h = max(w, min_width), max(h, min_height)
+            min_size = self.get_min_size()
+            w, h = max(w, min_size[0]), max(h, min_size[1])
         self.resize(canvas, x, y, w, h)
 
     def resize(self, canvas, x, y, w, h):
         self.x, self.y, self.w, self.h = align((x, y, w, h))
-        r = self.bounds()
-        canvas.coords(self.id, r[0], r[1], r[2], r[3])
+        canvas.delete(self.get_tag())
+        self.draw(canvas)
 
 
 class GRect(GElement):
@@ -158,15 +159,52 @@ class GRect(GElement):
         super().init()
         self.radius = 0
 
+    def get_min_size(self):
+        sz = super().get_min_size()
+        o = self.radius * 2
+        return (sz[0] + o, sz[1] + o)
+
     def draw(self, canvas):
         # pygame.draw.rect(surface, self.color, self, self.line_width, self.radius)
         x1, y1, x2, y2 = self.bounds()
+        w = self.line_width
         color = '#%06x' % self.color
         tags = (self.get_tag(), str(Element.BODY), 'item')
-        if self.line_width == 0:
-            self.id = canvas.create_rectangle(x1, y1, x2, y2, fill=color, tags=tags)
+
+        def draw_rect(x0, y0, x1, y1):
+            canvas.create_rectangle(x0, y0, x1, y1, outline=color, width=w, tags=tags)
+        def fill_rect(x0, y0, x1, y1):
+            canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline='', width=0, tags=tags)
+        def draw_line(x0, y0, x1, y1):
+            canvas.create_line(x0, y0, x1, y1, fill=color, width=w, tags=tags)
+        def draw_corner(x, y, start):
+            canvas.create_arc(x, y, x+r*2, y+r*2, start=start, extent=90, outline=color, width=w, style='arc', tags=tags)
+        def fill_corner(x, y, start):
+            canvas.create_arc(x, y, x+r*2, y+r*2, start=start, extent=90, fill=color, outline='', width=0, tags=tags)
+
+        r = self.radius
+        if r > 1:
+            if w == 0:
+                fill_corner(x1, y1, 90)
+                fill_corner(x2-r*2, y1, start=0)
+                fill_corner(x2-r*2, y2-r*2, start=270)
+                fill_corner(x1, y2-r*2, start=180)
+                fill_rect(x1+r, y1, 1+x2-r, y2)
+                fill_rect(x1, y1+r, x1+r, y2-r)
+                fill_rect(x2-r, y1+r, x2, y2-r)
+            else:
+                draw_corner(x1, y1, 90)
+                draw_corner(x2-r*2, y1, start=0)
+                draw_corner(x2-r*2, y2-r*2, start=270)
+                draw_corner(x1, y2-r*2, start=180)
+                draw_line(x1+r, y1, x2-r, y1)
+                draw_line(x1+r, y2, x2-r, y2)
+                draw_line(x1, y1+r, x1, y2-r)
+                draw_line(x2, y1+r, x2, y2-r)
+        elif w == 0:
+            fill_rect(x1, y1, x2, y2)
         else:
-            self.id = canvas.create_rectangle(x1, y1, x2, y2, outline=color, width=self.line_width, tags=tags)
+            draw_rect(x1, y1, x2, y2)
 
 
 class GEllipse(GElement):
@@ -176,9 +214,9 @@ class GEllipse(GElement):
         color = '#%06x' % self.color
         tags = (self.get_tag(), str(Element.BODY), 'item')
         if self.line_width == 0:
-            self.id = canvas.create_oval(x1, y1, x2, y2, fill=color, tags=tags)
+            canvas.create_oval(x1, y1, x2, y2, fill=color, tags=tags)
         else:
-            self.id = canvas.create_oval(x1, y1, x2, y2, outline=color, width=self.line_width, tags=tags)
+            canvas.create_oval(x1, y1, x2, y2, outline=color, width=self.line_width, tags=tags)
 
 
 class Handler:
@@ -208,7 +246,7 @@ class Handler:
                 item = GEllipse(x, y, w, h)
             else:
                 item = GRect(x, y, w, h)
-                item.radius = randrange(0, 20)
+                item.radius = randrange(0, min(w,h)//2)
             item.color = randrange(0xffffff)
             item.line_width = randrange(5)
             self.add_item(item)
