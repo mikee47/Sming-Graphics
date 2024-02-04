@@ -9,6 +9,18 @@ import tkinter as tk
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
 MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 2
 
+GRID_ALIGNMENT = 8
+
+def align(value):
+    a = GRID_ALIGNMENT
+    if a <= 1:
+        return value
+    if isinstance(value, (tuple, list)):
+        return (align(x) for x in value)
+    n = (value + a // 2) // a
+    return n * a
+
+
 class Rect:
     def __init__(self, x=0, y=0, w=0, h=0):
         self.x = x
@@ -18,26 +30,6 @@ class Rect:
 
     def inflate(self, off):
         return Rect(self.x - off[0], self.y - off[1], self.w + off[0]*2, self.h + off[1]*2)
-
-    def pos(self, anchor=tk.NW):
-        if anchor == tk.N:
-            return (self.x + self.w // 2, self.y)
-        if anchor == tk.NE:
-            return (self.x + self.w, self.y)
-        if anchor == tk.E:
-            return (self.x + self.w, self.y + self.h // 2)
-        if anchor == tk.SE:
-            return (self.x + self.w, self.y + self.h)
-        if anchor == tk.S:
-            return (self.x + self.w // 2, self.y + self.h)
-        if anchor == tk.SW:
-            return (self.x, self.y + self.h)
-        if anchor == tk.W:
-            return (self.x, self.y + self.h // 2)
-        if anchor == tk.CENTER:
-            return (self.x + self.w // 2, self.y + self.h // 2)
-        # Default and NW
-        return (self.x, self.y)
 
     def bounds(self):
         return (self.x, self.y, self.x + self.w, self.y + self.h)
@@ -91,13 +83,6 @@ class GElement(Rect):
         self.line_width = 1
         self.color = 0xa0a0a0
 
-    def test(self, pt):
-        for e in Element:
-            r = self.element_rect(e)
-            if r and r.collidepoint(pt):
-                return e
-        return None
-
     def get_tag(self):
         return 'G%08x' % id(self)
 
@@ -115,9 +100,6 @@ class GElement(Rect):
             Element.HANDLE_W: 'sb_h_double_arrow',
             Element.BODY: 'target',
         }.get(elem)
-
-    def hide_handles(self, canvas):
-        canvas.itemconfigure('handle', {'state': 'hidden'})
 
     def remove_handles(self, canvas):
         canvas.delete('handle')
@@ -160,12 +142,13 @@ class GElement(Rect):
                 h = orig.h + off[1]
             if elem & DIR_W:
                 x, w = orig.x + off[0], orig.w - off[0]
-            w = max(w, MIN_ELEMENT_WIDTH + self.line_width*2)
-            h = max(h, MIN_ELEMENT_HEIGHT + self.line_width*2)
+            min_width = align(MIN_ELEMENT_WIDTH + self.line_width*2)
+            min_height = align(MIN_ELEMENT_HEIGHT + self.line_width*2)
+            w, h = max(w, min_width), max(h, min_height)
         self.resize(canvas, x, y, w, h)
 
     def resize(self, canvas, x, y, w, h):
-        self.x, self.y, self.w, self.h = x, y, w, h
+        self.x, self.y, self.w, self.h = align((x, y, w, h))
         r = self.bounds()
         canvas.coords(self.id, r[0], r[1], r[2], r[3])
 
@@ -199,13 +182,18 @@ class GEllipse(GElement):
 
 
 class Handler:
-    def __init__(self):
-        self.canvas = None
+    def __init__(self, tk_root, size):
+        c = self.canvas = tk.Canvas(tk_root, width=size[0], height=size[1], background='black')
+        c.pack(side=tk.TOP)
+        c.bind('<1>', self.canvas_select)
+        c.bind('<Motion>', self.canvas_move)
+        c.bind('<B1-Motion>', self.canvas_drag)
+        c.bind('<ButtonRelease-1>', self.canvas_end_move)
         self.display_list = []
         self.sel_item = None
         self.is_dragging = False
 
-    def get_random_shapes(self, count):
+    def add_random_shapes(self, count):
         self.display_list = []
         for i in range(count):
             w_min, w_max = 10, 200
@@ -214,85 +202,73 @@ class Handler:
             h = randrange(h_min, h_max)
             x = randrange(DISPLAY_WIDTH - w)
             y = randrange(DISPLAY_HEIGHT - h)
+            x, y, w, h = align(x), align(y), align(w), align(h)
             kind = randrange(5)
             if kind == 1:
-                r = GEllipse(x, y, w, h)
+                item = GEllipse(x, y, w, h)
             else:
-                r = GRect(x, y, w, h)
-                r.radius = randrange(0, 20)
-            r.color = randrange(0xffffff)
-            r.line_width = randrange(5)
-            self.display_list.append(r)
+                item = GRect(x, y, w, h)
+                item.radius = randrange(0, 20)
+            item.color = randrange(0xffffff)
+            item.line_width = randrange(5)
+            self.add_item(item)
 
-    def build_canvas(self):
-        for e in self.display_list:
-            e.draw(self.canvas)
-        self.canvas.tag_bind('item', '<Enter>', self.elem_enter)
-        self.canvas.tag_bind('item', '<Leave>', self.elem_leave)
-        self.canvas.tag_bind('item', '<1>', self.elem_select)
-        self.canvas.tag_bind('item', '<B1-Motion>', self.elem_move)
-        self.canvas.tag_bind('item', '<ButtonRelease-1>', self.elem_end_move)
+    def add_item(self, item):
+        self.display_list.append(item)
+        item.draw(self.canvas)
 
-        self.canvas.tag_bind('handle', '<Enter>', self.elem_enter)
-        self.canvas.tag_bind('handle', '<Leave>', self.elem_leave)
-        self.canvas.tag_bind('handle', '<1>', self.handle_select)
-        self.canvas.tag_bind('handle', '<B1-Motion>', self.elem_move)
-        self.canvas.tag_bind('handle', '<ButtonRelease-1>', self.elem_end_move)
+    def remove_item(self, item):
+        canvas.delete(item.get_tag())
+        self.display_list.remove(item)
 
-        self.canvas.bind('<1>', self.canvas_select)
+    def get_current(self):
+        tags = self.canvas.gettags('current')
+        if not tags:
+            return None, None
+        item = next(x for x in self.display_list if x.get_tag() == tags[0])
+        elem = Element(int(tags[1]))
+        return item, elem
 
-    def get_elem(self, tag):
-        return next(x for x in self.display_list if x.get_tag() == tag)
+    def canvas_select(self, evt):
+        item, elem = self.get_current()
+        if not item:
+            if self.sel_item:
+                self.sel_item.remove_handles(self.canvas)
+                self.sel_item = None
+            return
 
-    def get_current_elem(self):
-        tag = self.canvas.gettags('current')[0]
-        return self.get_elem(tag)
+        self.sel_pos = (evt.x, evt.y)
+        self.orig_item = copy.copy(item)
+        self.sel_elem = elem
+        if item != self.sel_item:
+            if self.sel_item:
+                self.sel_item.remove_handles(self.canvas)
+            item.draw_handles(self.canvas)
+            self.sel_item = item
 
-    def elem_enter(self, evt):
+    def canvas_move(self, evt):
         if self.is_dragging:
             return
-        self.orig_item = copy.copy(self.sel_item)
-        tags = self.canvas.gettags('current')
-        e = self.get_elem(tags[0])
-        csr = e.get_cursor(int(tags[1]))
+        item, elem = self.get_current()
+        if not item:
+            self.canvas.configure({'cursor': ''})
+            return
+        csr = item.get_cursor(elem)
         if csr:
             self.canvas.configure({'cursor': csr})
 
-    def elem_leave(self, evt):
-        if self.is_dragging:
-            return
-        self.canvas.configure({'cursor': ''})
-
-    def elem_select(self, evt):
-        if self.sel_item:
-            self.sel_item.remove_handles(self.canvas)
-        e = self.get_current_elem()
-        self.sel_item = e
-        self.orig_item = copy.copy(e)
-        self.sel_elem = Element.BODY
-        self.sel_pos = (evt.x, evt.y)
-        e.draw_handles(self.canvas)
-
-    def handle_select(self, evt):
-        tags = self.canvas.gettags('current')
-        self.orig_item = copy.copy(self.sel_item)
-        self.sel_elem = int(tags[1])
-        self.sel_pos = (evt.x, evt.y)
-
-    def canvas_select(self, evt):
+    def canvas_drag(self, evt):
         e = self.sel_item
-        if not e or self.canvas.gettags('current'):
+        if not e:
             return
-        e.remove_handles(self.canvas)
-        self.sel_item = None
-
-    def elem_move(self, evt):
-        self.is_dragging = True
-        e = self.sel_item
-        e.hide_handles(self.canvas)
+        if not self.is_dragging:
+            e.remove_handles(self.canvas)
+            self.is_dragging = True
         e.adjust(self.canvas, self.sel_elem, self.orig_item, (evt.x - self.sel_pos[0], evt.y - self.sel_pos[1]))
 
-    def elem_end_move(self, evt):
+    def canvas_end_move(self, evt):
+        if not self.is_dragging:
+            return
         self.is_dragging = False
         e = self.sel_item
         e.remove_handles(self.canvas)
@@ -307,13 +283,8 @@ def run():
         print('Button clicked')
     btn = tk.Button(root, text='Hello', command=btn_click)
     btn.pack(side=tk.TOP)
-    handler = Handler()
-    handler.canvas = tk.Canvas(root, width=DISPLAY_WIDTH, height=DISPLAY_HEIGHT, background='black')
-    handler.canvas.pack(side=tk.TOP)
-    root.update()
-
-    handler.get_random_shapes(20)
-    handler.build_canvas()
+    handler = Handler(root, DISPLAY_SIZE)
+    handler.add_random_shapes(20)
 
     sel_item = None
     sel_elem = None
