@@ -7,7 +7,7 @@ import tkinter as tk
 
 
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
-MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 1
+MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 2
 
 class Rect:
     def __init__(self, x=0, y=0, w=0, h=0):
@@ -79,15 +79,6 @@ class Element(IntEnum):
     HANDLE_W = HIT_HANDLE | DIR_W
     HANDLE_NW = HIT_HANDLE | DIR_NW
 
-    EDGE_N = HIT_EDGE | DIR_N
-    EDGE_NE = HIT_EDGE | DIR_NE
-    EDGE_E = HIT_EDGE | DIR_E
-    EDGE_SE = HIT_EDGE | DIR_SE
-    EDGE_S = HIT_EDGE | DIR_S
-    EDGE_SW = HIT_EDGE | DIR_SW
-    EDGE_W = HIT_EDGE | DIR_W
-    EDGE_NW = HIT_EDGE | DIR_NW
-
     BODY = HIT_BODY
 
 
@@ -152,32 +143,29 @@ class GElement(Rect):
             Element.HANDLE_SW: Rect(self.x, self.y + self.h, 1, 1).inflate(HR),
             Element.HANDLE_W: Rect(self.x, self.y + self.h // 2, 1, 1).inflate(HR),
             Element.HANDLE_NW: Rect(self.x, self.y, 1, 1).inflate(HR),
-            Element.EDGE_N: Rect(self.x, self.y, self.w, self.line_width).inflate(ER),
-            Element.EDGE_E: Rect(self.x + self.w - self.line_width, self.y, self.line_width, self.h).inflate(ER),
-            Element.EDGE_S: Rect(self.x, self.y + self.h - self.line_width, self.w, self.line_width).inflate(ER),
-            Element.EDGE_W: Rect(self.x, self.y, self.line_width, self.h).inflate(ER),
             Element.BODY: Rect(self.x, self.y, self.w, self.h).inflate(ER),
         }.get(elem)
 
 
-    def adjust(self, elem, orig, off):
-        if elem == Element.BODY:
-            self.x, self.y = orig.x + off[0], orig.y + off[1]
-            return
+    def adjust(self, canvas, elem, orig, off):
         x, y, w, h = self.x, self.y, self.w, self.h
-        if elem & DIR_N:
-            y, h = orig.y + off[1], orig.h - off[1]
-        if elem & DIR_E:
-            w = orig.w + off[0]
-        if elem & DIR_S:
-            h = orig.h + off[1]
-        if elem & DIR_W:
-            x, w = orig.x + off[0], orig.w - off[0]
-        if w >= MIN_ELEMENT_WIDTH + self.line_width*2 and h >= MIN_ELEMENT_HEIGHT + self.line_width*2:
-            self.x, self.y, self.w, self.h = x, y, w, h
+        if elem == Element.BODY:
+            x, y = orig.x + off[0], orig.y + off[1]
+        else:
+            if elem & DIR_N:
+                y, h = orig.y + off[1], orig.h - off[1]
+            if elem & DIR_E:
+                w = orig.w + off[0]
+            if elem & DIR_S:
+                h = orig.h + off[1]
+            if elem & DIR_W:
+                x, w = orig.x + off[0], orig.w - off[0]
+            w = max(w, MIN_ELEMENT_WIDTH + self.line_width*2)
+            h = max(h, MIN_ELEMENT_HEIGHT + self.line_width*2)
+        self.resize(canvas, x, y, w, h)
 
-
-    def update(self, canvas):
+    def resize(self, canvas, x, y, w, h):
+        self.x, self.y, self.w, self.h = x, y, w, h
         r = self.bounds()
         canvas.coords(self.id, r[0], r[1], r[2], r[3])
 
@@ -302,8 +290,7 @@ class Handler:
         self.is_dragging = True
         e = self.sel_item
         e.hide_handles(self.canvas)
-        e.adjust(self.sel_elem, self.orig_item, (evt.x - self.sel_pos[0], evt.y - self.sel_pos[1]))
-        e.update(self.canvas)
+        e.adjust(self.canvas, self.sel_elem, self.orig_item, (evt.x - self.sel_pos[0], evt.y - self.sel_pos[1]))
 
     def elem_end_move(self, evt):
         self.is_dragging = False
