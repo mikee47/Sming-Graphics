@@ -96,6 +96,14 @@ class Rect:
         return (self.x, self.y, self.x + self.w, self.y + self.h)
 
 
+def union(r1: Rect, r2: Rect):
+    x = min(r1.x, r2.x)
+    y = min(r1.y, r2.y)
+    w = max(r1.x + r1.w, r2.x + r2.w) - x
+    h = max(r1.y + r1.h, r2.y + r2.h) - y
+    return Rect(x, y, w, h)
+
+
 class GItem(Rect):
     def __init__(self, bounds: Rect):
         super().__init__(bounds.x, bounds.y, bounds.w, bounds.h)
@@ -198,11 +206,12 @@ class Handler:
         c = self.canvas = tk.Canvas(tk_root, width=size[0], height=size[1], background='black')
         c.pack(side=tk.TOP)
         c.bind('<1>', self.canvas_select)
+        c.bind('<Control-1>', self.canvas_multi_select)
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
         c.bind('<ButtonRelease-1>', self.canvas_end_move)
         self.display_list = []
-        self.sel_item = None
+        self.sel_items = []
         self.state = State.IDLE
 
     def add_random_shapes(self, count):
@@ -244,11 +253,14 @@ class Handler:
             item = None
         return elem, item
 
-    def draw_handles(self, rect):
+    def draw_handles(self):
+        hr = self.handle_rect = self.sel_items[0].get_bounds()
+        for item in self.sel_items[1:]:
+            hr = union(hr, item)
         for e in Element:
             if not e.is_handle():
                 continue
-            r = rect.element_rect(e).tk_bounds()
+            r = hr.element_rect(e).tk_bounds()
             tags = ('handle', str(e))
             self.canvas.create_rectangle(r[0], r[1], r[2], r[3], outline='white', width=1, tags=tags)
 
@@ -258,18 +270,30 @@ class Handler:
     def canvas_select(self, evt):
         elem, item = self.get_current()
         if not elem:
-            if self.sel_item:
+            if self.sel_items:
                 self.remove_handles()
-                self.sel_item = None
+                self.sel_items = []
             return
 
         self.sel_pos = (evt.x, evt.y)
         self.sel_elem = elem
-        if item and item != self.sel_item:
+        if item and not item in self.sel_items:
             self.remove_handles()
-            self.draw_handles(item)
-            self.sel_item = item
-        self.orig_item = copy.copy(self.sel_item)
+            self.sel_items = [item]
+            self.draw_handles()
+        self.orig_bounds = [x.get_bounds() for x in self.sel_items]
+
+    def canvas_multi_select(self, evt):
+        elem, item = self.get_current()
+        if not elem:
+            return
+        self.sel_pos = (evt.x, evt.y)
+        self.sel_elem = elem
+        if item and item not in self.sel_items:
+            self.remove_handles()
+            self.sel_items.append(item)
+            self.draw_handles()
+        self.orig_bounds = [x.get_bounds() for x in self.sel_items]
 
     @staticmethod
     def get_cursor(elem):
@@ -294,40 +318,39 @@ class Handler:
         self.canvas.configure({'cursor': self.get_cursor(elem)})
 
     def canvas_drag(self, evt):
-        item = self.sel_item
-        if not item:
+        if not self.sel_items:
             return
         if self.state != State.DRAGGING:
             self.remove_handles()
             self.state = State.DRAGGING
         elem = self.sel_elem
-        orig = self.orig_item
-        r = item.get_bounds()
-        off = evt.x - self.sel_pos[0], evt.y - self.sel_pos[1]
-        if elem == Element.ITEM:
-            r.x, r.y = align((orig.x + off[0], orig.y + off[1]))
-        else:
-            if elem & DIR_N:
-                r.y = align(orig.y + off[1])
-                r.h = orig.y + orig.h - r.y
-            if elem & DIR_E:
-                r.w = align(orig.w + off[0])
-            if elem & DIR_S:
-                r.h = align(orig.h + off[1])
-            if elem & DIR_W:
-                r.x = align(orig.x + off[0])
-                r.w = orig.x + orig.w - r.x
-            min_size = item.get_min_size()
-            if r.w < min_size[0] or r.h < min_size[1]:
-                return
-        item.resize(self.canvas, r)
+        for item, orig in zip(self.sel_items, self.orig_bounds):
+            r = item.get_bounds()
+            off = evt.x - self.sel_pos[0], evt.y - self.sel_pos[1]
+            if elem == Element.ITEM:
+                r.x, r.y = align((orig.x + off[0], orig.y + off[1]))
+            else:
+                if elem & DIR_N:
+                    r.y = align(orig.y + off[1])
+                    r.h = orig.y + orig.h - r.y
+                if elem & DIR_E:
+                    r.w = align(orig.w + off[0])
+                if elem & DIR_S:
+                    r.h = align(orig.h + off[1])
+                if elem & DIR_W:
+                    r.x = align(orig.x + off[0])
+                    r.w = orig.x + orig.w - r.x
+                min_size = item.get_min_size()
+                if r.w < min_size[0] or r.h < min_size[1]:
+                    return
+            item.resize(self.canvas, r)
 
     def canvas_end_move(self, evt):
         if self.state != State.DRAGGING:
             return
         self.state = State.IDLE
         self.remove_handles()
-        self.draw_handles(self.sel_item)
+        self.draw_handles()
 
 
 def run():
