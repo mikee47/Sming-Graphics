@@ -3,14 +3,11 @@ import sys
 import copy
 from enum import Enum, IntEnum
 from random import randrange
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import tkinter as tk
 from tkinter.font import Font
 
-
-DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
 MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 2
-
 GRID_ALIGNMENT = 8
 
 # Event state modifier masks
@@ -100,19 +97,6 @@ class Rect:
             Element.HANDLE_NW: (self.x, self.y),
         }.get(elem)
 
-    def element_rect(self, elem):
-        HR = 4, 4
-        ER = 1, 1
-        if elem == Element.ITEM:
-            return Rect(self.x, self.y, self.w, self.h).inflate(ER)
-        pt = self.handle_pos(elem)
-        return Rect(pt[0], pt[1], 1, 1).inflate(HR)
-
-    def tk_bounds(self):
-        return (self.x, self.y, self.x + self.w, self.y + self.h)
-
-def tk_rect(coords):
-    return Rect(coords[0], coords[1], 1 + coords[2] - coords[0], 1 + coords[3] - coords[1])
 
 def union(r1: Rect, r2: Rect):
     x = min(r1.x, r2.x)
@@ -142,10 +126,10 @@ class GItem(Rect):
         o = self.line_width * 2
         return (MIN_ELEMENT_WIDTH + o, MIN_ELEMENT_HEIGHT + o)
 
-    def resize(self, canvas, rect):
+    def resize(self, handler, rect):
         self.bounds = rect
-        canvas.delete(self.get_tag())
-        self.draw(canvas)
+        handler.canvas.delete(self.get_tag())
+        self.draw(handler)
 
 
 @dataclass
@@ -157,25 +141,25 @@ class GRect(GItem):
         o = self.radius * 2
         return (sz[0] + o, sz[1] + o)
 
-    def draw(self, canvas):
-        x1, y1, x2, y2 = self.tk_bounds()
-        w = self.line_width
+    def draw(self, handler):
+        x1, y1, x2, y2 = handler.tk_bounds(self)
+        w = self.line_width * handler.scale
         color = tk_color(self.color)
         tags = self.get_item_tags()
 
         def draw_rect(x0, y0, x1, y1):
-            canvas.create_rectangle(x0, y0, x1, y1, outline=color, width=w, tags=tags)
+            handler.canvas.create_rectangle(x0, y0, x1, y1, outline=color, width=w, tags=tags)
         def fill_rect(x0, y0, x1, y1):
-            canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline='', width=0, tags=tags)
+            handler.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline='', width=0, tags=tags)
         def draw_line(x0, y0, x1, y1):
-            canvas.create_line(x0, y0, x1, y1, fill=color, width=w, tags=tags)
+            handler.canvas.create_line(x0, y0, x1, y1, fill=color, width=w, tags=tags)
         def draw_corner(x, y, start):
-            canvas.create_arc(x, y, x+r*2, y+r*2, start=start, extent=90, outline=color, width=w, style='arc', tags=tags)
+            handler.canvas.create_arc(x, y, x+r*2, y+r*2, start=start, extent=90, outline=color, width=w, style='arc', tags=tags)
         def fill_corner(x, y, start):
-            canvas.create_arc(x, y, x+r*2, y+r*2, start=start, extent=90, fill=color, outline='', width=0, tags=tags)
+            handler.canvas.create_arc(x, y, x+r*2, y+r*2, start=start, extent=90, fill=color, outline='', tags=tags)
 
-        r = self.radius
-        if r > 1:
+        if self.radius > 1:
+            r = self.radius * handler.scale
             if w == 0:
                 fill_corner(x1, y1, 90)
                 fill_corner(x2-r*2, y1, 0)
@@ -201,14 +185,15 @@ class GRect(GItem):
 
 @dataclass
 class GEllipse(GItem):
-    def draw(self, canvas):
-        x1, y1, x2, y2 = self.tk_bounds()
+    def draw(self, handler):
+        x1, y1, x2, y2 = handler.tk_bounds(self)
         color = tk_color(self.color)
+        w = self.line_width * handler.scale
         tags = self.get_item_tags()
-        if self.line_width == 0:
-            canvas.create_oval(x1, y1, x2, y2, fill=color, outline='', tags=tags)
+        if w == 0:
+            handler.canvas.create_oval(x1, y1, x2, y2, fill=color, outline='', tags=tags)
         else:
-            canvas.create_oval(x1, y1, x2, y2, outline=color, width=self.line_width, tags=tags)
+            handler.canvas.create_oval(x1, y1, x2, y2, outline=color, width=w, tags=tags)
 
 
 @dataclass
@@ -218,12 +203,15 @@ class GText(GItem):
     def __post_init__(self):
         super().__post_init__()
         if self.text is None:
-            self.text = f'text{self.get_tag()}'
+            self.text = f'Text {self.get_tag()}'
 
-    def draw(self, canvas):
+    def draw(self, handler):
         color = tk_color(self.color)
         tags = self.get_item_tags()
-        canvas.create_text(self.x, self.y, width=self.w, text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
+        x1, y1, x2, y2 = handler.tk_bounds(self)
+        M = 10
+        w = 1 + x2 - x1 - M*2
+        handler.canvas.create_text(x1, y1, width=w, text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
 
 
 @dataclass
@@ -235,23 +223,25 @@ class GButton(GRect):
         if self.text is None:
             self.text = f'button {self.get_tag()}'
 
-    def draw(self, canvas):
+    def draw(self, handler):
         self.radius = min(self.w, self.h) // 8
         self.line_width = 0
-        super().draw(canvas)
+        super().draw(handler)
         color = tk_color(self.color)
         tags = self.get_item_tags()
         font_px = min(self.w, self.h) // 4
-        font = Font(family='Helvetica', size=-font_px)
-        M = font_px
-        x, y, w = self.x + M, self.y, self.w - 2*M
-        id = canvas.create_text(x, y, width=w,
+        font = Font(family='Helvetica', size=font_px * -handler.scale)
+        M = font_px * handler.scale
+        x1, y1, x2, y2 = handler.tk_bounds(self)
+        x1 += M
+        x2 -= M
+        id = handler.canvas.create_text(x1, y1, width=1+x2-x1,
             font=font, text=self.text, fill='white',
             anchor=tk.NW, justify=tk.CENTER, tags=tags)
-        r = tk_rect(canvas.bbox(id))
-        x += (w - r.w) // 2
-        y += (self.h - r.h) // 2
-        canvas.coords(id, x, y)
+        _, _, x3, y3 = handler.canvas.bbox(id)
+        x1 += (x2 - x3) // 2
+        y1 += (y2 - y3) // 2
+        handler.canvas.coords(id, x1, y1)
 
 
 class State(Enum):
@@ -260,16 +250,40 @@ class State(Enum):
     SELECTING = 2
 
 class Handler:
-    def __init__(self, tk_root, size):
-        c = self.canvas = tk.Canvas(tk_root, width=size[0], height=size[1], background='black')
+    def __init__(self, tk_root, width=320, height=240, scale=1):
+        self.width = width
+        self.height = height
+        self.scale = scale
+        c = self.canvas = tk.Canvas(tk_root, background='black')
         c.pack(side=tk.TOP)
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
         c.bind('<ButtonRelease-1>', self.canvas_end_move)
+        self.set_size(width, height)
+        self.set_scale(scale)
         self.display_list = []
         self.sel_items = []
         self.state = State.IDLE
+
+    def set_size(self, width, height):
+        self.width = width
+        self.height = height
+        self.size_changed()
+    
+    def size_changed(self):
+        self.canvas.configure(width=self.width*self.scale, height=self.height*self.scale)
+
+    def set_scale(self, scale):
+        self.scale = scale
+        self.size_changed()
+
+    def tk_bounds(self, rect):
+        return (
+            rect.x * self.scale,
+            rect.y * self.scale,
+            (rect.x + rect.w - 1) * self.scale,
+            (rect.y + rect.h - 1) * self.scale )
 
     def add_random_shapes(self, count):
         self.display_list = []
@@ -278,8 +292,8 @@ class Handler:
             h_min, h_max = 10, 100
             w = randrange(w_min, w_max)
             h = randrange(h_min, h_max)
-            x = randrange(DISPLAY_WIDTH - w)
-            y = randrange(DISPLAY_HEIGHT - h)
+            x = randrange(self.width - w)
+            y = randrange(self.height - h)
             r = Rect(x, y, w, h).align()
             kind = randrange(5)
             if kind == 1:
@@ -298,10 +312,10 @@ class Handler:
 
     def add_item(self, item):
         self.display_list.append(item)
-        item.draw(self.canvas)
+        item.draw(self)
 
     def remove_item(self, item):
-        canvas.delete(item.get_tag())
+        self.canvas.delete(item.get_tag())
         self.display_list.remove(item)
 
     def get_current(self):
@@ -319,9 +333,14 @@ class Handler:
         for item in self.sel_items[1:]:
             hr = union(hr, item)
         for e in Element:
-            r = hr.element_rect(e).tk_bounds()
             tags = ('handle', str(e))
-            self.canvas.create_rectangle(r[0], r[1], r[2], r[3], outline='white', width=1, tags=tags)
+            if e == Element.ITEM:
+                r = self.tk_bounds(hr.inflate((1, 1)))
+                self.canvas.create_rectangle(r, outline='white', width=1, tags=tags)
+            else:
+                pt = hr.handle_pos(e)
+                r = self.tk_bounds(Rect(pt[0], pt[1]).inflate((4, 4)))
+                self.canvas.create_rectangle(r, outline='', fill='white', tags=tags)
         return hr
 
     def remove_handles(self):
@@ -377,13 +396,13 @@ class Handler:
             self.state = State.DRAGGING
             self.orig_bounds = [x.get_bounds() for x in self.sel_items]
         elem = self.sel_elem
-        off = evt.x - self.sel_pos[0], evt.y - self.sel_pos[1]
+        off = (evt.x - self.sel_pos[0]) // self.scale, (evt.y - self.sel_pos[1]) // self.scale
 
         if elem == Element.ITEM:
             for item, orig in zip(self.sel_items, self.orig_bounds):
                 r = item.get_bounds()
                 r.x, r.y = align((orig.x + off[0], orig.y + off[1]))
-                item.resize(self.canvas, r)
+                item.resize(self, r)
         elif len(self.sel_items) == 1:
             item, orig = self.sel_items[0], self.orig_bounds[0]
             r = item.get_bounds()
@@ -399,7 +418,7 @@ class Handler:
                 r.w = orig.x + orig.w - r.x
             min_size = item.get_min_size()
             if r.w >= min_size[0] and r.h >= min_size[1]:
-                item.resize(self.canvas, r)
+                item.resize(self, r)
         else:
             # Scale the bounding rectangle
             orig = orig_bounds = self.sel_bounds
@@ -428,7 +447,7 @@ class Handler:
                         min_size = item.get_min_size()
                         if r.w < min_size[0] or r.h < min_size[1]:
                             continue
-                    item.resize(self.canvas, r)
+                    item.resize(self, r)
 
         self.draw_handles()
 
@@ -445,7 +464,7 @@ class Handler:
     def redraw(self):
         self.canvas.delete(tk.ALL)
         for item in self.display_list:
-            item.draw(self.canvas)
+            item.draw(self)
 
 
 def run():
@@ -456,7 +475,7 @@ def run():
             print(repr(item))
     btn = tk.Button(root, text='Hello', command=btn_click)
     btn.pack(side=tk.TOP)
-    handler = Handler(root, DISPLAY_SIZE)
+    handler = Handler(root)
     handler.add_random_shapes(20)
 
     sel_item = None
