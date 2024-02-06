@@ -71,7 +71,15 @@ class Rect:
     w: int = 0
     h: int = 0
 
-    def set_rect(self, rect):
+    def __post_init__(self):
+        pass
+
+    @property
+    def bounds(self):
+        return self.copy()
+
+    @bounds.setter
+    def bounds(self, rect):
         self.x, self.y, self.w, self.h = rect.x, rect.y, rect.w, rect.h
 
     def align(self):
@@ -116,11 +124,10 @@ def union(r1: Rect, r2: Rect):
 def tk_color(color):
     return '#%06x' % color
 
+@dataclass
 class GItem(Rect):
-    def __init__(self, bounds: Rect, line_width = 1, color = 0xa0a0a0):
-        super().__init__(bounds.x, bounds.y, bounds.w, bounds.h)
-        self.line_width = line_width
-        self.color = color
+    line_width: int = 1
+    color: int = 0xa0a0a0
 
     def get_bounds(self):
         return Rect(self.x, self.y, self.w, self.h)
@@ -136,15 +143,14 @@ class GItem(Rect):
         return (MIN_ELEMENT_WIDTH + o, MIN_ELEMENT_HEIGHT + o)
 
     def resize(self, canvas, rect):
-        self.set_rect(rect)
+        self.bounds = rect
         canvas.delete(self.get_tag())
         self.draw(canvas)
 
 
+@dataclass
 class GRect(GItem):
-    def __init__(self, bounds: Rect, radius = 0):
-            super().__init__(bounds)
-            self.radius = radius
+    radius: int = 0
 
     def get_min_size(self):
         sz = super().get_min_size()
@@ -193,21 +199,26 @@ class GRect(GItem):
             draw_rect(x1, y1, x2, y2)
 
 
+@dataclass
 class GEllipse(GItem):
     def draw(self, canvas):
         x1, y1, x2, y2 = self.tk_bounds()
         color = tk_color(self.color)
         tags = self.get_item_tags()
         if self.line_width == 0:
-            canvas.create_oval(x1, y1, x2, y2, fill=color, tags=tags)
+            canvas.create_oval(x1, y1, x2, y2, fill=color, outline='', tags=tags)
         else:
             canvas.create_oval(x1, y1, x2, y2, outline=color, width=self.line_width, tags=tags)
 
 
+@dataclass
 class GText(GItem):
-    def __init__(self, bounds: Rect, text = None):
-        super().__init__(bounds)
-        self.text = text or f'text{self.get_tag()}'
+    text: str = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.text is None:
+            self.text = f'text{self.get_tag()}'
 
     def draw(self, canvas):
         color = tk_color(self.color)
@@ -215,10 +226,14 @@ class GText(GItem):
         canvas.create_text(self.x, self.y, width=self.w, text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
 
 
+@dataclass
 class GButton(GRect):
-    def __init__(self, bounds: Rect, text = None, **kwargs):
-        super().__init__(bounds, **kwargs)
-        self.text = text or f'button\n{self.get_tag()}'
+    text: str = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.text is None:
+            self.text = f'button {self.get_tag()}'
 
     def draw(self, canvas):
         self.radius = min(self.w, self.h) // 8
@@ -268,14 +283,15 @@ class Handler:
             r = Rect(x, y, w, h).align()
             kind = randrange(5)
             if kind == 1:
-                item = GEllipse(r)
+                item = GEllipse()
             elif kind == 2:
-                item = GText(r)
+                item = GText()
             elif kind == 3:
-                item = GButton(r)
+                item = GButton()
             else:
-                item = GRect(r)
-                item.radius = randrange(0, min(w,h)//2)
+                item = GRect()
+                item.radius = randrange(0, min(r.w, r.h) // 2)
+            item.bounds = r
             item.color = randrange(0xffffff)
             item.line_width = randrange(5)
             self.add_item(item)
@@ -293,10 +309,9 @@ class Handler:
         if not tags:
             return None, None
         elem = Element(int(tags[1]))
-        if elem == Element.ITEM:
-            item = next(x for x in self.display_list if x.get_tag() == tags[2])
-        else:
-            item = None
+        if tags[0] == 'handle':
+            return elem, None
+        item = next(x for x in self.display_list if x.get_tag() == tags[2])
         return elem, item
 
     def draw_handles(self):
@@ -304,8 +319,6 @@ class Handler:
         for item in self.sel_items[1:]:
             hr = union(hr, item)
         for e in Element:
-            # if not e.is_handle():
-            #     continue
             r = hr.element_rect(e).tk_bounds()
             tags = ('handle', str(e))
             self.canvas.create_rectangle(r[0], r[1], r[2], r[3], outline='white', width=1, tags=tags)
@@ -439,7 +452,8 @@ def run():
     root = tk.Tk(className='GED')
     root.title('Graphical Layout Editor')
     def btn_click():
-        print('Button clicked')
+        for item in handler.display_list:
+            print(repr(item))
     btn = tk.Button(root, text='Hello', command=btn_click)
     btn.pack(side=tk.TOP)
     handler = Handler(root, DISPLAY_SIZE)
