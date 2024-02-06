@@ -5,6 +5,7 @@ from enum import Enum, IntEnum
 from random import randrange
 from dataclasses import dataclass
 import tkinter as tk
+from tkinter.font import Font
 
 
 DISPLAY_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGHT = 800, 480
@@ -102,6 +103,8 @@ class Rect:
     def tk_bounds(self):
         return (self.x, self.y, self.x + self.w, self.y + self.h)
 
+def tk_rect(coords):
+    return Rect(coords[0], coords[1], 1 + coords[2] - coords[0], 1 + coords[3] - coords[1])
 
 def union(r1: Rect, r2: Rect):
     x = min(r1.x, r2.x)
@@ -212,6 +215,30 @@ class GText(GItem):
         canvas.create_text(self.x, self.y, width=self.w, text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
 
 
+class GButton(GRect):
+    def __init__(self, bounds: Rect, text = None, **kwargs):
+        super().__init__(bounds, **kwargs)
+        self.text = text or f'button\n{self.get_tag()}'
+
+    def draw(self, canvas):
+        self.radius = min(self.w, self.h) // 8
+        self.line_width = 0
+        super().draw(canvas)
+        color = tk_color(self.color)
+        tags = self.get_item_tags()
+        font_px = min(self.w, self.h) // 4
+        font = Font(family='Helvetica', size=-font_px)
+        M = font_px
+        x, y, w = self.x + M, self.y, self.w - 2*M
+        id = canvas.create_text(x, y, width=w,
+            font=font, text=self.text, fill='white',
+            anchor=tk.NW, justify=tk.CENTER, tags=tags)
+        r = tk_rect(canvas.bbox(id))
+        x += (w - r.w) // 2
+        y += (self.h - r.h) // 2
+        canvas.coords(id, x, y)
+
+
 class State(Enum):
     IDLE = 0
     DRAGGING = 1
@@ -244,6 +271,8 @@ class Handler:
                 item = GEllipse(r)
             elif kind == 2:
                 item = GText(r)
+            elif kind == 3:
+                item = GButton(r)
             else:
                 item = GRect(r)
                 item.radius = randrange(0, min(w,h)//2)
@@ -275,8 +304,8 @@ class Handler:
         for item in self.sel_items[1:]:
             hr = union(hr, item)
         for e in Element:
-            if not e.is_handle():
-                continue
+            # if not e.is_handle():
+            #     continue
             r = hr.element_rect(e).tk_bounds()
             tags = ('handle', str(e))
             self.canvas.create_rectangle(r[0], r[1], r[2], r[3], outline='white', width=1, tags=tags)
