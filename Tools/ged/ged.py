@@ -150,7 +150,6 @@ class GRect(GItem):
         return (sz[0] + o, sz[1] + o)
 
     def draw(self, canvas):
-        # pygame.draw.rect(surface, self.color, self, self.line_width, self.radius)
         x1, y1, x2, y2 = self.tk_bounds()
         w = self.line_width
         color = '#%06x' % self.color
@@ -171,17 +170,17 @@ class GRect(GItem):
         if r > 1:
             if w == 0:
                 fill_corner(x1, y1, 90)
-                fill_corner(x2-r*2, y1, start=0)
-                fill_corner(x2-r*2, y2-r*2, start=270)
-                fill_corner(x1, y2-r*2, start=180)
+                fill_corner(x2-r*2, y1, 0)
+                fill_corner(x2-r*2, y2-r*2, 270)
+                fill_corner(x1, y2-r*2, 180)
                 fill_rect(x1+r, y1, 1+x2-r, y2)
                 fill_rect(x1, y1+r, x1+r, y2-r)
                 fill_rect(x2-r, y1+r, x2, y2-r)
             else:
                 draw_corner(x1, y1, 90)
-                draw_corner(x2-r*2, y1, start=0)
-                draw_corner(x2-r*2, y2-r*2, start=270)
-                draw_corner(x1, y2-r*2, start=180)
+                draw_corner(x2-r*2, y1, 0)
+                draw_corner(x2-r*2, y2-r*2, 270)
+                draw_corner(x1, y2-r*2, 180)
                 draw_line(x1+r, y1, x2-r, y1)
                 draw_line(x1+r, y2, x2-r, y2)
                 draw_line(x1, y1+r, x1, y2-r)
@@ -194,7 +193,6 @@ class GRect(GItem):
 
 class GEllipse(GItem):
     def draw(self, canvas):
-        # pygame.draw.ellipse(surface, self.color, self, self.line_width)
         x1, y1, x2, y2 = self.tk_bounds()
         color = '#%06x' % self.color
         tags = self.get_item_tags()
@@ -249,7 +247,7 @@ class Handler:
         self.display_list.remove(item)
 
     def get_current(self):
-        tags = self.canvas.gettags('current')
+        tags = self.canvas.gettags(tk.CURRENT)
         if not tags:
             return None, None
         elem = Element(int(tags[1]))
@@ -385,13 +383,19 @@ class Handler:
             return
         self.state = State.IDLE
         self.remove_handles()
+        self.redraw() # Fix Z-ordering and ensure consistency
         self.sel_bounds = self.draw_handles()
+
+
+    def redraw(self):
+        self.canvas.delete(tk.ALL)
+        for item in self.display_list:
+            item.draw(self.canvas)
 
 
 def run():
     root = tk.Tk(className='GED')
     root.title('Graphical Layout Editor')
-    # root.geometry(f'{DISPLAY_WIDTH}x{DISPLAY_HEIGHT}')
     def btn_click():
         print('Button clicked')
     btn = tk.Button(root, text='Hello', command=btn_click)
