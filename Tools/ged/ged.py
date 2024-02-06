@@ -6,6 +6,7 @@ from random import randrange
 from dataclasses import dataclass, field
 import tkinter as tk
 from tkinter.font import Font
+from tkinter import ttk
 
 MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 2
 GRID_ALIGNMENT = 8
@@ -254,36 +255,49 @@ class Handler:
         self.width = width
         self.height = height
         self.scale = scale
-        c = self.canvas = tk.Canvas(tk_root, background='black')
-        c.pack(side=tk.TOP)
+        c = self.canvas = tk.Canvas(tk_root, background='gray')
+        c.pack(side=tk.BOTTOM, expand=True, fill=tk.BOTH)
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
         c.bind('<ButtonRelease-1>', self.canvas_end_move)
-        self.set_size(width, height)
-        self.set_scale(scale)
+        def canvas_configure(evt):
+            self.size_changed()
+        c.bind('<Configure>', canvas_configure)
         self.display_list = []
         self.sel_items = []
         self.state = State.IDLE
+        self.set_size(width, height)
+        self.set_scale(scale)
+        self.size_changed()
 
     def set_size(self, width, height):
+        if width == self.width and height == self.height:
+            return
         self.width = width
         self.height = height
         self.size_changed()
     
-    def size_changed(self):
-        self.canvas.configure(width=self.width*self.scale, height=self.height*self.scale)
-
     def set_scale(self, scale):
+        if scale == self.scale:
+            return
         self.scale = scale
         self.size_changed()
 
+    def size_changed(self):
+        w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+        self.draw_offset = ((w - self.width * self.scale) // 2, (h - self.height * self.scale) // 2)
+        self.redraw()
+        if self.sel_items:
+            self.sel_bounds = self.draw_handles()
+
     def tk_bounds(self, rect):
+        xo, yo = self.draw_offset
         return (
-            rect.x * self.scale,
-            rect.y * self.scale,
-            (rect.x + rect.w - 1) * self.scale,
-            (rect.y + rect.h - 1) * self.scale )
+            xo + rect.x * self.scale,
+            yo + rect.y * self.scale,
+            xo + (rect.x + rect.w - 1) * self.scale,
+            yo + (rect.y + rect.h - 1) * self.scale )
 
     def add_random_shapes(self, count):
         self.display_list = []
@@ -320,7 +334,7 @@ class Handler:
 
     def get_current(self):
         tags = self.canvas.gettags(tk.CURRENT)
-        if not tags:
+        if len(tags) < 2:
             return None, None
         elem = Element(int(tags[1]))
         if tags[0] == 'handle':
@@ -456,13 +470,14 @@ class Handler:
         if self.state != State.DRAGGING:
             return
         self.state = State.IDLE
-        self.remove_handles()
         self.redraw() # Fix Z-ordering and ensure consistency
         self.sel_bounds = self.draw_handles()
 
 
     def redraw(self):
         self.canvas.delete(tk.ALL)
+        r = self.tk_bounds(Rect(0, 0, self.width, self.height))
+        self.canvas.create_rectangle((r), fill='black', outline='')
         for item in self.display_list:
             item.draw(self)
 
@@ -470,19 +485,67 @@ class Handler:
 def run():
     root = tk.Tk(className='GED')
     root.title('Graphical Layout Editor')
-    def btn_click():
+    handler = Handler(root)
+
+    # Menus
+    def fileNew():
+        pass
+        # self.reset()
+        # self.reload()
+        # self.editDevice(self.config.devices[0])
+
+    def fileOpen():
+        pass
+        # filename = filedialog.askopenfilename(
+        #     title='Select profile ' + HW_EXT + ' file',
+        #     filetypes=hwFilter,
+        #     initialdir=os.getcwd())
+        # if len(filename) != 0 and checkProfilePath(filename):
+        #     self.loadConfig(filename)
+
+    def fileSave():
+        pass
+        # filename = self.json['name']
+        # filename = filedialog.asksaveasfilename(
+        #     title='Save profile to file',
+        #     filetypes=hwFilter,
+        #     initialfile=filename,
+        #     initialdir=os.getcwd())
+        # if len(filename) != 0 and checkProfilePath(filename):
+        #     ext = os.path.splitext(filename)[1]
+        #     if ext != HW_EXT:
+        #         filename += HW_EXT
+        #     json_save(self.json, filename)
+
+    def fileList():
         for item in handler.display_list:
             print(repr(item))
-    btn = tk.Button(root, text='Hello', command=btn_click)
-    btn.pack(side=tk.TOP)
-    handler = Handler(root)
-    handler.add_random_shapes(20)
 
-    sel_item = None
-    sel_elem = None
-    cap_item = None
-    mouse_pos = None
-    sel_pos = None
+    # Toolbar
+    toolbar = ttk.Frame(root)
+    toolbar.pack(side=tk.TOP, fill=tk.X)
+    col = 0
+    def addButton(text, command):
+        btn = ttk.Button(toolbar, text=text, command=command)
+        nonlocal col
+        btn.grid(row=0, column=col)
+        col += 1
+    addButton('New', fileNew)
+    addButton('Open...', fileOpen)
+    addButton('Save...', fileSave)
+    sep = ttk.Separator(toolbar, orient=tk.VERTICAL)
+    sep.grid(row=0, column=col, sticky=tk.NS)
+    col += 1
+    addButton('List', fileList)
+    def changeScale():
+        scale = 1 + handler.scale % 4
+        handler.set_scale(scale)
+    addButton('scale', changeScale)
+    # addButton('Edit Config', self.editConfig)
+    # addButton('Add Device', self.addDevice)
+
+    handler.add_random_shapes(20)
+    handler.set_scale(2)
 
     tk.mainloop()
 
