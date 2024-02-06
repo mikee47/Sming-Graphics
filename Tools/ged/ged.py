@@ -110,15 +110,14 @@ def union(r1: Rect, r2: Rect):
     h = max(r1.y + r1.h, r2.y + r2.h) - y
     return Rect(x, y, w, h)
 
+def tk_color(color):
+    return '#%06x' % color
 
 class GItem(Rect):
-    def __init__(self, bounds: Rect):
+    def __init__(self, bounds: Rect, line_width = 1, color = 0xa0a0a0):
         super().__init__(bounds.x, bounds.y, bounds.w, bounds.h)
-
-    def __post_init__(self):
-        super().__post_init__()
-        self.line_width = 1
-        self.color = 0xa0a0a0
+        self.line_width = line_width
+        self.color = color
 
     def get_bounds(self):
         return Rect(self.x, self.y, self.w, self.h)
@@ -140,9 +139,9 @@ class GItem(Rect):
 
 
 class GRect(GItem):
-    def __post_init__(self):
-        super().__post_init__()
-        self.radius = 0
+    def __init__(self, bounds: Rect, radius = 0):
+            super().__init__(bounds)
+            self.radius = radius
 
     def get_min_size(self):
         sz = super().get_min_size()
@@ -152,7 +151,7 @@ class GRect(GItem):
     def draw(self, canvas):
         x1, y1, x2, y2 = self.tk_bounds()
         w = self.line_width
-        color = '#%06x' % self.color
+        color = tk_color(self.color)
         tags = self.get_item_tags()
 
         def draw_rect(x0, y0, x1, y1):
@@ -194,12 +193,24 @@ class GRect(GItem):
 class GEllipse(GItem):
     def draw(self, canvas):
         x1, y1, x2, y2 = self.tk_bounds()
-        color = '#%06x' % self.color
+        color = tk_color(self.color)
         tags = self.get_item_tags()
         if self.line_width == 0:
             canvas.create_oval(x1, y1, x2, y2, fill=color, tags=tags)
         else:
             canvas.create_oval(x1, y1, x2, y2, outline=color, width=self.line_width, tags=tags)
+
+
+class GText(GItem):
+    def __init__(self, bounds: Rect, text = None):
+        super().__init__(bounds)
+        self.text = text or f'text{self.get_tag()}'
+
+    def draw(self, canvas):
+        color = tk_color(self.color)
+        tags = self.get_item_tags()
+        canvas.create_text(self.x, self.y, width=self.w, text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
+
 
 class State(Enum):
     IDLE = 0
@@ -231,6 +242,8 @@ class Handler:
             kind = randrange(5)
             if kind == 1:
                 item = GEllipse(r)
+            elif kind == 2:
+                item = GText(r)
             else:
                 item = GRect(r)
                 item.radius = randrange(0, min(w,h)//2)
