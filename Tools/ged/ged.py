@@ -8,6 +8,9 @@ import json
 import tkinter as tk
 from tkinter.font import Font
 from tkinter import ttk, filedialog
+from PIL.ImageColor import colormap
+
+rev_colormap = {value: name for name, value in colormap.items()}
 
 MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 2
 GRID_ALIGNMENT = 8
@@ -137,7 +140,7 @@ def union(r1: Rect, r2: Rect):
     return Rect(x, y, w, h)
 
 def tk_color(color):
-    return '#%06x' % color
+    return color if isinstance(color, str) else '#%06x' % color
 
 def tk_inflate(bounds, xo, yo):
     return (bounds[0]-xo, bounds[1]-yo, bounds[2]+xo, bounds[3]+yo)
@@ -279,10 +282,10 @@ class Handler:
         self.scale = scale
         self.display_list = []
         self.sel_items = []
+        self.on_sel_changed = None
         self.state = State.IDLE
 
         c = self.canvas = tk.Canvas(tk_root, background='gray')
-        c.pack(side=tk.BOTTOM, expand=True, fill=tk.BOTH)
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
@@ -314,8 +317,6 @@ class Handler:
         w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
         self.draw_offset = ((w - self.width * self.scale) // 2, (h - self.height * self.scale) // 2)
         self.redraw()
-        if self.sel_items:
-            self.sel_bounds = self.draw_handles()
 
     def tk_bounds(self, rect):
         xo, yo = self.draw_offset
@@ -381,17 +382,23 @@ class Handler:
             if not is_multi and self.sel_items:
                 self.remove_handles()
                 self.sel_items = []
+                if self.on_sel_changed:
+                    self.on_sel_changed()
             return
 
         self.sel_elem = elem
+        sel_changed = False
         if item and not item in self.sel_items:
             self.remove_handles()
             if is_multi:
                 self.sel_items.append(item)
             else:
                 self.sel_items = [item]
+            sel_changed = True
             self.sel_bounds = self.draw_handles()
         self.orig_bounds = [x.get_bounds() for x in self.sel_items]
+        if sel_changed and self.on_sel_changed:
+            self.on_sel_changed()
 
     @staticmethod
     def get_cursor(elem):
@@ -484,7 +491,6 @@ class Handler:
             return
         self.state = State.IDLE
         self.redraw() # Fix Z-ordering and ensure consistency
-        self.sel_bounds = self.draw_handles()
 
 
     def redraw(self):
@@ -497,6 +503,8 @@ class Handler:
             item.draw(self)
         c.color = 'white'
         c.draw_rect(r[0]-1, r[1]-1, r[2]+1, r[3]+1)
+        if self.sel_items:
+            self.sel_bounds = self.draw_handles()
 
 
 def run():
@@ -596,11 +604,16 @@ def run():
     root = tk.Tk(className='GED')
     root.geometry('800x600')
     root.title('Graphical Layout Editor')
+    root.grid()
+    root.columnconfigure(0, weight=2)
+    root.rowconfigure(1, weight=2)
     handler = Handler(root)
+    handler.set_scale(2)
+    handler.canvas.grid(row=1, column=0, sticky=tk.NSEW)
 
     # Toolbar
     toolbar = ttk.Frame(root)
-    toolbar.pack(side=tk.TOP, fill=tk.X)
+    toolbar.grid(row=0, column=0, columnspan=2)
     col = 0
     def addButton(text, command):
         btn = ttk.Button(toolbar, text=text, command=command)
@@ -622,7 +635,30 @@ def run():
     # addButton('Edit Config', self.editConfig)
     # addButton('Add Device', self.addDevice)
 
-    handler.set_scale(2)
+    # Properties
+    frame = ttk.Frame(root)
+    frame.grid(row=1, column=1)
+    var = tk.StringVar(value='blue')
+    cb = ttk.Combobox(frame, textvariable=var)
+    cb.pack()
+    def set_color(evt):
+        color = var.get()
+        color_name = rev_colormap.get(color)
+        if color_name:
+            var.set(color_name)
+            color = color_name
+        for item in handler.sel_items:
+            item.color = color
+        handler.redraw()
+    cb.bind('<Return>', set_color)
+
+    def sel_changed():
+        items = handler.sel_items
+        if not items:
+            return
+        color = tk_color(items[0].color)
+        var.set(rev_colormap.get(color, color))
+    handler.on_sel_changed = sel_changed
 
     tk.mainloop()
 
