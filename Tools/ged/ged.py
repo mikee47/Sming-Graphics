@@ -63,6 +63,35 @@ class Element(IntEnum):
         return (self & ELEMENT_CLASS_MASK) == EC_HANDLE
 
 
+class Canvas:
+    def __init__(self, tk_canvas, tags=()):
+        self.canvas = tk_canvas
+        self.tags = tags
+        self.color = 'white'
+        self.width = 1
+
+    def draw_rect(self, x0, y0, x1, y1):
+        self.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.width, tags=self.tags)
+
+    def fill_rect(self, x0, y0, x1, y1):
+        self.canvas.create_rectangle(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
+
+    def draw_line(self, x0, y0, x1, y1):
+        self.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=self.width, tags=self.tags)
+
+    def draw_corner(self, x, y, r, start_angle):
+        self.canvas.create_arc(x, y, x+r*2, y+r*2, start=start_angle, extent=90, outline=self.color, width=self.width, style='arc', tags=self.tags)
+
+    def fill_corner(self, x, y, r, start_angle):
+        self.canvas.create_arc(x, y, x+r*2, y+r*2, start=start_angle, extent=90, fill=self.color, outline='', tags=self.tags)
+
+    def draw_ellipse(self, x0, y0, x1, y1):
+        self.canvas.create_oval(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
+
+    def fill_ellipse(self, x0, y0, x1, y1):
+        self.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=self.width, tags=self.tags)
+
+
 @dataclass
 class Rect:
     x: int = 0
@@ -84,8 +113,8 @@ class Rect:
     def align(self):
         return Rect(align(self.x), align(self.y), align(self.w), align(self.h))
 
-    def inflate(self, off):
-        return Rect(self.x - off[0], self.y - off[1], self.w + off[0]*2, self.h + off[1]*2)
+    def inflate(self, xo, yo):
+        return Rect(self.x - xo, self.y - yo, self.w + xo*2, self.h + yo*2)
 
     def handle_pos(self, elem: Element):
         return {
@@ -109,6 +138,9 @@ def union(r1: Rect, r2: Rect):
 
 def tk_color(color):
     return '#%06x' % color
+
+def tk_inflate(bounds, xo, yo):
+    return (bounds[0]-xo, bounds[1]-yo, bounds[2]+xo, bounds[3]+yo)
 
 @dataclass
 class GItem(Rect):
@@ -145,57 +177,46 @@ class GRect(GItem):
 
     def draw(self, handler):
         x1, y1, x2, y2 = handler.tk_bounds(self)
-        w = self.line_width * handler.scale
-        color = tk_color(self.color)
-        tags = self.get_item_tags()
-
-        def draw_rect(x0, y0, x1, y1):
-            handler.canvas.create_rectangle(x0, y0, x1, y1, outline=color, width=w, tags=tags)
-        def fill_rect(x0, y0, x1, y1):
-            handler.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline='', width=0, tags=tags)
-        def draw_line(x0, y0, x1, y1):
-            handler.canvas.create_line(x0, y0, x1, y1, fill=color, width=w, tags=tags)
-        def draw_corner(x, y, start):
-            handler.canvas.create_arc(x, y, x+r*2, y+r*2, start=start, extent=90, outline=color, width=w, style='arc', tags=tags)
-        def fill_corner(x, y, start):
-            handler.canvas.create_arc(x, y, x+r*2, y+r*2, start=start, extent=90, fill=color, outline='', tags=tags)
+        c = Canvas(handler.canvas, self.get_item_tags())
+        c.color = tk_color(self.color)
+        c.width = self.line_width * handler.scale
 
         if self.radius > 1:
             r = self.radius * handler.scale
-            if w == 0:
-                fill_corner(x1, y1, 90)
-                fill_corner(x2-r*2, y1, 0)
-                fill_corner(x2-r*2, y2-r*2, 270)
-                fill_corner(x1, y2-r*2, 180)
-                fill_rect(x1+r, y1, 1+x2-r, y2)
-                fill_rect(x1, y1+r, x1+r, y2-r)
-                fill_rect(x2-r, y1+r, x2, y2-r)
+            if c.width == 0:
+                c.fill_corner(x1, y1, r, 90)
+                c.fill_corner(x2-r*2, y1, r, 0)
+                c.fill_corner(x2-r*2, y2-r*2, r, 270)
+                c.fill_corner(x1, y2-r*2, r, 180)
+                c.fill_rect(x1+r, y1, 1+x2-r, y2)
+                c.fill_rect(x1, y1+r, x1+r, y2-r)
+                c.fill_rect(x2-r, y1+r, x2, y2-r)
             else:
-                draw_corner(x1, y1, 90)
-                draw_corner(x2-r*2, y1, 0)
-                draw_corner(x2-r*2, y2-r*2, 270)
-                draw_corner(x1, y2-r*2, 180)
-                draw_line(x1+r, y1, x2-r, y1)
-                draw_line(x1+r, y2, x2-r, y2)
-                draw_line(x1, y1+r, x1, y2-r)
-                draw_line(x2, y1+r, x2, y2-r)
-        elif w == 0:
-            fill_rect(x1, y1, x2, y2)
+                c.draw_corner(x1, y1, r, 90)
+                c.draw_corner(x2-r*2, y1, r, 0)
+                c.draw_corner(x2-r*2, y2-r*2, r, 270)
+                c.draw_corner(x1, y2-r*2, r, 180)
+                c.draw_line(x1+r, y1, x2-r, y1)
+                c.draw_line(x1+r, y2, x2-r, y2)
+                c.draw_line(x1, y1+r, x1, y2-r)
+                c.draw_line(x2, y1+r, x2, y2-r)
+        elif c.width == 0:
+            c.fill_rect(x1, y1, x2, y2)
         else:
-            draw_rect(x1, y1, x2, y2)
+            c.draw_rect(x1, y1, x2, y2)
 
 
 @dataclass
 class GEllipse(GItem):
     def draw(self, handler):
-        x1, y1, x2, y2 = handler.tk_bounds(self)
-        color = tk_color(self.color)
-        w = self.line_width * handler.scale
-        tags = self.get_item_tags()
-        if w == 0:
-            handler.canvas.create_oval(x1, y1, x2, y2, fill=color, outline='', tags=tags)
+        r = handler.tk_bounds(self)
+        c = Canvas(handler.canvas, self.get_item_tags())
+        c.color = tk_color(self.color)
+        c.width = self.line_width * handler.scale
+        if c.width == 0:
+            c.draw_ellipse(*r)
         else:
-            handler.canvas.create_oval(x1, y1, x2, y2, outline=color, width=w, tags=tags)
+            c.fill_ellipse(*r)
 
 
 @dataclass
@@ -212,7 +233,7 @@ class GText(GItem):
         tags = self.get_item_tags()
         x1, y1, x2, y2 = handler.tk_bounds(self)
         M = 10
-        w = 1 + x2 - x1 - M*2
+        w = x2 - x1 - M*2
         handler.canvas.create_text(x1, y1, width=w, text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
 
 
@@ -301,11 +322,13 @@ class Handler:
         return (
             xo + rect.x * self.scale,
             yo + rect.y * self.scale,
-            xo + (rect.x + rect.w - 1) * self.scale,
-            yo + (rect.y + rect.h - 1) * self.scale )
+            xo + (rect.x + rect.w) * self.scale,
+            yo + (rect.y + rect.h) * self.scale )
 
     def clear(self):
         self.display_list.clear()
+        self.sel_items.clear()
+        self.state = State.IDLE
         self.redraw()
 
     def add_items(self, item_list):
@@ -337,11 +360,13 @@ class Handler:
         for e in Element:
             tags = ('handle', str(e))
             if e == Element.ITEM:
-                r = self.tk_bounds(hr.inflate((1, 1)))
+                r = self.tk_bounds(hr)
+                r = tk_inflate(r, 1, 1)
                 self.canvas.create_rectangle(r, outline='white', width=1, tags=tags)
             else:
                 pt = hr.handle_pos(e)
-                r = self.tk_bounds(Rect(pt[0], pt[1]).inflate((4, 4)))
+                r = self.tk_bounds(Rect(pt[0], pt[1]))
+                r = tk_inflate(r, 4, 4)
                 self.canvas.create_rectangle(r, outline='', fill='white', tags=tags)
         return hr
 
@@ -465,17 +490,16 @@ class Handler:
     def redraw(self):
         self.canvas.delete(tk.ALL)
         r = self.tk_bounds(Rect(0, 0, self.width, self.height))
-        self.canvas.create_rectangle((r), fill='black', outline='')
+        c = Canvas(self.canvas)
+        c.color = 'black'
+        c.fill_rect(*r)
         for item in self.display_list:
             item.draw(self)
+        c.color = 'white'
+        c.draw_rect(r[0]-1, r[1]-1, r[2]+1, r[3]+1)
 
 
 def run():
-    root = tk.Tk(className='GED')
-    root.geometry('800x600')
-    root.title('Graphical Layout Editor')
-    handler = Handler(root)
-
     PROJECT_EXT = '.ged'
     PROJECT_FILTER = [('GED Project', '*' + PROJECT_EXT)]
 
@@ -568,6 +592,11 @@ def run():
     def fileList():
         data = dl_serialise(handler.display_list)
         print(json_dumps(data))
+
+    root = tk.Tk(className='GED')
+    root.geometry('800x600')
+    root.title('Graphical Layout Editor')
+    handler = Handler(root)
 
     # Toolbar
     toolbar = ttk.Frame(root)
