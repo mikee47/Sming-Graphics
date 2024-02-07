@@ -3,10 +3,11 @@ import sys
 import copy
 from enum import Enum, IntEnum
 from random import randrange
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
+import json
 import tkinter as tk
 from tkinter.font import Font
-from tkinter import ttk
+from tkinter import ttk, filedialog
 
 MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 2
 GRID_ALIGNMENT = 8
@@ -255,21 +256,24 @@ class Handler:
         self.width = width
         self.height = height
         self.scale = scale
+        self.display_list = []
+        self.sel_items = []
+        self.state = State.IDLE
+
         c = self.canvas = tk.Canvas(tk_root, background='gray')
         c.pack(side=tk.BOTTOM, expand=True, fill=tk.BOTH)
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
         c.bind('<ButtonRelease-1>', self.canvas_end_move)
+
+        # Respond to size changes but slow them down a bit as full redraw is expensive
+        self.size_change_pending = False
         def canvas_configure(evt):
-            self.size_changed()
+            if not self.size_change_pending:
+                self.canvas.after(200, self.size_changed)
+                self.size_change_pending = True
         c.bind('<Configure>', canvas_configure)
-        self.display_list = []
-        self.sel_items = []
-        self.state = State.IDLE
-        self.set_size(width, height)
-        self.set_scale(scale)
-        self.size_changed()
 
     def set_size(self, width, height):
         if width == self.width and height == self.height:
@@ -285,6 +289,7 @@ class Handler:
         self.size_changed()
 
     def size_changed(self):
+        self.size_change_pending = False
         w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
         self.draw_offset = ((w - self.width * self.scale) // 2, (h - self.height * self.scale) // 2)
         self.redraw()
@@ -299,30 +304,13 @@ class Handler:
             xo + (rect.x + rect.w - 1) * self.scale,
             yo + (rect.y + rect.h - 1) * self.scale )
 
-    def add_random_shapes(self, count):
-        self.display_list = []
-        for i in range(count):
-            w_min, w_max = 10, 200
-            h_min, h_max = 10, 100
-            w = randrange(w_min, w_max)
-            h = randrange(h_min, h_max)
-            x = randrange(self.width - w)
-            y = randrange(self.height - h)
-            r = Rect(x, y, w, h).align()
-            kind = randrange(5)
-            if kind == 1:
-                item = GEllipse()
-            elif kind == 2:
-                item = GText()
-            elif kind == 3:
-                item = GButton()
-            else:
-                item = GRect()
-                item.radius = randrange(0, min(r.w, r.h) // 2)
-            item.bounds = r
-            item.color = randrange(0xffffff)
-            item.line_width = randrange(5)
-            self.add_item(item)
+    def clear(self):
+        self.display_list.clear()
+        self.redraw()
+
+    def add_items(self, item_list):
+        self.display_list.extend(item_list)
+        self.redraw()
 
     def add_item(self, item):
         self.display_list.append(item)
@@ -484,42 +472,102 @@ class Handler:
 
 def run():
     root = tk.Tk(className='GED')
+    root.geometry('800x600')
     root.title('Graphical Layout Editor')
     handler = Handler(root)
 
-    # Menus
-    def fileNew():
-        pass
-        # self.reset()
-        # self.reload()
-        # self.editDevice(self.config.devices[0])
+    PROJECT_EXT = '.ged'
+    PROJECT_FILTER = [('GED Project', '*' + PROJECT_EXT)]
 
-    def fileOpen():
-        pass
-        # filename = filedialog.askopenfilename(
-        #     title='Select profile ' + HW_EXT + ' file',
-        #     filetypes=hwFilter,
-        #     initialdir=os.getcwd())
-        # if len(filename) != 0 and checkProfilePath(filename):
-        #     self.loadConfig(filename)
+    def json_loads(s):
+        return json.loads(s)#, object_pairs_hook=OrderedDict)
+
+    def json_load(filename):
+        with open(filename) as f:
+            return json_loads(f.read())
+
+    def json_save(data, filename):
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=4)
+
+    def json_dumps(obj):
+        return json.dumps(obj, indent=4)
+
+    def dl_serialise(display_list):
+        data = []
+        for item in display_list:
+            d = {
+                'class': str(item.__class__.__name__),
+                'tag': item.get_tag(),
+            }
+            d.update(asdict(item))
+            data.append(d)
+        return data
+
+    def dl_deserialise(data):
+        display_list = []
+        for d in data:
+            class_name = d.pop('class')
+            cls = getattr(sys.modules[__name__], class_name)
+            item = cls()
+            tag = d.pop('tag')
+            for a, v in d.items():
+                setattr(item, a, v)
+            display_list.append(item)
+        return display_list
+
+    # Menus
+    def fileClear():
+        handler.clear()
+
+    def fileAddRandom(count = 10):
+        display_list = []
+        for i in range(count):
+            w_min, w_max = 10, 200
+            h_min, h_max = 10, 100
+            w = randrange(w_min, w_max)
+            h = randrange(h_min, h_max)
+            x = randrange(handler.width - w)
+            y = randrange(handler.height - h)
+            r = Rect(x, y, w, h).align()
+            kind = randrange(5)
+            if kind == 1:
+                item = GEllipse()
+            elif kind == 2:
+                item = GText()
+            elif kind == 3:
+                item = GButton()
+            else:
+                item = GRect()
+                item.radius = randrange(0, min(r.w, r.h) // 2)
+            item.bounds = r
+            item.color = randrange(0xffffff)
+            item.line_width = randrange(5)
+            display_list.append(item)
+        handler.add_items(display_list)
+
+
+    def fileLoad():
+        filename = filedialog.askopenfilename(title='Load project', filetypes=PROJECT_FILTER)
+        if len(filename) != 0:
+            data = json_load(filename)
+            handler.display_list = []
+            display_list = dl_deserialise(data)
+            handler.clear()
+            handler.add_items(display_list)
 
     def fileSave():
-        pass
-        # filename = self.json['name']
-        # filename = filedialog.asksaveasfilename(
-        #     title='Save profile to file',
-        #     filetypes=hwFilter,
-        #     initialfile=filename,
-        #     initialdir=os.getcwd())
-        # if len(filename) != 0 and checkProfilePath(filename):
-        #     ext = os.path.splitext(filename)[1]
-        #     if ext != HW_EXT:
-        #         filename += HW_EXT
-        #     json_save(self.json, filename)
+        filename = filedialog.asksaveasfilename(title='Save project', filetypes=PROJECT_FILTER)
+        if len(filename) != 0:
+            ext = os.path.splitext(filename)[1]
+            if ext != PROJECT_EXT:
+                filename += PROJECT_EXT
+            data = dl_serialise(handler.display_list)
+            json_save(data, filename)
 
     def fileList():
-        for item in handler.display_list:
-            print(repr(item))
+        data = dl_serialise(handler.display_list)
+        print(json_dumps(data))
 
     # Toolbar
     toolbar = ttk.Frame(root)
@@ -530,8 +578,9 @@ def run():
         nonlocal col
         btn.grid(row=0, column=col)
         col += 1
-    addButton('New', fileNew)
-    addButton('Open...', fileOpen)
+    addButton('Clear', fileClear)
+    addButton('Add Random', fileAddRandom)
+    addButton('Load...', fileLoad)
     addButton('Save...', fileSave)
     sep = ttk.Separator(toolbar, orient=tk.VERTICAL)
     sep.grid(row=0, column=col, sticky=tk.NS)
@@ -544,7 +593,6 @@ def run():
     # addButton('Edit Config', self.editConfig)
     # addButton('Add Device', self.addDevice)
 
-    handler.add_random_shapes(20)
     handler.set_scale(2)
 
     tk.mainloop()
