@@ -3,7 +3,8 @@ import sys
 import copy
 from enum import Enum, IntEnum
 from random import randrange
-from dataclasses import dataclass, field, asdict
+import dataclasses
+from dataclasses import dataclass
 import json
 import tkinter as tk
 from tkinter.font import Font
@@ -383,7 +384,7 @@ class Handler:
                 self.remove_handles()
                 self.sel_items = []
                 if self.on_sel_changed:
-                    self.on_sel_changed()
+                    self.on_sel_changed(True)
             return
 
         self.sel_elem = elem
@@ -398,7 +399,7 @@ class Handler:
             self.sel_bounds = self.draw_handles()
         self.orig_bounds = [x.get_bounds() for x in self.sel_items]
         if sel_changed and self.on_sel_changed:
-            self.on_sel_changed()
+            self.on_sel_changed(True)
 
     @staticmethod
     def get_cursor(elem):
@@ -484,6 +485,8 @@ class Handler:
                     item.resize(self, r)
 
         self.draw_handles()
+        if self.on_sel_changed:
+            self.on_sel_changed(False)
 
 
     def canvas_end_move(self, evt):
@@ -505,6 +508,37 @@ class Handler:
         c.draw_rect(r[0]-1, r[1]-1, r[2]+1, r[3]+1)
         if self.sel_items:
             self.sel_bounds = self.draw_handles()
+
+
+class Properties:
+    def __init__(self, root):
+        self.frame = ttk.Frame(root)
+        self.fields = {}
+
+    def clear(self):
+        for w in self.frame.winfo_children():
+            w.destroy()
+        self.fields.clear()
+
+    def set_field(self, name, values):
+        if name in self.fields:
+            var, cb = self.fields[name]
+            var.set(value=values[0] if len(values) == 1 else '')
+            cb.configure(values=values)
+            return
+
+        row = len(self.fields)
+        label = ttk.Label(self.frame, text=name)
+        label.grid(row=row, column=0)
+        var = tk.StringVar(value=values[0] if len(values) == 1 else '')
+        cb = ttk.Combobox(self.frame, textvariable=var, values=values)
+        cb.grid(row=row, column=1)
+        self.fields[name] = (var, cb)
+
+
+    def get_value(self, name):
+        var, _ = self.fields[name]
+        return var.get()
 
 
 def run():
@@ -532,7 +566,7 @@ def run():
                 'class': str(item.__class__.__name__),
                 'tag': item.get_tag(),
             }
-            d.update(asdict(item))
+            d.update(dataclasses.asdict(item))
             data.append(d)
         return data
 
@@ -636,28 +670,36 @@ def run():
     # addButton('Add Device', self.addDevice)
 
     # Properties
-    frame = ttk.Frame(root)
-    frame.grid(row=1, column=1)
-    var = tk.StringVar(value='blue')
-    cb = ttk.Combobox(frame, textvariable=var)
-    cb.pack()
-    def set_color(evt):
-        color = var.get()
-        color_name = rev_colormap.get(color)
-        if color_name:
-            var.set(color_name)
-            color = color_name
-        for item in handler.sel_items:
-            item.color = color
-        handler.redraw()
-    cb.bind('<Return>', set_color)
+    prop = Properties(root)
+    prop.frame.grid(row=1, column=1)
 
-    def sel_changed():
+    # def set_color(evt):
+    #     color = var.get()
+    #     color_name = rev_colormap.get(color)
+    #     if color_name:
+    #         var.set(color_name)
+    #         color = color_name
+    #     for item in handler.sel_items:
+    #         item.color = color
+    #     handler.redraw()
+    # cb.bind('<Return>', set_color)
+
+    def sel_changed(full_change: bool):
+        if full_change:
+            prop.clear()
         items = handler.sel_items
         if not items:
             return
-        color = tk_color(items[0].color)
-        var.set(rev_colormap.get(color, color))
+        fields = {}
+        for item in items:
+            for name, value in dataclasses.asdict(item).items():
+                values = fields.setdefault(name, set())
+                values.add(value)
+        for name, values in fields.items():
+            prop.set_field(name, list(values))
+
+    # color = tk_color(items[0].color)
+    # var.set(rev_colormap.get(color, color))
     handler.on_sel_changed = sel_changed
 
     tk.mainloop()
