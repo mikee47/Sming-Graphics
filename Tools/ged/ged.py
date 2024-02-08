@@ -512,8 +512,10 @@ class Handler:
 
 class Properties:
     def __init__(self, root):
-        self.frame = ttk.Frame(root)
+        self.frame = ttk.LabelFrame(root, text='Properties')
+        self.on_value_changed = None
         self.fields = {}
+        self.is_updating = False
 
     def clear(self):
         for w in self.frame.winfo_children():
@@ -523,18 +525,29 @@ class Properties:
     def set_field(self, name, values):
         if name in self.fields:
             var, cb = self.fields[name]
+            self.is_updating = True
             var.set(value=values[0] if len(values) == 1 else '')
+            self.is_updating = False
             cb.configure(values=values)
             return
 
         row = len(self.fields)
-        label = ttk.Label(self.frame, text=name)
-        label.grid(row=row, column=0)
-        var = tk.StringVar(value=values[0] if len(values) == 1 else '')
+        label = ttk.Label(self.frame, text=name.replace('_', ' '))
+        label.grid(row=row, column=0, sticky=tk.E, padx=8)
+        var = tk.StringVar(name=name, value=values[0] if len(values) == 1 else '')
+        var.trace_add('write', self.value_changed)
         cb = ttk.Combobox(self.frame, textvariable=var, values=values)
         cb.grid(row=row, column=1)
         self.fields[name] = (var, cb)
 
+    def value_changed(self, name1, name2, op):
+        if self.is_updating:
+            return
+        """See 'trace add variable' in TCL docs"""
+        var, _ = self.fields[name1]
+        # print(f'value_changed:"{name1}", "{name2}", "{op}", "{var.get()}"')
+        if self.on_value_changed:
+            self.on_value_changed(name1, var.get())
 
     def get_value(self, name):
         var, _ = self.fields[name]
@@ -641,6 +654,7 @@ def run():
     root.grid()
     root.columnconfigure(0, weight=2)
     root.rowconfigure(1, weight=2)
+
     handler = Handler(root)
     handler.set_scale(2)
     handler.canvas.grid(row=1, column=0, sticky=tk.NSEW)
@@ -666,12 +680,29 @@ def run():
         scale = 1 + handler.scale % 4
         handler.set_scale(scale)
     addButton('scale', changeScale)
-    # addButton('Edit Config', self.editConfig)
-    # addButton('Add Device', self.addDevice)
+
+    # Status bar
+    status = tk.StringVar()
+    label = ttk.Label(root, textvariable=status)
+    label.grid(row=2, column=0, columnspan=2, sticky=tk.W)
 
     # Properties
     prop = Properties(root)
-    prop.frame.grid(row=1, column=1)
+    prop.frame.grid(row=1, column=1, sticky=tk.NW)
+
+    def value_changed(name, value):
+        for item in handler.sel_items:
+            try:
+                old_value = getattr(item, name)
+                if isinstance(old_value, int) and not isinstance(value, int):
+                    value = int(value, 0)
+                setattr(item, name, value)
+            except AttributeError:
+                pass
+            except Exception as e:
+                status.set(str(e))
+        handler.redraw()
+    prop.on_value_changed = value_changed
 
     # def set_color(evt):
     #     color = var.get()
