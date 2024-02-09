@@ -7,6 +7,7 @@ import dataclasses
 from dataclasses import dataclass
 import json
 import tkinter as tk
+import tkinter.font
 from tkinter.font import Font
 from tkinter import ttk, filedialog
 from PIL.ImageColor import colormap
@@ -125,7 +126,7 @@ class Rect:
 
     @property
     def bounds(self):
-        return self.copy()
+        return copy.copy(self)
 
     @bounds.setter
     def bounds(self, rect):
@@ -194,7 +195,7 @@ class GColor(int):
 
 @dataclass
 class GItem(Rect):
-    color: GColor = GColor(0xa0a0a0)
+    color: GColor = GColor('orange')
 
     def get_min_size(self, offset=0):
         return (MIN_ELEMENT_WIDTH + offset, MIN_ELEMENT_HEIGHT + offset)
@@ -575,9 +576,19 @@ class Handler:
             self.sel_bounds = self.draw_handles()
 
 
-class Properties:
+class Editor:
+    def __init__(self, root, title):
+        self.frame = ttk.LabelFrame(root, text=title)
+
+    def addLabel(self, text, row):
+        label = ttk.Label(self.frame, text=text)
+        label.grid(row=row, column=0, sticky=tk.E, padx=8)
+        return label
+
+
+class PropertyEditor(Editor):
     def __init__(self, root):
-        self.frame = ttk.LabelFrame(root, text='Properties')
+        super().__init__(root, 'Properties')
         self.on_value_changed = None
         self.fields = {}
         self.is_updating = False
@@ -597,8 +608,7 @@ class Properties:
             return
 
         row = len(self.fields)
-        label = ttk.Label(self.frame, text=name.replace('_', ' '))
-        label.grid(row=row, column=0, sticky=tk.E, padx=8)
+        self.addLabel(name.replace('_', ' '), row)
         var = tk.StringVar(name=name, value=values[0] if len(values) == 1 else '')
         var.trace_add('write', self.value_changed)
         cb = ttk.Combobox(self.frame, textvariable=var, values=values)
@@ -620,6 +630,29 @@ class Properties:
     def get_value(self, name):
         var, _ = self.fields[name]
         return var.get()
+
+
+class FontEditor(Editor):
+    def __init__(self, root):
+        super().__init__(root, 'Font')
+        row = 0
+        self.addLabel('Family', row)
+        font_families = list(set(tk.font.families()))
+        self.family = ttk.Combobox(self.frame, values=sorted(font_families)).grid(row=row, column=1)
+        row += 1
+        self.addLabel('Size', row)
+        self.size = ttk.Entry(self.frame).grid(row=row, column=1)
+        row += 1
+        styleFrame = ttk.Labelframe(self.frame, text='Styles')
+        styleFrame.grid(row=row, column=0, columnspan=2)
+        def addCheck(name):
+            cb = ttk.Checkbutton(styleFrame, text=name)
+            cb.pack()
+        for style in ('normal', 'italic', 'bold', 'bold-italic'):
+            addCheck(style)
+        # self.on_value_changed = None
+        # self.fields = {}
+        # self.is_updating = False
 
 
 def run():
@@ -705,7 +738,7 @@ def run():
         if len(filename) != 0:
             data = json_load(filename)
             handler.display_list = []
-            display_list = dl_deserialise(data)
+            display_list = dl_deserialise(data['layout'])
             handler.clear()
             handler.add_items(display_list)
 
@@ -715,7 +748,9 @@ def run():
             ext = os.path.splitext(filename)[1]
             if ext != PROJECT_EXT:
                 filename += PROJECT_EXT
-            data = dl_serialise(handler.display_list)
+            data = {
+                'layout': dl_serialise(handler.display_list),
+            }
             json_save(data, filename)
 
     def fileList():
@@ -729,9 +764,10 @@ def run():
     root.columnconfigure(0, weight=2)
     root.rowconfigure(1, weight=2)
 
+    # Layout editor
     handler = Handler(root)
     handler.set_scale(2)
-    handler.canvas.grid(row=1, column=0, sticky=tk.NSEW)
+    handler.canvas.grid(row=1, column=0, rowspan=2, sticky=tk.NSEW)
 
     # Toolbar
     toolbar = ttk.Frame(root)
@@ -758,10 +794,10 @@ def run():
     # Status bar
     status = tk.StringVar()
     label = ttk.Label(root, textvariable=status)
-    label.grid(row=2, column=0, columnspan=2, sticky=tk.W)
+    label.grid(row=3, column=0, columnspan=2, sticky=tk.W)
 
     # Properties
-    prop = Properties(root)
+    prop = PropertyEditor(root)
     prop.frame.grid(row=1, column=1, sticky=tk.NW)
 
     def value_changed(name, value):
@@ -774,6 +810,7 @@ def run():
         handler.redraw()
     prop.on_value_changed = value_changed
 
+    # Selection handling
     def sel_changed(full_change: bool):
         if full_change:
             prop.clear()
@@ -790,6 +827,12 @@ def run():
 
     handler.on_sel_changed = sel_changed
 
+    # Fonts
+    fonts = FontEditor(root)
+    fonts.frame.grid(row=2, column=1, sticky=tk.NW)
+
+
+    #
     tk.mainloop()
 
 
