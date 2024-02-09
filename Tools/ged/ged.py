@@ -2,7 +2,7 @@ import os
 import sys
 import copy
 from enum import Enum, IntEnum
-from random import randrange
+from random import randrange, randint
 import dataclasses
 from dataclasses import dataclass
 import json
@@ -72,28 +72,47 @@ class Canvas:
         self.canvas = tk_canvas
         self.tags = tags
         self.color = 'white'
-        self.width = 1
+        self.line_width = 1
 
     def draw_rect(self, x0, y0, x1, y1):
-        self.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.width, tags=self.tags)
+        self.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.line_width, tags=self.tags)
 
     def fill_rect(self, x0, y0, x1, y1):
         self.canvas.create_rectangle(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
 
+    def draw_rounded_rect(self, x0, y0, x1, y1, r):
+        self.draw_corner(x0, y0, r, 90)
+        self.draw_corner(x1-r*2, y0, r, 0)
+        self.draw_corner(x1-r*2, y1-r*2, r, 270)
+        self.draw_corner(x0, y1-r*2, r, 180)
+        self.draw_line(x0+r, y0, x1-r, y0)
+        self.draw_line(x0+r, y1, x1-r, y1)
+        self.draw_line(x0, y0+r, x0, y1-r)
+        self.draw_line(x1, y0+r, x1, y1-r)
+
+    def fill_rounded_rect(self, x0, y0, x1, y1, r):
+        self.fill_corner(x0, y0, r, 90)
+        self.fill_corner(x1-r*2, y0, r, 0)
+        self.fill_corner(x1-r*2, y1-r*2, r, 270)
+        self.fill_corner(x0, y1-r*2, r, 180)
+        self.fill_rect(x0+r, y0, 1+x1-r, y1)
+        self.fill_rect(x0, y0+r, x0+r, y1-r)
+        self.fill_rect(x1-r, y0+r, x1, y1-r)
+
     def draw_line(self, x0, y0, x1, y1):
-        self.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=self.width, tags=self.tags)
+        self.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=self.line_width, tags=self.tags)
 
     def draw_corner(self, x, y, r, start_angle):
-        self.canvas.create_arc(x, y, x+r*2, y+r*2, start=start_angle, extent=90, outline=self.color, width=self.width, style='arc', tags=self.tags)
+        self.canvas.create_arc(x, y, x+r*2, y+r*2, start=start_angle, extent=90, outline=self.color, width=self.line_width, style='arc', tags=self.tags)
 
     def fill_corner(self, x, y, r, start_angle):
         self.canvas.create_arc(x, y, x+r*2, y+r*2, start=start_angle, extent=90, fill=self.color, outline='', tags=self.tags)
 
     def draw_ellipse(self, x0, y0, x1, y1):
-        self.canvas.create_oval(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
+        self.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=self.line_width, tags=self.tags)
 
     def fill_ellipse(self, x0, y0, x1, y1):
-        self.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=self.width, tags=self.tags)
+        self.canvas.create_oval(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
 
 
 @dataclass
@@ -146,10 +165,13 @@ def tk_color(color):
 def tk_inflate(bounds, xo, yo):
     return (bounds[0]-xo, bounds[1]-yo, bounds[2]+xo, bounds[3]+yo)
 
+
 @dataclass
 class GItem(Rect):
-    line_width: int = 1
     color: int = 0xa0a0a0
+
+    def get_min_size(self, offset=0):
+        return (MIN_ELEMENT_WIDTH + offset, MIN_ELEMENT_HEIGHT + offset)
 
     def get_bounds(self):
         return Rect(self.x, self.y, self.w, self.h)
@@ -160,10 +182,6 @@ class GItem(Rect):
     def get_item_tags(self):
         return ('item', str(Element.ITEM), self.get_tag())
 
-    def get_min_size(self):
-        o = self.line_width * 2
-        return (MIN_ELEMENT_WIDTH + o, MIN_ELEMENT_HEIGHT + o)
-
     def resize(self, handler, rect):
         self.bounds = rect
         handler.canvas.delete(self.get_tag())
@@ -172,55 +190,64 @@ class GItem(Rect):
 
 @dataclass
 class GRect(GItem):
+    line_width: int = 1
     radius: int = 0
 
     def get_min_size(self):
-        sz = super().get_min_size()
-        o = self.radius * 2
-        return (sz[0] + o, sz[1] + o)
+        return super().get_min_size((self.line_width + self.radius) * 2)
 
     def draw(self, handler):
         x1, y1, x2, y2 = handler.tk_bounds(self)
         c = Canvas(handler.canvas, self.get_item_tags())
         c.color = tk_color(self.color)
-        c.width = self.line_width * handler.scale
+        c.line_width = self.line_width * handler.scale
 
         if self.radius > 1:
-            r = self.radius * handler.scale
-            if c.width == 0:
-                c.fill_corner(x1, y1, r, 90)
-                c.fill_corner(x2-r*2, y1, r, 0)
-                c.fill_corner(x2-r*2, y2-r*2, r, 270)
-                c.fill_corner(x1, y2-r*2, r, 180)
-                c.fill_rect(x1+r, y1, 1+x2-r, y2)
-                c.fill_rect(x1, y1+r, x1+r, y2-r)
-                c.fill_rect(x2-r, y1+r, x2, y2-r)
-            else:
-                c.draw_corner(x1, y1, r, 90)
-                c.draw_corner(x2-r*2, y1, r, 0)
-                c.draw_corner(x2-r*2, y2-r*2, r, 270)
-                c.draw_corner(x1, y2-r*2, r, 180)
-                c.draw_line(x1+r, y1, x2-r, y1)
-                c.draw_line(x1+r, y2, x2-r, y2)
-                c.draw_line(x1, y1+r, x1, y2-r)
-                c.draw_line(x2, y1+r, x2, y2-r)
-        elif c.width == 0:
-            c.fill_rect(x1, y1, x2, y2)
+            c.draw_rounded_rect(x1, y1, x2, y2, self.radius * handler.scale)
         else:
             c.draw_rect(x1, y1, x2, y2)
 
 
 @dataclass
+class GFilledRect(GItem):
+    radius: int = 0
+
+    def get_min_size(self):
+        return super().get_min_size(self.radius * 2)
+
+    def draw(self, handler):
+        x1, y1, x2, y2 = handler.tk_bounds(self)
+        c = Canvas(handler.canvas, self.get_item_tags())
+        c.color = tk_color(self.color)
+
+        if self.radius > 1:
+            c.fill_rounded_rect(x1, y1, x2, y2, self.radius * handler.scale)
+        else:
+            c.fill_rect(x1, y1, x2, y2)
+
+
+@dataclass
 class GEllipse(GItem):
+    line_width: int = 1
+
+    def get_min_size(self):
+        return super().get_min_size(self.line_width * 2)
+
     def draw(self, handler):
         r = handler.tk_bounds(self)
         c = Canvas(handler.canvas, self.get_item_tags())
         c.color = tk_color(self.color)
-        c.width = self.line_width * handler.scale
-        if c.width == 0:
-            c.draw_ellipse(*r)
-        else:
-            c.fill_ellipse(*r)
+        c.line_width = self.line_width * handler.scale
+        c.draw_ellipse(*r)
+
+
+@dataclass
+class GFilledEllipse(GItem):
+    def draw(self, handler):
+        r = handler.tk_bounds(self)
+        c = Canvas(handler.canvas, self.get_item_tags())
+        c.color = tk_color(self.color)
+        c.fill_ellipse(*r)
 
 
 @dataclass
@@ -242,7 +269,7 @@ class GText(GItem):
 
 
 @dataclass
-class GButton(GRect):
+class GButton(GItem):
     text: str = None
 
     def __post_init__(self):
@@ -251,15 +278,17 @@ class GButton(GRect):
             self.text = f'button {self.get_tag()}'
 
     def draw(self, handler):
-        self.radius = min(self.w, self.h) // 8
-        self.line_width = 0
-        super().draw(handler)
+        radius = min(self.w, self.h) // 8
+        line_width = 0
         color = tk_color(self.color)
         tags = self.get_item_tags()
         font_px = min(self.w, self.h) // 4
         font = Font(family='Helvetica', size=font_px * -handler.scale)
         M = font_px * handler.scale
         x1, y1, x2, y2 = handler.tk_bounds(self)
+        c = Canvas(handler.canvas, tags)
+        c.color = color
+        c.fill_rounded_rect(x1, y1, x2, y2, radius * handler.scale)
         x1 += M
         x2 -= M
         id = handler.canvas.create_text(x1, y1, width=1+x2-x1,
@@ -504,7 +533,7 @@ class Handler:
         c.fill_rect(*r)
         for item in self.display_list:
             item.draw(self)
-        c.color = 'white'
+        c.color = 'dimgray'
         c.draw_rect(r[0]-1, r[1]-1, r[2]+1, r[3]+1)
         if self.sel_items:
             self.sel_bounds = self.draw_handles()
@@ -599,29 +628,33 @@ def run():
     def fileClear():
         handler.clear()
 
-    def fileAddRandom(count = 10):
+    def fileAddRandom(count=10):
         display_list = []
         for i in range(count):
             w_min, w_max = 10, 200
             h_min, h_max = 10, 100
-            w = randrange(w_min, w_max)
-            h = randrange(h_min, h_max)
+            w = randint(w_min, w_max)
+            h = randint(h_min, h_max)
             x = randrange(handler.width - w)
             y = randrange(handler.height - h)
-            r = Rect(x, y, w, h).align()
-            kind = randrange(5)
-            if kind == 1:
-                item = GEllipse()
+            r = Rect(*handler.grid_align((x, y, w, h)))
+            line_width = randint(1, 5)
+            radius = randint(0, min(r.w, r.h) // 2)
+            kind = randrange(6)
+            if kind == 0:
+                item = GEllipse(line_width=line_width)
+            elif kind == 1:
+                item = GFilledEllipse()
             elif kind == 2:
                 item = GText()
             elif kind == 3:
                 item = GButton()
-            else:
-                item = GRect()
-                item.radius = randrange(0, min(r.w, r.h) // 2)
+            elif kind == 4:
+                item = GRect(line_width=line_width, radius=radius)
+            elif kind == 5:
+                item = GFilledRect(radius=radius)
             item.bounds = r
             item.color = randrange(0xffffff)
-            item.line_width = randrange(5)
             display_list.append(item)
         handler.add_items(display_list)
 
@@ -661,7 +694,7 @@ def run():
 
     # Toolbar
     toolbar = ttk.Frame(root)
-    toolbar.grid(row=0, column=0, columnspan=2)
+    toolbar.grid(row=0, column=0, columnspan=2, sticky=tk.W)
     col = 0
     def addButton(text, command):
         btn = ttk.Button(toolbar, text=text, command=command)
