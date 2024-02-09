@@ -14,7 +14,6 @@ from PIL.ImageColor import colormap
 rev_colormap = {value: name for name, value in colormap.items()}
 
 MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 2
-GRID_ALIGNMENT = 8
 
 # Event state modifier masks
 EVS_SHIFT = 0x0001
@@ -23,14 +22,13 @@ EVS_ALTLEFT = 0x0008
 EVS_ALTRIGHT = 0x0080
 
 
-def align(value):
-    a = GRID_ALIGNMENT
-    if a <= 1:
+def align(value: int, boundary: int):
+    if boundary <= 1:
         return value
     if isinstance(value, (tuple, list)):
-        return (align(x) for x in value)
-    n = (value + a // 2) // a
-    return n * a
+        return (align(x, boundary) for x in value)
+    n = (value + boundary // 2) // boundary
+    return n * boundary
 
 # Top 4 bits identify hit class
 ELEMENT_CLASS_MASK = 0xf0
@@ -132,9 +130,6 @@ class Rect:
     @bounds.setter
     def bounds(self, rect):
         self.x, self.y, self.w, self.h = rect.x, rect.y, rect.w, rect.h
-
-    def align(self):
-        return Rect(align(self.x), align(self.y), align(self.w), align(self.h))
 
     def inflate(self, xo, yo):
         return Rect(self.x - xo, self.y - yo, self.w + xo*2, self.h + yo*2)
@@ -306,10 +301,11 @@ class State(Enum):
     SELECTING = 2
 
 class Handler:
-    def __init__(self, tk_root, width=320, height=240, scale=1):
+    def __init__(self, tk_root, width=320, height=240, scale=1, grid_alignment=8):
         self.width = width
         self.height = height
         self.scale = scale
+        self.grid_alignment = grid_alignment
         self.display_list = []
         self.sel_items = []
         self.on_sel_changed = None
@@ -347,6 +343,9 @@ class Handler:
         w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
         self.draw_offset = ((w - self.width * self.scale) // 2, (h - self.height * self.scale) // 2)
         self.redraw()
+
+    def grid_align(self, value):
+        return align(value, self.grid_alignment)
 
     def tk_bounds(self, rect):
         xo, yo = self.draw_offset
@@ -465,20 +464,20 @@ class Handler:
         if elem == Element.ITEM:
             for item, orig in zip(self.sel_items, self.orig_bounds):
                 r = item.get_bounds()
-                r.x, r.y = align((orig.x + off[0], orig.y + off[1]))
+                r.x, r.y = self.grid_align((orig.x + off[0], orig.y + off[1]))
                 item.resize(self, r)
         elif len(self.sel_items) == 1:
             item, orig = self.sel_items[0], self.orig_bounds[0]
             r = item.get_bounds()
             if elem & DIR_N:
-                r.y = align(orig.y + off[1])
+                r.y = self.grid_align(orig.y + off[1])
                 r.h = orig.y + orig.h - r.y
             if elem & DIR_E:
-                r.w = align(orig.w + off[0])
+                r.w = self.grid_align(orig.w + off[0])
             if elem & DIR_S:
-                r.h = align(orig.h + off[1])
+                r.h = self.grid_align(orig.h + off[1])
             if elem & DIR_W:
-                r.x = align(orig.x + off[0])
+                r.x = self.grid_align(orig.x + off[0])
                 r.w = orig.x + orig.w - r.x
             min_size = item.get_min_size()
             if r.w >= min_size[0] and r.h >= min_size[1]:
@@ -503,11 +502,11 @@ class Handler:
                 do_size = (evt.state & EVS_SHIFT) != 0
                 for item, orig in zip(self.sel_items, self.orig_bounds):
                     r = copy.copy(orig)
-                    r.x = align(cur_bounds.x + (orig.x - orig_bounds.x) * cur_bounds.w // orig_bounds.w)
-                    r.y = align(cur_bounds.y + (orig.y - orig_bounds.y) * cur_bounds.h // orig_bounds.h)
+                    r.x = self.grid_align(cur_bounds.x + (orig.x - orig_bounds.x) * cur_bounds.w // orig_bounds.w)
+                    r.y = self.grid_align(cur_bounds.y + (orig.y - orig_bounds.y) * cur_bounds.h // orig_bounds.h)
                     if do_size:
-                        r.w = align(orig.w * cur_bounds.w // orig_bounds.w)
-                        r.h = align(orig.h * cur_bounds.h // orig_bounds.h)
+                        r.w = self.grid_align(orig.w * cur_bounds.w // orig_bounds.w)
+                        r.h = self.grid_align(orig.h * cur_bounds.h // orig_bounds.h)
                         min_size = item.get_min_size()
                         if r.w < min_size[0] or r.h < min_size[1]:
                             continue
