@@ -418,20 +418,23 @@ class Handler:
         return elem, item
 
     def draw_handles(self):
-        hr = self.sel_items[0].get_bounds()
-        for item in self.sel_items[1:]:
-            hr = union(hr, item)
+        hr = None
+        tags = ('handle', str(Element.ITEM))
+        for item in self.sel_items:
+            hr = union(hr, item) if hr else item.bounds
+            r = tk_inflate(self.tk_bounds(item), 1, 1)
+            self.canvas.create_rectangle(r, outline='white', width=1, tags=tags)
+        if len(self.sel_items) > 1:
+            r = tk_inflate(self.tk_bounds(hr), 1, 1)
+            self.canvas.create_rectangle(r, outline='white', width=1, tags=tags)
         for e in Element:
-            tags = ('handle', str(e))
             if e == Element.ITEM:
-                r = self.tk_bounds(hr)
-                r = tk_inflate(r, 1, 1)
-                self.canvas.create_rectangle(r, outline='white', width=1, tags=tags)
-            else:
-                pt = get_handle_pos(hr, e)
-                r = self.tk_bounds(Rect(pt[0], pt[1]))
-                r = tk_inflate(r, 4, 4)
-                self.canvas.create_rectangle(r, outline='', fill='white', tags=tags)
+                continue
+            tags = ('handle', str(e))
+            pt = get_handle_pos(hr, e)
+            r = self.tk_bounds(Rect(pt[0], pt[1]))
+            r = tk_inflate(r, 4, 4)
+            self.canvas.create_rectangle(r, outline='', fill='white', tags=tags)
         return hr
 
     def remove_handles(self):
