@@ -134,18 +134,6 @@ class Rect:
     def inflate(self, xo, yo):
         return Rect(self.x - xo, self.y - yo, self.w + xo*2, self.h + yo*2)
 
-    def handle_pos(self, elem: Element):
-        return {
-            Element.HANDLE_N: (self.x + self.w // 2, self.y),
-            Element.HANDLE_NE: (self.x + self.w, self.y),
-            Element.HANDLE_E: (self.x + self.w, self.y + self.h // 2),
-            Element.HANDLE_SE: (self.x + self.w, self.y + self.h),
-            Element.HANDLE_S: (self.x + self.w // 2, self.y + self.h),
-            Element.HANDLE_SW: (self.x, self.y + self.h),
-            Element.HANDLE_W: (self.x, self.y + self.h // 2),
-            Element.HANDLE_NW: (self.x, self.y),
-        }.get(elem)
-
 
 def union(r1: Rect, r2: Rect):
     x = min(r1.x, r2.x)
@@ -161,6 +149,20 @@ def tk_inflate(bounds, xo, yo):
     return (bounds[0]-xo, bounds[1]-yo, bounds[2]+xo, bounds[3]+yo)
 
 
+def get_handle_pos(r: Rect, elem: Element):
+    return {
+        Element.HANDLE_N: (r.x + r.w // 2, r.y),
+        Element.HANDLE_NE: (r.x + r.w, r.y),
+        Element.HANDLE_E: (r.x + r.w, r.y + r.h // 2),
+        Element.HANDLE_SE: (r.x + r.w, r.y + r.h),
+        Element.HANDLE_S: (r.x + r.w // 2, r.y + r.h),
+        Element.HANDLE_SW: (r.x, r.y + r.h),
+        Element.HANDLE_W: (r.x, r.y + r.h // 2),
+        Element.HANDLE_NW: (r.x, r.y),
+    }.get(elem)
+
+
+
 @dataclass
 class GItem(Rect):
     color: int = 0xa0a0a0
@@ -171,15 +173,16 @@ class GItem(Rect):
     def get_bounds(self):
         return Rect(self.x, self.y, self.w, self.h)
 
-    def get_tag(self):
+    @property
+    def id(self):
         return 'G%08x' % id(self)
 
     def get_item_tags(self):
-        return ('item', str(Element.ITEM), self.get_tag())
+        return ('item', str(Element.ITEM), self.id)
 
     def resize(self, handler, rect):
         self.bounds = rect
-        handler.canvas.delete(self.get_tag())
+        handler.canvas.delete(self.id)
         self.draw(handler)
 
 
@@ -252,7 +255,7 @@ class GText(GItem):
     def __post_init__(self):
         super().__post_init__()
         if self.text is None:
-            self.text = f'Text {self.get_tag()}'
+            self.text = f'Text {self.id}'
 
     def draw(self, handler):
         color = tk_color(self.color)
@@ -270,7 +273,7 @@ class GButton(GItem):
     def __post_init__(self):
         super().__post_init__()
         if self.text is None:
-            self.text = f'button {self.get_tag()}'
+            self.text = f'button {self.id}'
 
     def draw(self, handler):
         radius = min(self.w, self.h) // 8
@@ -370,7 +373,7 @@ class Handler:
         item.draw(self)
 
     def remove_item(self, item):
-        self.canvas.delete(item.get_tag())
+        self.canvas.delete(item.id)
         self.display_list.remove(item)
 
     def get_current(self):
@@ -380,7 +383,7 @@ class Handler:
         elem = Element(int(tags[1]))
         if tags[0] == 'handle':
             return elem, None
-        item = next(x for x in self.display_list if x.get_tag() == tags[2])
+        item = next(x for x in self.display_list if x.id == tags[2])
         return elem, item
 
     def draw_handles(self):
@@ -394,7 +397,7 @@ class Handler:
                 r = tk_inflate(r, 1, 1)
                 self.canvas.create_rectangle(r, outline='white', width=1, tags=tags)
             else:
-                pt = hr.handle_pos(e)
+                pt = get_handle_pos(hr, e)
                 r = self.tk_bounds(Rect(pt[0], pt[1]))
                 r = tk_inflate(r, 4, 4)
                 self.canvas.create_rectangle(r, outline='', fill='white', tags=tags)
@@ -605,7 +608,7 @@ def run():
         for item in display_list:
             d = {
                 'class': str(item.__class__.__name__),
-                'tag': item.get_tag(),
+                'tag': item.id,
             }
             d.update(dataclasses.asdict(item))
             data.append(d)
