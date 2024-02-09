@@ -142,8 +142,6 @@ def union(r1: Rect, r2: Rect):
     h = max(r1.y + r1.h, r2.y + r2.h) - y
     return Rect(x, y, w, h)
 
-def tk_color(color):
-    return color if isinstance(color, str) else '#%06x' % color
 
 def tk_inflate(bounds, xo, yo):
     return (bounds[0]-xo, bounds[1]-yo, bounds[2]+xo, bounds[3]+yo)
@@ -163,9 +161,40 @@ def get_handle_pos(r: Rect, elem: Element):
 
 
 
+class GColor(int):
+    def __new__(cls, value):
+        if isinstance(value, str):
+            if value == '' or str.isdigit(value[0]):
+                value = int(value, 0)
+            else:
+                if value[0] != '#':
+                    try:
+                        value = colormap[value]
+                    except KeyError:
+                        raise ValueError(f'Unknown color name {value}')
+                if value[0] != '#':
+                    raise ValueError(f'Bad color {value}')
+                value = int(value[1:], 16)
+        return int.__new__(cls, value)
+
+    def __init__(self, *args, **kwds):
+        pass
+
+    def value_str(self):
+        return '#%06x' % self
+
+    def __str__(self):
+        s = self.value_str()
+        return rev_colormap.get(s, s)
+
+    def __repr__(self):
+        return str(self)
+
+
+
 @dataclass
 class GItem(Rect):
-    color: int = 0xa0a0a0
+    color: GColor = GColor(0xa0a0a0)
 
     def get_min_size(self, offset=0):
         return (MIN_ELEMENT_WIDTH + offset, MIN_ELEMENT_HEIGHT + offset)
@@ -197,7 +226,7 @@ class GRect(GItem):
     def draw(self, handler):
         x1, y1, x2, y2 = handler.tk_bounds(self)
         c = Canvas(handler.canvas, self.get_item_tags())
-        c.color = tk_color(self.color)
+        c.color = str(self.color)
         c.line_width = self.line_width * handler.scale
 
         if self.radius > 1:
@@ -216,7 +245,7 @@ class GFilledRect(GItem):
     def draw(self, handler):
         x1, y1, x2, y2 = handler.tk_bounds(self)
         c = Canvas(handler.canvas, self.get_item_tags())
-        c.color = tk_color(self.color)
+        c.color = str(self.color)
 
         if self.radius > 1:
             c.fill_rounded_rect(x1, y1, x2, y2, self.radius * handler.scale)
@@ -234,7 +263,7 @@ class GEllipse(GItem):
     def draw(self, handler):
         r = handler.tk_bounds(self)
         c = Canvas(handler.canvas, self.get_item_tags())
-        c.color = tk_color(self.color)
+        c.color = str(self.color)
         c.line_width = self.line_width * handler.scale
         c.draw_ellipse(*r)
 
@@ -244,7 +273,7 @@ class GFilledEllipse(GItem):
     def draw(self, handler):
         r = handler.tk_bounds(self)
         c = Canvas(handler.canvas, self.get_item_tags())
-        c.color = tk_color(self.color)
+        c.color = str(self.color)
         c.fill_ellipse(*r)
 
 
@@ -258,7 +287,7 @@ class GText(GItem):
             self.text = f'Text {self.id}'
 
     def draw(self, handler):
-        color = tk_color(self.color)
+        color = str(self.color)
         tags = self.get_item_tags()
         x1, y1, x2, y2 = handler.tk_bounds(self)
         M = 10
@@ -278,7 +307,7 @@ class GButton(GItem):
     def draw(self, handler):
         radius = min(self.w, self.h) // 8
         line_width = 0
-        color = tk_color(self.color)
+        color = str(self.color)
         tags = self.get_item_tags()
         font_px = min(self.w, self.h) // 4
         font = Font(family='Helvetica', size=font_px * -handler.scale)
@@ -363,6 +392,8 @@ class Handler:
         self.sel_items.clear()
         self.state = State.IDLE
         self.redraw()
+        if self.on_sel_changed:
+            self.on_sel_changed(True)
 
     def add_items(self, item_list):
         self.display_list.extend(item_list)
@@ -575,7 +606,10 @@ class Properties:
         if self.is_updating:
             return
         """See 'trace add variable' in TCL docs"""
-        var, _ = self.fields[name1]
+        fld = self.fields.get(name1)
+        if fld is None:
+            return
+        var = fld[0]
         # print(f'value_changed:"{name1}", "{name2}", "{op}", "{var.get()}"')
         if self.on_value_changed:
             self.on_value_changed(name1, var.get())
@@ -622,7 +656,9 @@ def run():
             item = cls()
             tag = d.pop('tag')
             for a, v in d.items():
-                setattr(item, a, v)
+                ac = item.__dataclass_fields__[a].type
+                setattr(item, a, ac(v))
+            print(item)
             display_list.append(item)
         return display_list
 
@@ -656,7 +692,7 @@ def run():
             elif kind == 5:
                 item = GFilledRect(radius=radius)
             item.bounds = r
-            item.color = randrange(0xffffff)
+            item.color = GColor(randrange(0xffffff))
             display_list.append(item)
         handler.add_items(display_list)
 
@@ -728,27 +764,12 @@ def run():
     def value_changed(name, value):
         for item in handler.sel_items:
             try:
-                old_value = getattr(item, name)
-                if isinstance(old_value, int) and not isinstance(value, int):
-                    value = int(value, 0)
-                setattr(item, name, value)
-            except AttributeError:
-                pass
-            except Exception as e:
+                cls = item.__dataclass_fields__[name].type
+                setattr(item, name, cls(value))
+            except ValueError as e:
                 status.set(str(e))
         handler.redraw()
     prop.on_value_changed = value_changed
-
-    # def set_color(evt):
-    #     color = var.get()
-    #     color_name = rev_colormap.get(color)
-    #     if color_name:
-    #         var.set(color_name)
-    #         color = color_name
-    #     for item in handler.sel_items:
-    #         item.color = color
-    #     handler.redraw()
-    # cb.bind('<Return>', set_color)
 
     def sel_changed(full_change: bool):
         if full_change:
@@ -764,8 +785,6 @@ def run():
         for name, values in fields.items():
             prop.set_field(name, list(values))
 
-    # color = tk_color(items[0].color)
-    # var.set(rev_colormap.get(color, color))
     handler.on_sel_changed = sel_changed
 
     tk.mainloop()
