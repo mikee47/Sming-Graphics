@@ -13,7 +13,7 @@ from PIL.ImageColor import colormap
 
 rev_colormap = {value: name for name, value in colormap.items()}
 
-MIN_ELEMENT_WIDTH = MIN_ELEMENT_HEIGHT = 2
+MIN_ITEM_WIDTH = MIN_ITEM_HEIGHT = 2
 
 # Event state modifier masks
 EVS_SHIFT = 0x0001
@@ -162,7 +162,7 @@ def get_handle_pos(r: Rect, elem: Element):
 
 @dataclass
 class GFont:
-    family: str = 'default'
+    family: str = ''
     size: int = 12
     # style: list[str] For now, assume all styles are available
 
@@ -203,7 +203,7 @@ class GItem(Rect):
     color: GColor = GColor('orange')
 
     def get_min_size(self, offset=0):
-        return (MIN_ELEMENT_WIDTH + offset, MIN_ELEMENT_HEIGHT + offset)
+        return (MIN_ITEM_WIDTH + offset, MIN_ITEM_HEIGHT + offset)
 
     def get_bounds(self):
         return Rect(self.x, self.y, self.w, self.h)
@@ -342,7 +342,22 @@ class FontAssets(dict):
 
     def clear(self):
         super().clear()
-        self['default'] = GFont()
+        font = self['default'] = GFont()
+        tk_def = FontAssets.tk_default().configure()
+        font.family = tk_def['family']
+
+    @staticmethod
+    def tk_default():
+        return tkinter.font.nametofont('TkDefaultFont')
+
+    @staticmethod
+    def families():
+        # Not all fonts are listed by TK, so include the 'guaranteed supported' ones
+        font_families = list(tk.font.families())
+        tk_def = FontAssets.tk_default().configure()
+        font_families += ['Courier', 'Times', 'Helvetica', tk_def['family']]
+        font_families = list(set(font_families))
+        return sorted(font_families, key=str.lower)
 
     def names(self):
         return list(self.keys())
@@ -361,7 +376,7 @@ class FontAssets(dict):
         for name, font_def in font_defs.items():
             self[name] = GFont(family=font_def['family'], size=font_def['size'])
 
-font_assets = FontAssets()
+font_assets = None
 
 
 class State(Enum):
@@ -676,19 +691,24 @@ class PropertyEditor(Editor):
 class FontEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Font')
+        self.on_value_changed = None
+        self.is_updating = False
         row = 0
         self.addLabel('Name', row)
-        self.fontsel = ttk.Combobox(self.frame)
+        self.font_name = tk.StringVar()
+        self.font_name.trace_add('write', self.sel_changed)
+        self.fontsel = ttk.Combobox(self.frame, textvariable=self.font_name)
         self.fontsel.grid(row=row, column=1)
         row += 1
         self.addLabel('Family', row)
-        font_families = list(set(tk.font.families()))
         self.family = tk.StringVar()
-        c = ttk.Combobox(self.frame, textvariable=self.family, values=sorted(font_families))
+        self.family.trace_add('write', self.value_changed)
+        c = ttk.Combobox(self.frame, textvariable=self.family, values=font_assets.families())
         c.grid(row=row, column=1)
         row += 1
         self.addLabel('Size', row)
         self.size = tk.IntVar()
+        self.size.trace_add('write', self.value_changed)
         c = ttk.Entry(self.frame, textvariable=self.size)
         c.grid(row=row, column=1)
         row += 1
@@ -701,10 +721,27 @@ class FontEditor(Editor):
             c.pack()
         for style in ('normal', 'italic', 'bold', 'bold-italic'):
             addCheck(style)
+        self.update()
 
         # self.on_value_changed = None
         # self.fields = {}
         # self.is_updating = False
+
+    def sel_changed(self, name1, name2, op):
+        font_name = self.font_name.get()
+        print('sel_changed', name1, name2, op, font_name)
+        self.select(font_name)
+
+    def value_changed(self, name1, name2, op):
+        if self.is_updating:
+            return
+        font_name = self.font_name.get()
+        print('value_changed', name1, name2, op, font_name)
+        font = font_assets[font_name]
+        font.family = self.family.get()
+        font.size = self.size.get()
+        if self.on_value_changed:
+            self.on_value_changed(font_name)
 
     def update(self):
         font_names = font_assets.names()
@@ -712,11 +749,14 @@ class FontEditor(Editor):
         self.select(font_names[0])
 
     def select(self, font_name):
-        font = font_assets[font_name]
-        self.fontsel.set(font_name)
-        self.family.set(font.family)
-        self.size.set(font.size)
-
+        self.is_updating = True
+        try:
+            font = font_assets[font_name]
+            self.font_name.set(font_name)
+            self.family.set(font.family)
+            self.size.set(font.size)
+        finally:
+            self.is_updating = False
 
 
 def run():
@@ -901,7 +941,12 @@ def run():
     handler.on_sel_changed = sel_changed
 
     # Fonts
+    global font_assets
+    font_assets = FontAssets()
     font_editor = FontEditor(root)
+    def font_value_changed(font_name):
+        handler.redraw()
+    font_editor.on_value_changed = font_value_changed
     font_editor.frame.grid(row=2, column=1, sticky=tk.NW)
 
     #
