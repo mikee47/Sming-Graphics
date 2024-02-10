@@ -8,7 +8,6 @@ from dataclasses import dataclass
 import json
 import tkinter as tk
 import tkinter.font
-from tkinter.font import Font
 from tkinter import ttk, filedialog
 from PIL.ImageColor import colormap
 
@@ -161,6 +160,12 @@ def get_handle_pos(r: Rect, elem: Element):
     }.get(elem)
 
 
+@dataclass
+class GFont:
+    family: str = 'default'
+    size: int = 12
+    # style: list[str] For now, assume all styles are available
+
 
 class GColor(int):
     def __new__(cls, value):
@@ -280,6 +285,7 @@ class GFilledEllipse(GItem):
 
 @dataclass
 class GText(GItem):
+    font: str = 'default'
     text: str = None
 
     def __post_init__(self):
@@ -293,11 +299,12 @@ class GText(GItem):
         x1, y1, x2, y2 = handler.tk_bounds(self)
         M = 10
         w = x2 - x1 - M*2
-        handler.canvas.create_text(x1, y1, width=w, text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
+        handler.canvas.create_text(x1, y1, width=w, font=handler.tk_font(self.font), text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
 
 
 @dataclass
 class GButton(GItem):
+    font: str = 'default'
     text: str = None
 
     def __post_init__(self):
@@ -311,7 +318,7 @@ class GButton(GItem):
         color = str(self.color)
         tags = self.get_item_tags()
         font_px = min(self.w, self.h) // 4
-        font = Font(family='Helvetica', size=font_px * -handler.scale)
+        font = handler.tk_font(self.font)
         M = font_px * handler.scale
         x1, y1, x2, y2 = handler.tk_bounds(self)
         c = Canvas(handler.canvas, tags)
@@ -326,6 +333,35 @@ class GButton(GItem):
         x1 += (x2 - x3) // 2
         y1 += (y2 - y3) // 2
         handler.canvas.coords(id, x1, y1)
+
+
+class FontAssets(dict):
+    def __init__(self):
+        super().__init__()
+        self.clear()
+
+    def clear(self):
+        super().clear()
+        self['default'] = GFont()
+
+    def names(self):
+        return list(self.keys())
+
+    def asdict(self):
+        d = {}
+        for name, font_def in self.items():
+            d[name] = {
+                'family': font_def.family,
+                'size': font_def.size,
+            }
+        return d
+
+    def load(self, font_defs):
+        self.clear()
+        for name, font_def in font_defs.items():
+            self[name] = GFont(family=font_def['family'], size=font_def['size'])
+
+font_assets = FontAssets()
 
 
 class State(Enum):
@@ -387,6 +423,10 @@ class Handler:
             yo + rect.y * self.scale,
             xo + (rect.x + rect.w) * self.scale,
             yo + (rect.y + rect.h) * self.scale )
+
+    def tk_font(self, font_name: str):
+        font = font_assets[font_name]
+        return tkinter.font.Font(family=font.family, size=-font.size*self.scale)
 
     def clear(self):
         self.display_list.clear()
@@ -598,20 +638,21 @@ class PropertyEditor(Editor):
             w.destroy()
         self.fields.clear()
 
-    def set_field(self, name, values):
+    def set_field(self, name=str, values=list, options=list):
+        value_list = values + [o for o in options if o not in values]
         if name in self.fields:
             var, cb = self.fields[name]
             self.is_updating = True
             var.set(value=values[0] if len(values) == 1 else '')
             self.is_updating = False
-            cb.configure(values=values)
+            cb.configure(values=value_list)
             return
 
         row = len(self.fields)
         self.addLabel(name.replace('_', ' '), row)
         var = tk.StringVar(name=name, value=values[0] if len(values) == 1 else '')
         var.trace_add('write', self.value_changed)
-        cb = ttk.Combobox(self.frame, textvariable=var, values=values)
+        cb = ttk.Combobox(self.frame, textvariable=var, values=value_list)
         cb.grid(row=row, column=1)
         self.fields[name] = (var, cb)
 
@@ -636,23 +677,46 @@ class FontEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Font')
         row = 0
+        self.addLabel('Name', row)
+        self.fontsel = ttk.Combobox(self.frame)
+        self.fontsel.grid(row=row, column=1)
+        row += 1
         self.addLabel('Family', row)
         font_families = list(set(tk.font.families()))
-        self.family = ttk.Combobox(self.frame, values=sorted(font_families)).grid(row=row, column=1)
+        self.family = tk.StringVar()
+        c = ttk.Combobox(self.frame, textvariable=self.family, values=sorted(font_families))
+        c.grid(row=row, column=1)
         row += 1
         self.addLabel('Size', row)
-        self.size = ttk.Entry(self.frame).grid(row=row, column=1)
+        self.size = tk.IntVar()
+        c = ttk.Entry(self.frame, textvariable=self.size)
+        c.grid(row=row, column=1)
         row += 1
         styleFrame = ttk.Labelframe(self.frame, text='Styles')
         styleFrame.grid(row=row, column=0, columnspan=2)
+        self.styles = {}
         def addCheck(name):
-            cb = ttk.Checkbutton(styleFrame, text=name)
-            cb.pack()
+            v = self.styles[name] = tk.BooleanVar()
+            c = ttk.Checkbutton(styleFrame, variable=v, text=name)
+            c.pack()
         for style in ('normal', 'italic', 'bold', 'bold-italic'):
             addCheck(style)
+
         # self.on_value_changed = None
         # self.fields = {}
         # self.is_updating = False
+
+    def update(self):
+        font_names = font_assets.names()
+        self.fontsel.configure(values=font_names)
+        self.select(font_names[0])
+
+    def select(self, font_name):
+        font = font_assets[font_name]
+        self.fontsel.set(font_name)
+        self.family.set(font.family)
+        self.size.set(font.size)
+
 
 
 def run():
@@ -694,7 +758,6 @@ def run():
             for a, v in d.items():
                 ac = item.__dataclass_fields__[a].type
                 setattr(item, a, ac(v))
-            print(item)
             display_list.append(item)
         return display_list
 
@@ -737,6 +800,8 @@ def run():
         filename = filedialog.askopenfilename(title='Load project', filetypes=PROJECT_FILTER)
         if len(filename) != 0:
             data = json_load(filename)
+            font_assets.load(data['fonts'])
+            font_editor.update()
             handler.display_list = []
             display_list = dl_deserialise(data['layout'])
             handler.clear()
@@ -749,6 +814,7 @@ def run():
             if ext != PROJECT_EXT:
                 filename += PROJECT_EXT
             data = {
+                'fonts': font_assets.asdict(),
                 'layout': dl_serialise(handler.display_list),
             }
             json_save(data, filename)
@@ -795,6 +861,8 @@ def run():
     status = tk.StringVar()
     label = ttk.Label(root, textvariable=status)
     label.grid(row=3, column=0, columnspan=2, sticky=tk.W)
+    # grip = ttk.Sizegrip(root)
+    # grip.grid(row=3, column=1, sticky=tk.SE)
 
     # Properties
     prop = PropertyEditor(root)
@@ -804,6 +872,7 @@ def run():
         for item in handler.sel_items:
             try:
                 cls = item.__dataclass_fields__[name].type
+                # print(f'setattr({item}, {name}, {cls(value)})')
                 setattr(item, name, cls(value))
             except ValueError as e:
                 status.set(str(e))
@@ -823,14 +892,17 @@ def run():
                 values = fields.setdefault(name, set())
                 values.add(value)
         for name, values in fields.items():
-            prop.set_field(name, list(values))
+            if name == 'font':
+                options = font_assets.names()
+            else:
+                options = []
+            prop.set_field(name, list(values), options)
 
     handler.on_sel_changed = sel_changed
 
     # Fonts
-    fonts = FontEditor(root)
-    fonts.frame.grid(row=2, column=1, sticky=tk.NW)
-
+    font_editor = FontEditor(root)
+    font_editor.frame.grid(row=2, column=1, sticky=tk.NW)
 
     #
     tk.mainloop()
