@@ -1,3 +1,4 @@
+import sys
 import copy
 from dataclasses import dataclass
 from PIL.ImageColor import colormap
@@ -72,8 +73,16 @@ class GColor(int):
 class GItem(Rect):
     color: GColor = GColor('orange')
 
-    def itemtype(self):
+    @staticmethod
+    def create(typename: str):
+        return getattr(sys.modules[__name__], f'G{typename}')()
+
+    @property
+    def typename(self):
         return self.__class__.__name__[1:]
+
+    def fieldtype(self, field_name: str):
+        return self.__dataclass_fields__[field_name].type
 
     def get_min_size(self, offset=0):
         return (MIN_ITEM_WIDTH + offset, MIN_ITEM_HEIGHT + offset)
@@ -163,6 +172,7 @@ class GText(GItem):
 class GButton(GItem):
     font: str = 'default'
     text: str = None
+    text_color: GColor = GColor('white')
 
     def __post_init__(self):
         super().__post_init__()
@@ -176,6 +186,6 @@ class GButton(GItem):
         r.inflate(-M, -M)
         c.color = str(self.color)
         c.fill_rounded_rect(self, radius)
-        c.color = 'white'
+        c.color = str(self.text_color)
         c.font = self.font
         c.draw_text(r, self.text, tk.CENTER, tk.CENTER)
