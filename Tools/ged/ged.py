@@ -8,23 +8,29 @@ from dataclasses import dataclass
 import json
 import tkinter as tk
 import tkinter.font
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, colorchooser
 from item import *
 
 # Event state modifier masks
 EVS_SHIFT = 0x0001
+EVS_LOCK = 0x0002
 EVS_CONTROL = 0x0004
 EVS_ALTLEFT = 0x0008
-EVS_ALTRIGHT = 0x0080
+EVS_MOD2 = 0x0010 # Numlock
+EVS_MOD3 = 0x0020
+EVS_MOD4 = 0x0040
+EVS_ALTRIGHT = 0x0080 # Mod5
 
 
-def align(value: int, boundary: int):
+def align(boundary: int, *values):
     if boundary <= 1:
-        return value
-    if isinstance(value, (tuple, list)):
-        return (align(x, boundary) for x in value)
-    n = (value + boundary // 2) // boundary
-    return n * boundary
+        return values
+    def align_single(value):
+        n = (value + boundary // 2) // boundary
+        return n * boundary
+    if len(values) == 1:
+        return align_single(values[0])
+    return tuple(align_single(x) for x in values)
 
 # Top 4 bits identify hit class
 ELEMENT_CLASS_MASK = 0xf0
@@ -253,8 +259,8 @@ class Handler:
         self.draw_offset = ((w - self.width * self.scale) // 2, (h - self.height * self.scale) // 2)
         self.redraw()
 
-    def grid_align(self, value):
-        return align(value, self.grid_alignment)
+    def grid_align(self, *values):
+        return align(self.grid_alignment, *values)
 
     def tk_scale(self, *values):
         if len(values) == 1:
@@ -337,6 +343,13 @@ class Handler:
     def remove_handles(self):
         self.canvas.delete('handle')
 
+    def select(self, items: list):
+        self.state = State.IDLE
+        self.sel_items = items
+        self.redraw()
+        if self.on_sel_changed:
+            self.on_sel_changed(True)
+
     def canvas_select(self, evt):
         self.canvas.focus_set()
         self.sel_pos = (evt.x, evt.y)
@@ -404,7 +417,7 @@ class Handler:
         if elem == Element.ITEM:
             for item, orig in zip(self.sel_items, self.orig_bounds):
                 r = item.get_bounds()
-                r.x, r.y = self.grid_align((orig.x + off[0], orig.y + off[1]))
+                r.x, r.y = self.grid_align(orig.x + off[0], orig.y + off[1])
                 resize_item(item, r)
         elif len(self.sel_items) == 1:
             item, orig = self.sel_items[0], self.orig_bounds[0]
@@ -478,30 +491,29 @@ class Handler:
         # print(evt)
         def add_item(cls):
             x, y = self.canvas_point(evt.x, evt.y)
-            item = cls(x, y, 50, 50)
+            item = cls(*self.grid_align(x, y), *self.grid_align(50, 50))
             self.add_item(item)
-            self.state = State.DRAGGING
-            self.canvas.dtag('current', 'current')
-            self.canvas.addtag_withtag('current', item.id)
-            self.canvas_select(evt)
-            self.canvas_drag(evt)
+            self.select([item])
 
-        if evt.state == 0 and evt.keysym == 'Delete':
+        mod = evt.state & (EVS_CONTROL | EVS_SHIFT | EVS_ALTLEFT | EVS_ALTRIGHT)
+        if mod == 0 and evt.keysym == 'Delete':
             for item in self.sel_items:
                 self.display_list.remove(item)
-            self.sel_items.clear()
-            self.redraw()
-        elif evt.state in [0, EVS_SHIFT]:
-            cls = {
-                'r': GRect,
-                'e': GEllipse,
-                'R': GFilledRect,
-                'E': GFilledEllipse,
-                't': GText,
-                'b': GButton,
-            }.get(evt.keysym)
-            if cls is not None:
-                add_item(cls)
+            self.select([])
+            return
+        if len(evt.keysym) != 1 or (mod & EVS_CONTROL):
+            return
+        c = evt.keysym.upper() if (mod & EVS_SHIFT) else evt.keysym.lower()
+        cls = {
+            'r': GRect,
+            'e': GEllipse,
+            'R': GFilledRect,
+            'E': GFilledEllipse,
+            't': GText,
+            'b': GButton,
+        }.get(c)
+        if cls is not None:
+            add_item(cls)
 
 
 class Editor:
@@ -526,7 +538,7 @@ class PropertyEditor(Editor):
             w.destroy()
         self.fields.clear()
 
-    def set_field(self, name=str, values=list, options=list):
+    def set_field(self, name=str, values=list, options=list, callback=None):
         value_list = values + [o for o in options if o not in values]
         if name in self.fields:
             var, cb = self.fields[name]
@@ -542,6 +554,10 @@ class PropertyEditor(Editor):
         var.trace_add('write', self.value_changed)
         cb = ttk.Combobox(self.frame, textvariable=var, values=value_list)
         cb.grid(row=row, column=1)
+        if callback:
+            def handler(evt, callback=callback, var=var):
+                callback(var)
+            cb.bind('<Double-1>', handler)
         self.fields[name] = (var, cb)
 
     def value_changed(self, name1, name2, op):
@@ -654,22 +670,25 @@ def run():
         data = []
         for item in display_list:
             d = {
-                'class': str(item.__class__.__name__),
+                'type': item.typename,
                 'tag': item.id,
             }
-            d.update(dataclasses.asdict(item))
+            for name, value in item.__dict__.items():
+                if type(value) in [int, float, str]:
+                    d[name] = value
+                else:
+                    d[name] = str(value)
             data.append(d)
         return data
 
     def dl_deserialise(data):
         display_list = []
         for d in data:
-            class_name = d.pop('class')
-            cls = getattr(sys.modules[__name__], class_name)
-            item = cls()
+            typename = d.pop('type')
             tag = d.pop('tag')
+            item = GItem.create(typename)
             for a, v in d.items():
-                ac = item.__dataclass_fields__[a].type
+                ac = item.fieldtype(a)
                 setattr(item, a, ac(v))
             display_list.append(item)
         return display_list
@@ -689,7 +708,7 @@ def run():
             h = randint(h_min, h_max)
             x = randrange(handler.width - w)
             y = randrange(handler.height - h)
-            r = Rect(*handler.grid_align((x, y, w, h)))
+            r = Rect(*handler.grid_align(x, y, w, h))
             line_width = randint(1, 5)
             radius = randint(0, min(r.w, r.h) // 2)
             kind = randrange(6)
@@ -786,7 +805,7 @@ def run():
     def value_changed(name, value):
         for item in handler.sel_items:
             try:
-                cls = item.__dataclass_fields__[name].type
+                cls = item.fieldtype(name)
                 # print(f'setattr({item}, {name}, {cls(value)})')
                 setattr(item, name, cls(value))
             except ValueError as e:
@@ -802,21 +821,28 @@ def run():
         if not items:
             return
         if full_change:
-            types = set(x.itemtype() for x in items)
-            prop.set_field('type', list(types), [])
+            typenames = set(x.typename for x in items)
+            prop.set_field('type', list(typenames), [])
         fields = {}
         for item in items:
             for name, value in dataclasses.asdict(item).items():
                 values = fields.setdefault(name, set())
                 values.add(value)
         for name, values in fields.items():
+            callback = None
+            values = list(values)
             if name == 'font':
                 options = font_assets.names()
-            elif name == 'color':
+            elif isinstance(values[0], GColor):
                 options = sorted(colormap.keys())
+                def select_color(var):
+                    res = colorchooser.askcolor(color=var.get())
+                    if res[1] is not None:
+                        var.set(GColor(res[1]))
+                callback = select_color
             else:
                 options = []
-            prop.set_field(name, list(values), options)
+            prop.set_field(name, values, options, callback)
 
     handler.on_sel_changed = sel_changed
 
