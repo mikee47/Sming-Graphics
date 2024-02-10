@@ -224,6 +224,7 @@ class Handler:
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
         c.bind('<ButtonRelease-1>', self.canvas_end_move)
+        c.bind('<Any-KeyRelease>', self.canvas_key)
 
         # Respond to size changes but slow them down a bit as full redraw is expensive
         self.size_change_pending = False
@@ -264,6 +265,10 @@ class Handler:
         xo, yo = self.draw_offset
         x, y = self.tk_scale(x, y)
         return (xo + x, yo + y)
+
+    def canvas_point(self, x, y):
+        xo, yo = self.draw_offset
+        return ((x - xo) // self.scale, (y - yo) // self.scale)
 
     def tk_bounds(self, rect):
         xo, yo = self.draw_offset
@@ -333,6 +338,7 @@ class Handler:
         self.canvas.delete('handle')
 
     def canvas_select(self, evt):
+        self.canvas.focus_set()
         self.sel_pos = (evt.x, evt.y)
         is_multi = (evt.state & EVS_CONTROL) != 0
         elem, item = self.get_current()
@@ -467,6 +473,35 @@ class Handler:
         self.canvas.create_rectangle(r[0]-1, r[1]-1, r[2]+1, r[3]+1, outline='dimgray')
         if self.sel_items:
             self.sel_bounds = self.draw_handles()
+
+    def canvas_key(self, evt):
+        # print(evt)
+        def add_item(cls):
+            x, y = self.canvas_point(evt.x, evt.y)
+            item = cls(x, y, 50, 50)
+            self.add_item(item)
+            self.state = State.DRAGGING
+            self.canvas.dtag('current', 'current')
+            self.canvas.addtag_withtag('current', item.id)
+            self.canvas_select(evt)
+            self.canvas_drag(evt)
+
+        if evt.state == 0 and evt.keysym == 'Delete':
+            for item in self.sel_items:
+                self.display_list.remove(item)
+            self.sel_items.clear()
+            self.redraw()
+        elif evt.state in [0, EVS_SHIFT]:
+            cls = {
+                'r': GRect,
+                'e': GEllipse,
+                'R': GFilledRect,
+                'E': GFilledEllipse,
+                't': GText,
+                'b': GButton,
+            }.get(evt.keysym)
+            if cls is not None:
+                add_item(cls)
 
 
 class Editor:
