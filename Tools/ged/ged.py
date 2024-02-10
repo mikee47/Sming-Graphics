@@ -9,11 +9,7 @@ import json
 import tkinter as tk
 import tkinter.font
 from tkinter import ttk, filedialog
-from PIL.ImageColor import colormap
-
-rev_colormap = {value: name for name, value in colormap.items()}
-
-MIN_ITEM_WIDTH = MIN_ITEM_HEIGHT = 2
+from item import *
 
 # Event state modifier masks
 EVS_SHIFT = 0x0001
@@ -66,19 +62,24 @@ class Element(IntEnum):
 
 
 class Canvas:
-    def __init__(self, tk_canvas, tags=()):
-        self.canvas = tk_canvas
+    def __init__(self, handler, tags):
+        self.handler = handler
+        self.canvas = handler.canvas
         self.tags = tags
         self.color = 'white'
         self.line_width = 1
+        self.font = 'default'
 
-    def draw_rect(self, x0, y0, x1, y1):
+    def draw_rect(self, rect):
+        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
         self.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.line_width, tags=self.tags)
 
-    def fill_rect(self, x0, y0, x1, y1):
+    def fill_rect(self, rect):
+        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
         self.canvas.create_rectangle(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
 
-    def draw_rounded_rect(self, x0, y0, x1, y1, r):
+    def draw_rounded_rect(self, rect, r):
+        x0, y0, x1, y1 = rect.x, rect.y, rect.x + rect.w, rect.y + rect.h
         self.draw_corner(x0, y0, r, 90)
         self.draw_corner(x1-r*2, y0, r, 0)
         self.draw_corner(x1-r*2, y1-r*2, r, 270)
@@ -88,51 +89,49 @@ class Canvas:
         self.draw_line(x0, y0+r, x0, y1-r)
         self.draw_line(x1, y0+r, x1, y1-r)
 
-    def fill_rounded_rect(self, x0, y0, x1, y1, r):
+    def fill_rounded_rect(self, rect, r):
+        x0, y0, x1, y1 = rect.x, rect.y, rect.x + rect.w, rect.y + rect.h
         self.fill_corner(x0, y0, r, 90)
         self.fill_corner(x1-r*2, y0, r, 0)
         self.fill_corner(x1-r*2, y1-r*2, r, 270)
         self.fill_corner(x0, y1-r*2, r, 180)
-        self.fill_rect(x0+r, y0, 1+x1-r, y1)
-        self.fill_rect(x0, y0+r, x0+r, y1-r)
-        self.fill_rect(x1-r, y0+r, x1, y1-r)
+        self.fill_rect(Rect(x0+r, y0, rect.w - 2*r, rect.h))
+        self.fill_rect(Rect(x0, y0+r, r, rect.h-2*r))
+        self.fill_rect(Rect(x0+rect.w-r, y0+r, r, rect.h-2*r))
 
     def draw_line(self, x0, y0, x1, y1):
+        x0, y0 = self.handler.tk_point(x0, y0)
+        x1, y1 = self.handler.tk_point(x1, y1)
         self.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=self.line_width, tags=self.tags)
 
     def draw_corner(self, x, y, r, start_angle):
-        self.canvas.create_arc(x, y, x+r*2, y+r*2, start=start_angle, extent=90, outline=self.color, width=self.line_width, style='arc', tags=self.tags)
+        x0, y0 = self.handler.tk_point(x, y)
+        x1, y1 = self.handler.tk_point(x+r*2, y+r*2)
+        self.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, outline=self.color, width=self.line_width, style='arc', tags=self.tags)
 
     def fill_corner(self, x, y, r, start_angle):
-        self.canvas.create_arc(x, y, x+r*2, y+r*2, start=start_angle, extent=90, fill=self.color, outline='', tags=self.tags)
+        x0, y0 = self.handler.tk_point(x, y)
+        x1, y1 = self.handler.tk_point(x+r*2, y+r*2)
+        self.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, fill=self.color, outline='', tags=self.tags)
 
-    def draw_ellipse(self, x0, y0, x1, y1):
+    def draw_ellipse(self, rect):
+        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
         self.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=self.line_width, tags=self.tags)
 
-    def fill_ellipse(self, x0, y0, x1, y1):
+    def fill_ellipse(self, rect):
+        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
         self.canvas.create_oval(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
 
-
-@dataclass
-class Rect:
-    x: int = 0
-    y: int = 0
-    w: int = 0
-    h: int = 0
-
-    def __post_init__(self):
-        pass
-
-    @property
-    def bounds(self):
-        return copy.copy(self)
-
-    @bounds.setter
-    def bounds(self, rect):
-        self.x, self.y, self.w, self.h = rect.x, rect.y, rect.w, rect.h
-
-    def inflate(self, xo, yo):
-        return Rect(self.x - xo, self.y - yo, self.w + xo*2, self.h + yo*2)
+    def draw_text(self, rect, text, halign, valign):
+        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
+        id = self.canvas.create_text(x0, y0, width=1+x1-x0,
+            font=self.handler.tk_font(self.font),
+            text=text, fill=self.color,
+            anchor=tk.NW, justify=tk.CENTER, tags=self.tags)
+        _, _, x2, y2 = self.canvas.bbox(id)
+        x0 += (x1 - x2) // 2
+        y0 += (y1 - y2) // 2
+        self.canvas.coords(id, x0, y0)
 
 
 def union(r1: Rect, r2: Rect):
@@ -158,181 +157,6 @@ def get_handle_pos(r: Rect, elem: Element):
         Element.HANDLE_W: (r.x, r.y + r.h // 2),
         Element.HANDLE_NW: (r.x, r.y),
     }.get(elem)
-
-
-@dataclass
-class GFont:
-    family: str = ''
-    size: int = 12
-    # style: list[str] For now, assume all styles are available
-
-
-class GColor(int):
-    def __new__(cls, value):
-        if isinstance(value, str):
-            if value == '' or str.isdigit(value[0]):
-                value = int(value, 0)
-            else:
-                if value[0] != '#':
-                    try:
-                        value = colormap[value]
-                    except KeyError:
-                        raise ValueError(f'Unknown color name {value}')
-                if value[0] != '#':
-                    raise ValueError(f'Bad color {value}')
-                value = int(value[1:], 16)
-        return int.__new__(cls, value)
-
-    def __init__(self, *args, **kwds):
-        pass
-
-    def value_str(self):
-        return '#%06x' % self
-
-    def __str__(self):
-        s = self.value_str()
-        return rev_colormap.get(s, s)
-
-    def __repr__(self):
-        return str(self)
-
-
-
-@dataclass
-class GItem(Rect):
-    color: GColor = GColor('orange')
-
-    def get_min_size(self, offset=0):
-        return (MIN_ITEM_WIDTH + offset, MIN_ITEM_HEIGHT + offset)
-
-    def get_bounds(self):
-        return Rect(self.x, self.y, self.w, self.h)
-
-    @property
-    def id(self):
-        return 'G%08x' % id(self)
-
-    def get_item_tags(self):
-        return ('item', str(Element.ITEM), self.id)
-
-    def resize(self, handler, rect):
-        self.bounds = rect
-        handler.canvas.delete(self.id)
-        self.draw(handler)
-
-
-@dataclass
-class GRect(GItem):
-    line_width: int = 1
-    radius: int = 0
-
-    def get_min_size(self):
-        return super().get_min_size((self.line_width + self.radius) * 2)
-
-    def draw(self, handler):
-        x1, y1, x2, y2 = handler.tk_bounds(self)
-        c = Canvas(handler.canvas, self.get_item_tags())
-        c.color = str(self.color)
-        c.line_width = self.line_width * handler.scale
-
-        if self.radius > 1:
-            c.draw_rounded_rect(x1, y1, x2, y2, self.radius * handler.scale)
-        else:
-            c.draw_rect(x1, y1, x2, y2)
-
-
-@dataclass
-class GFilledRect(GItem):
-    radius: int = 0
-
-    def get_min_size(self):
-        return super().get_min_size(self.radius * 2)
-
-    def draw(self, handler):
-        x1, y1, x2, y2 = handler.tk_bounds(self)
-        c = Canvas(handler.canvas, self.get_item_tags())
-        c.color = str(self.color)
-
-        if self.radius > 1:
-            c.fill_rounded_rect(x1, y1, x2, y2, self.radius * handler.scale)
-        else:
-            c.fill_rect(x1, y1, x2, y2)
-
-
-@dataclass
-class GEllipse(GItem):
-    line_width: int = 1
-
-    def get_min_size(self):
-        return super().get_min_size(self.line_width * 2)
-
-    def draw(self, handler):
-        r = handler.tk_bounds(self)
-        c = Canvas(handler.canvas, self.get_item_tags())
-        c.color = str(self.color)
-        c.line_width = self.line_width * handler.scale
-        c.draw_ellipse(*r)
-
-
-@dataclass
-class GFilledEllipse(GItem):
-    def draw(self, handler):
-        r = handler.tk_bounds(self)
-        c = Canvas(handler.canvas, self.get_item_tags())
-        c.color = str(self.color)
-        c.fill_ellipse(*r)
-
-
-@dataclass
-class GText(GItem):
-    font: str = 'default'
-    text: str = None
-
-    def __post_init__(self):
-        super().__post_init__()
-        if self.text is None:
-            self.text = f'Text {self.id}'
-
-    def draw(self, handler):
-        color = str(self.color)
-        tags = self.get_item_tags()
-        x1, y1, x2, y2 = handler.tk_bounds(self)
-        M = 10
-        w = x2 - x1 - M*2
-        handler.canvas.create_text(x1, y1, width=w, font=handler.tk_font(self.font), text=self.text, fill=color, anchor=tk.NW, justify=tk.CENTER, tags=tags)
-
-
-@dataclass
-class GButton(GItem):
-    font: str = 'default'
-    text: str = None
-
-    def __post_init__(self):
-        super().__post_init__()
-        if self.text is None:
-            self.text = f'button {self.id}'
-
-    def draw(self, handler):
-        radius = min(self.w, self.h) // 8
-        line_width = 0
-        color = str(self.color)
-        tags = self.get_item_tags()
-        font_px = min(self.w, self.h) // 4
-        font = handler.tk_font(self.font)
-        M = font_px * handler.scale
-        x1, y1, x2, y2 = handler.tk_bounds(self)
-        c = Canvas(handler.canvas, tags)
-        c.color = color
-        c.fill_rounded_rect(x1, y1, x2, y2, radius * handler.scale)
-        x1 += M
-        x2 -= M
-        id = handler.canvas.create_text(x1, y1, width=1+x2-x1,
-            font=font, text=self.text, fill='white',
-            anchor=tk.NW, justify=tk.CENTER, tags=tags)
-        _, _, x3, y3 = handler.canvas.bbox(id)
-        x1 += (x2 - x3) // 2
-        y1 += (y2 - y3) // 2
-        handler.canvas.coords(id, x1, y1)
 
 
 class FontAssets(dict):
@@ -431,13 +255,20 @@ class Handler:
     def grid_align(self, value):
         return align(value, self.grid_alignment)
 
+    def tk_scale(self, *values):
+        if len(values) == 1:
+            return value * self.scale
+        return tuple(x * self.scale for x in values)
+
+    def tk_point(self, x, y):
+        xo, yo = self.draw_offset
+        x, y = self.tk_scale(x, y)
+        return (xo + x, yo + y)
+
     def tk_bounds(self, rect):
         xo, yo = self.draw_offset
-        return (
-            xo + rect.x * self.scale,
-            yo + rect.y * self.scale,
-            xo + (rect.x + rect.w) * self.scale,
-            yo + (rect.y + rect.h) * self.scale )
+        b = self.tk_scale(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h)
+        return (xo + b[0], yo + b[1], xo + b[2], yo + b[3])
 
     def tk_font(self, font_name: str):
         font = font_assets[font_name]
@@ -457,7 +288,12 @@ class Handler:
 
     def add_item(self, item):
         self.display_list.append(item)
-        item.draw(self)
+        self.draw_item(item)
+
+    def draw_item(self, item):
+        tags = ('item', str(Element.ITEM), item.id)
+        c = Canvas(self, tags)
+        item.draw(c)
 
     def remove_item(self, item):
         self.canvas.delete(item.id)
@@ -554,11 +390,16 @@ class Handler:
         elem = self.sel_elem
         off = (evt.x - self.sel_pos[0]) // self.scale, (evt.y - self.sel_pos[1]) // self.scale
 
+        def resize_item(item, r):
+            item.bounds = r
+            self.canvas.delete(item.id)
+            self.draw_item(item)
+
         if elem == Element.ITEM:
             for item, orig in zip(self.sel_items, self.orig_bounds):
                 r = item.get_bounds()
                 r.x, r.y = self.grid_align((orig.x + off[0], orig.y + off[1]))
-                item.resize(self, r)
+                resize_item(item, r)
         elif len(self.sel_items) == 1:
             item, orig = self.sel_items[0], self.orig_bounds[0]
             r = item.get_bounds()
@@ -574,7 +415,7 @@ class Handler:
                 r.w = orig.x + orig.w - r.x
             min_size = item.get_min_size()
             if r.w >= min_size[0] and r.h >= min_size[1]:
-                item.resize(self, r)
+                resize_item(item, r)
         else:
             # Scale the bounding rectangle
             orig = orig_bounds = self.sel_bounds
@@ -603,7 +444,7 @@ class Handler:
                         min_size = item.get_min_size()
                         if r.w < min_size[0] or r.h < min_size[1]:
                             continue
-                    item.resize(self, r)
+                    resize_item(item, r)
 
         self.draw_handles()
         if self.on_sel_changed:
@@ -620,13 +461,10 @@ class Handler:
     def redraw(self):
         self.canvas.delete(tk.ALL)
         r = self.tk_bounds(Rect(0, 0, self.width, self.height))
-        c = Canvas(self.canvas)
-        c.color = 'black'
-        c.fill_rect(*r)
+        self.canvas.create_rectangle(r, outline='', fill='black')
         for item in self.display_list:
-            item.draw(self)
-        c.color = 'dimgray'
-        c.draw_rect(r[0]-1, r[1]-1, r[2]+1, r[3]+1)
+            self.draw_item(item)
+        self.canvas.create_rectangle(r[0]-1, r[1]-1, r[2]+1, r[3]+1, outline='dimgray')
         if self.sel_items:
             self.sel_bounds = self.draw_handles()
 
@@ -729,14 +567,14 @@ class FontEditor(Editor):
 
     def sel_changed(self, name1, name2, op):
         font_name = self.font_name.get()
-        print('sel_changed', name1, name2, op, font_name)
+        # print('sel_changed', name1, name2, op, font_name)
         self.select(font_name)
 
     def value_changed(self, name1, name2, op):
         if self.is_updating:
             return
         font_name = self.font_name.get()
-        print('value_changed', name1, name2, op, font_name)
+        # print('value_changed', name1, name2, op, font_name)
         font = font_assets[font_name]
         font.family = self.family.get()
         font.size = self.size.get()
@@ -804,6 +642,8 @@ def run():
     # Menus
     def fileClear():
         handler.clear()
+        font_assets.clear()
+        font_editor.update()
 
     def fileAddRandom(count=10):
         display_list = []
@@ -926,6 +766,9 @@ def run():
         items = handler.sel_items
         if not items:
             return
+        if full_change:
+            types = set(x.itemtype() for x in items)
+            prop.set_field('type', list(types), [])
         fields = {}
         for item in items:
             for name, value in dataclasses.asdict(item).items():
@@ -934,6 +777,8 @@ def run():
         for name, values in fields.items():
             if name == 'font':
                 options = font_assets.names()
+            elif name == 'color':
+                options = sorted(colormap.keys())
             else:
                 options = []
             prop.set_field(name, list(values), options)
