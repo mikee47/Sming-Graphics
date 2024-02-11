@@ -226,7 +226,13 @@ class Handler:
         self.on_sel_changed = None
         self.state = State.IDLE
 
-        c = self.canvas = tk.Canvas(tk_root, background='gray')
+        self.frame = ttk.Frame(tk_root)
+        c = self.canvas = tk.Canvas(self.frame, background='gray')
+        c.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
+        s = ttk.Scrollbar(self.frame, orient=tk.HORIZONTAL, command=c.xview)
+        s.pack(side=tk.BOTTOM, fill=tk.X)
+        c['xscrollcommand'] = s.set
+
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
@@ -398,7 +404,7 @@ class Handler:
         if self.state == State.DRAGGING:
             return
         elem, item = self.get_current()
-        self.canvas.configure({'cursor': self.get_cursor(elem)})
+        self.canvas['cursor'] = self.get_cursor(elem)
 
     def canvas_drag(self, evt):
         if not self.sel_items:
@@ -524,11 +530,55 @@ class Handler:
 class Editor:
     def __init__(self, root, title):
         self.frame = ttk.LabelFrame(root, text=title)
+        self.frame.columnconfigure(1, weight=1)
 
     def addLabel(self, text, row):
         label = ttk.Label(self.frame, text=text)
         label.grid(row=row, column=0, sticky=tk.E, padx=8)
         return label
+
+    def addCombo(self, row, **args):
+        return self.addControl(ttk.Combobox(self.frame, **args), row)
+
+    def addEntry(self, row, **args):
+        return self.addControl(ttk.Entry(self.frame, **args), row)
+
+    def addControl(self, ctrl, row):
+        ctrl.grid(row=row, column=1, sticky=tk.EW, padx=4, pady=2)
+        return ctrl
+
+class ProjectEditor(Editor):
+    def __init__(self, root):
+        super().__init__(root, 'Project')
+        self.on_value_changed = None
+        self.is_updating = False
+        row = -1
+        def addField(name):
+            nonlocal row
+            row += 1
+            self.addLabel(name, row)
+            var = tk.IntVar()
+            var.trace_add('write', self.value_changed)
+            c = self.addEntry(row, textvariable=var)
+            return var
+        self.width = addField('Width')
+        self.height = addField('Height')
+        self.scale= addField('Scale')
+        self.grid_align = addField('Grid')
+        self.update()
+
+    def sel_changed(self, name1, name2, op):
+        # print('sel_changed', name1, name2, op, font_name)
+        pass
+
+    def value_changed(self, name1, name2, op):
+        if self.is_updating:
+            return
+        if self.on_value_changed:
+            self.on_value_changed(font_name)
+
+    def update(self):
+        pass
 
 
 class PropertyEditor(Editor):
@@ -550,15 +600,14 @@ class PropertyEditor(Editor):
             self.is_updating = True
             var.set(value=values[0] if len(values) == 1 else '')
             self.is_updating = False
-            cb.configure(values=value_list)
+            cb['values'] = value_list
             return
 
         row = len(self.fields)
         self.addLabel(name.replace('_', ' '), row)
         var = tk.StringVar(name=name, value=values[0] if len(values) == 1 else '')
         var.trace_add('write', self.value_changed)
-        cb = ttk.Combobox(self.frame, textvariable=var, values=value_list)
-        cb.grid(row=row, column=1)
+        cb = self.addCombo(row, textvariable=var, values=value_list)
         if callback:
             def handler(evt, callback=callback, var=var):
                 callback(var)
@@ -591,35 +640,28 @@ class FontEditor(Editor):
         self.addLabel('Name', row)
         self.font_name = tk.StringVar()
         self.font_name.trace_add('write', self.sel_changed)
-        self.fontsel = ttk.Combobox(self.frame, textvariable=self.font_name)
-        self.fontsel.grid(row=row, column=1)
+        self.fontsel = self.addCombo(row, textvariable=self.font_name)
         row += 1
         self.addLabel('Family', row)
         self.family = tk.StringVar()
         self.family.trace_add('write', self.value_changed)
-        c = ttk.Combobox(self.frame, textvariable=self.family, values=font_assets.families())
-        c.grid(row=row, column=1)
+        c = self.addCombo(row, textvariable=self.family, values=font_assets.families())
         row += 1
         self.addLabel('Size', row)
         self.size = tk.IntVar()
         self.size.trace_add('write', self.value_changed)
-        c = ttk.Entry(self.frame, textvariable=self.size)
-        c.grid(row=row, column=1)
+        c = self.addEntry(row, textvariable=self.size)
         row += 1
-        styleFrame = ttk.Labelframe(self.frame, text='Styles')
-        styleFrame.grid(row=row, column=0, columnspan=2)
+        styleFrame = ttk.Frame(self.frame)
+        styleFrame.grid(row=row, column=0, columnspan=2, sticky=tk.EW)
         self.styles = {}
         def addCheck(name):
             v = self.styles[name] = tk.BooleanVar()
             c = ttk.Checkbutton(styleFrame, variable=v, text=name)
-            c.pack()
+            c.pack(side=tk.LEFT)
         for style in ('normal', 'italic', 'bold', 'bold-italic'):
             addCheck(style)
         self.update()
-
-        # self.on_value_changed = None
-        # self.fields = {}
-        # self.is_updating = False
 
     def sel_changed(self, name1, name2, op):
         font_name = self.font_name.get()
@@ -630,16 +672,19 @@ class FontEditor(Editor):
         if self.is_updating:
             return
         font_name = self.font_name.get()
-        # print('value_changed', name1, name2, op, font_name)
+        # print(f'value_changed: "{name1}", "{name2}", "{op}", "{font_name}"')
         font = font_assets[font_name]
-        font.family = self.family.get()
-        font.size = self.size.get()
+        try:
+            font.family = self.family.get()
+            font.size = self.size.get()
+        except tk.TclError:
+            return
         if self.on_value_changed:
             self.on_value_changed(font_name)
 
     def update(self):
         font_names = font_assets.names()
-        self.fontsel.configure(values=font_names)
+        self.fontsel['values'] = font_names
         self.select(font_names[0])
 
     def select(self, font_name):
@@ -763,31 +808,33 @@ def run():
     root = tk.Tk(className='GED')
     root.geometry('800x600')
     root.title('Graphical Layout Editor')
-    root.grid()
-    root.columnconfigure(0, weight=2)
-    root.rowconfigure(1, weight=2)
+
+    pane = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
+    pane.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
 
     # Layout editor
-    handler = Handler(root)
+    handler = Handler(pane)
     handler.set_scale(2)
-    handler.canvas.grid(row=1, column=0, rowspan=2, sticky=tk.NSEW)
+    handler.frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+    pane.add(handler.frame, weight=2)
+
+    # Editors to right
+    edit_frame = ttk.Frame(pane, width=240)
+    edit_frame.pack(fill=tk.BOTH)
+    pane.add(edit_frame)
 
     # Toolbar
     toolbar = ttk.Frame(root)
-    toolbar.grid(row=0, column=0, columnspan=2, sticky=tk.W)
-    col = 0
+    toolbar.pack(side=tk.TOP, before=pane, fill=tk.X)
     def addButton(text, command):
         btn = ttk.Button(toolbar, text=text, command=command)
-        nonlocal col
-        btn.grid(row=0, column=col)
-        col += 1
+        btn.pack(side=tk.LEFT)
     addButton('Clear', fileClear)
     addButton('Add Random', fileAddRandom)
     addButton('Load...', fileLoad)
     addButton('Save...', fileSave)
     sep = ttk.Separator(toolbar, orient=tk.VERTICAL)
-    sep.grid(row=0, column=col, sticky=tk.NS)
-    col += 1
+    sep.pack(side=tk.LEFT)
     addButton('List', fileList)
     def changeScale():
         scale = 1 + handler.scale % 4
@@ -797,13 +844,15 @@ def run():
     # Status bar
     status = tk.StringVar()
     label = ttk.Label(root, textvariable=status)
-    label.grid(row=3, column=0, columnspan=2, sticky=tk.W)
-    # grip = ttk.Sizegrip(root)
-    # grip.grid(row=3, column=1, sticky=tk.SE)
+    label.pack()
+
+    # Project
+    project = ProjectEditor(edit_frame)
+    project.frame.pack(fill=tk.X, ipady=4)
 
     # Properties
-    prop = PropertyEditor(root)
-    prop.frame.grid(row=1, column=1, sticky=tk.NW)
+    prop = PropertyEditor(edit_frame)
+    prop.frame.pack(fill=tk.X, ipady=4)
 
     def value_changed(name, value):
         for item in handler.sel_items:
@@ -854,11 +903,11 @@ def run():
     # Fonts
     global font_assets
     font_assets = FontAssets()
-    font_editor = FontEditor(root)
+    font_editor = FontEditor(edit_frame)
     def font_value_changed(font_name):
         handler.redraw()
     font_editor.on_value_changed = font_value_changed
-    font_editor.frame.grid(row=2, column=1, sticky=tk.NW)
+    font_editor.frame.pack(side=tk.TOP, expand=True, fill=tk.X, ipady=4)
 
     #
     tk.mainloop()
