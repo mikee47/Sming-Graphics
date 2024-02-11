@@ -173,9 +173,10 @@ class FontAssets(dict):
 
     def clear(self):
         super().clear()
-        font = self['default'] = GFont()
+        font = GFont()
         tk_def = FontAssets.tk_default().configure()
         font.family = tk_def['family']
+        self.default = self['default'] = font
 
     @staticmethod
     def tk_default():
@@ -192,6 +193,12 @@ class FontAssets(dict):
 
     def names(self):
         return list(self.keys())
+
+    def get_font_name(self, font):
+        try:
+            return next(k for k, v in self.items() if v == font)
+        except StopIteration:
+            return None
 
     def asdict(self):
         d = {}
@@ -231,7 +238,7 @@ class Handler:
         c.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
         s = ttk.Scrollbar(self.frame, orient=tk.HORIZONTAL, command=c.xview)
         s.pack(side=tk.BOTTOM, fill=tk.X)
-        c['xscrollcommand'] = s.set
+        c.configure(xscrollcommand=s.set)
 
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
@@ -289,7 +296,7 @@ class Handler:
         return (xo + b[0], yo + b[1], xo + b[2], yo + b[3])
 
     def tk_font(self, font_name: str):
-        font = font_assets[font_name]
+        font = font_assets.get(font_name, font_assets.default)
         return tkinter.font.Font(family=font.family, size=-font.size*self.scale)
 
     def clear(self):
@@ -404,7 +411,7 @@ class Handler:
         if self.state == State.DRAGGING:
             return
         elem, item = self.get_current()
-        self.canvas['cursor'] = self.get_cursor(elem)
+        self.canvas.configure(cursor= self.get_cursor(elem))
 
     def canvas_drag(self, evt):
         if not self.sel_items:
@@ -531,67 +538,99 @@ class Editor:
     def __init__(self, root, title):
         self.frame = ttk.LabelFrame(root, text=title)
         self.frame.columnconfigure(1, weight=1)
-
-    def addLabel(self, text, row):
-        label = ttk.Label(self.frame, text=text)
-        label.grid(row=row, column=0, sticky=tk.E, padx=8)
-        return label
-
-    def addCombo(self, row, **args):
-        return self.addControl(ttk.Combobox(self.frame, **args), row)
-
-    def addEntry(self, row, **args):
-        return self.addControl(ttk.Entry(self.frame, **args), row)
-
-    def addControl(self, ctrl, row):
-        ctrl.grid(row=row, column=1, sticky=tk.EW, padx=4, pady=2)
-        return ctrl
-
-class ProjectEditor(Editor):
-    def __init__(self, root):
-        super().__init__(root, 'Project')
-        self.on_value_changed = None
         self.is_updating = False
-        row = -1
-        def addField(name):
-            nonlocal row
-            row += 1
-            self.addLabel(name, row)
-            var = tk.IntVar()
-            var.trace_add('write', self.value_changed)
-            c = self.addEntry(row, textvariable=var)
-            return var
-        self.width = addField('Width')
-        self.height = addField('Height')
-        self.scale= addField('Scale')
-        self.grid_align = addField('Grid')
-        self.update()
-
-    def sel_changed(self, name1, name2, op):
-        # print('sel_changed', name1, name2, op, font_name)
-        pass
-
-    def value_changed(self, name1, name2, op):
-        if self.is_updating:
-            return
-        if self.on_value_changed:
-            self.on_value_changed(font_name)
-
-    def update(self):
-        pass
-
-
-class PropertyEditor(Editor):
-    def __init__(self, root):
-        super().__init__(root, 'Properties')
         self.on_value_changed = None
         self.fields = {}
-        self.is_updating = False
 
     def clear(self):
         for w in self.frame.winfo_children():
             w.destroy()
         self.fields.clear()
+
+    def add_label(self, text, row):
+        label = ttk.Label(self.frame, text=text)
+        label.grid(row=row, column=0, sticky=tk.E, padx=8)
+        return label
+
+    def add_control(self, ctrl, row):
+        ctrl.grid(row=row, column=1, sticky=tk.EW, padx=4, pady=2)
+        return ctrl
+
+    @staticmethod
+    def text_from_name(name: str):
+        return name.replace('_', ' ').capitalize()
+
+    def add_field(self, name: str, ctrl, var_type=tk.StringVar):
+        row = len(self.fields)
+        self.add_label(self.text_from_name(name), row)
+        var = var_type(name=name)
+        ctrl.configure(textvariable=var)
+        var.trace_add('write', self.tk_value_changed)
+        self.add_control(ctrl, row)
+        fld = self.fields[name] = (var, ctrl)
+        return fld
+
+    def add_entry_field(self, name: str, var_type=tk.StringVar):
+        c = ttk.Entry(self.frame)
+        return self.add_field(name, c, var_type)
+
+    def add_combo_field(self, name: str, value_list=[], var_type=tk.StringVar):
+        c = ttk.Combobox(self.frame, values=value_list)
+        return self.add_field(name, c, var_type)
+
+    def add_check_fields(self, title, names: list):
+        if title:
+            frame = ttk.LabelFrame(self.frame, text=title)
+        else:
+            frame = ttk.Frame(self.frame)
+        row = len(self.fields)
+        self.add_control(frame, row)
+        frame.grid(column=0, columnspan=2)
+        for name in names:
+            var = tk.BooleanVar(name=name)
+            var.trace_add('write', self.tk_value_changed)
+            ctrl = ttk.Checkbutton(frame, variable=var, text=self.text_from_name(name))
+            ctrl.pack(side=tk.LEFT)
+            self.fields[name] = (var, ctrl)
+            row += 1
+
+    def tk_value_changed(self, name1, name2, op):
+        if self.is_updating:
+            return
+        """See 'trace add variable' in TCL docs"""
+        var, _ = self.fields[name1]
+        if var is None:
+            return
+        try:
+            # print(f'value_changed:"{name1}", "{name2}", "{op}", "{var.get()}"')
+            self.value_changed(name1, var.get())
+        except tk.TclError: # Can happen whilst typing if conversion fails, empty strings, etc.
+            pass
+
+    def value_changed(self, name, value):
+        if self.on_value_changed:
+            self.on_value_changed(name, value)
+
+    def set_value(self, name, value):
+        var, _ = self.fields[name]
+        var.set(value)
+
+    def get_value(self, name):
+        var, _ = self.fields[name]
+        return var.get()
+
+
+
+class ProjectEditor(Editor):
+    def __init__(self, root):
+        super().__init__(root, 'Project')
+        for name in ['width', 'height', 'scale', 'grid_alignment']:
+            self.add_entry_field(name, tk.IntVar)
+
+
+class PropertyEditor(Editor):
+    def __init__(self, root):
+        super().__init__(root, 'Properties')
 
     def set_field(self, name=str, values=list, options=list, callback=None):
         value_list = values + [o for o in options if o not in values]
@@ -600,100 +639,51 @@ class PropertyEditor(Editor):
             self.is_updating = True
             var.set(value=values[0] if len(values) == 1 else '')
             self.is_updating = False
-            cb['values'] = value_list
+            cb.configure(values=value_list)
             return
 
-        row = len(self.fields)
-        self.addLabel(name.replace('_', ' '), row)
-        var = tk.StringVar(name=name, value=values[0] if len(values) == 1 else '')
-        var.trace_add('write', self.value_changed)
-        cb = self.addCombo(row, textvariable=var, values=value_list)
+        var, cb = self.add_combo_field(name, value_list)
+        if len(values) == 1:
+            var.set(values[0])
         if callback:
             def handler(evt, callback=callback, var=var):
                 callback(var)
             cb.bind('<Double-1>', handler)
-        self.fields[name] = (var, cb)
-
-    def value_changed(self, name1, name2, op):
-        if self.is_updating:
-            return
-        """See 'trace add variable' in TCL docs"""
-        fld = self.fields.get(name1)
-        if fld is None:
-            return
-        var = fld[0]
-        # print(f'value_changed:"{name1}", "{name2}", "{op}", "{var.get()}"')
-        if self.on_value_changed:
-            self.on_value_changed(name1, var.get())
-
-    def get_value(self, name):
-        var, _ = self.fields[name]
-        return var.get()
 
 
 class FontEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Font')
-        self.on_value_changed = None
-        self.is_updating = False
-        row = 0
-        self.addLabel('Name', row)
-        self.font_name = tk.StringVar()
-        self.font_name.trace_add('write', self.sel_changed)
-        self.fontsel = self.addCombo(row, textvariable=self.font_name)
-        row += 1
-        self.addLabel('Family', row)
-        self.family = tk.StringVar()
-        self.family.trace_add('write', self.value_changed)
-        c = self.addCombo(row, textvariable=self.family, values=font_assets.families())
-        row += 1
-        self.addLabel('Size', row)
-        self.size = tk.IntVar()
-        self.size.trace_add('write', self.value_changed)
-        c = self.addEntry(row, textvariable=self.size)
-        row += 1
-        styleFrame = ttk.Frame(self.frame)
-        styleFrame.grid(row=row, column=0, columnspan=2, sticky=tk.EW)
-        self.styles = {}
-        def addCheck(name):
-            v = self.styles[name] = tk.BooleanVar()
-            c = ttk.Checkbutton(styleFrame, variable=v, text=name)
-            c.pack(side=tk.LEFT)
-        for style in ('normal', 'italic', 'bold', 'bold-italic'):
-            addCheck(style)
+        self.add_combo_field('name')
+        self.add_combo_field('family', font_assets.families())
+        self.add_entry_field('size', tk.IntVar)
+        self.add_check_fields('Style', ['normal', 'italic', 'bold', 'bold-italic'])
         self.update()
 
-    def sel_changed(self, name1, name2, op):
-        font_name = self.font_name.get()
-        # print('sel_changed', name1, name2, op, font_name)
-        self.select(font_name)
-
-    def value_changed(self, name1, name2, op):
-        if self.is_updating:
+    def value_changed(self, name, value):
+        if name == 'name':
+            self.select(value)
             return
-        font_name = self.font_name.get()
+        font_name = self.get_value('name')
         # print(f'value_changed: "{name1}", "{name2}", "{op}", "{font_name}"')
         font = font_assets[font_name]
-        try:
-            font.family = self.family.get()
-            font.size = self.size.get()
-        except tk.TclError:
-            return
+        setattr(font, name, value)
         if self.on_value_changed:
             self.on_value_changed(font_name)
 
     def update(self):
         font_names = font_assets.names()
-        self.fontsel['values'] = font_names
+        _, c = self.fields['name']
+        c.configure(values=font_names)
         self.select(font_names[0])
 
     def select(self, font_name):
+        font = font_assets.get(font_name, font_assets.default)
         self.is_updating = True
         try:
-            font = font_assets[font_name]
-            self.font_name.set(font_name)
-            self.family.set(font.family)
-            self.size.set(font.size)
+            self.set_value('name', font_assets.get_font_name(font))
+            self.set_value('family', font.family)
+            self.set_value('size', font.size)
         finally:
             self.is_updating = False
 
@@ -849,6 +839,8 @@ def run():
     # Project
     project = ProjectEditor(edit_frame)
     project.frame.pack(fill=tk.X, ipady=4)
+    for name in project.fields.keys():
+        project.set_value(name, getattr(handler, name))
 
     # Properties
     prop = PropertyEditor(edit_frame)
@@ -862,6 +854,8 @@ def run():
                 cls = item.fieldtype(name)
                 # print(f'setattr({item}, {name}, {cls(value)})')
                 setattr(item, name, cls(value))
+                if name == 'font':
+                    font_editor.select(value)
             except ValueError as e:
                 status.set(str(e))
         handler.redraw()
