@@ -2,6 +2,7 @@ import os
 import sys
 import copy
 from enum import Enum, IntEnum
+import random
 from random import randrange, randint
 import dataclasses
 from dataclasses import dataclass
@@ -489,9 +490,13 @@ class Handler:
 
     def canvas_key(self, evt):
         # print(evt)
-        def add_item(cls):
+        def add_item(itemtype):
             x, y = self.canvas_point(evt.x, evt.y)
-            item = cls(*self.grid_align(x, y), *self.grid_align(50, 50))
+            x, y, w, h = *self.grid_align(x, y), *self.grid_align(50, 50)
+            item = GItem.create(itemtype, x=x, y=y, w=w, h=h)
+            item.assign_unique_id(self.display_list)
+            if hasattr(item, 'text'):
+                item.text = item.id.replace('_', ' ')
             self.add_item(item)
             self.select([item])
 
@@ -504,16 +509,16 @@ class Handler:
         if len(evt.keysym) != 1 or (mod & EVS_CONTROL):
             return
         c = evt.keysym.upper() if (mod & EVS_SHIFT) else evt.keysym.lower()
-        cls = {
-            'r': GRect,
-            'e': GEllipse,
-            'R': GFilledRect,
-            'E': GFilledEllipse,
-            't': GText,
-            'b': GButton,
+        itemtype = {
+            'r': 'Rect',
+            'R': 'FilledRect',
+            'e': 'Ellipse',
+            'E': 'FilledEllipse',
+            't': 'Text',
+            'b': 'Button',
         }.get(c)
-        if cls is not None:
-            add_item(cls)
+        if itemtype is not None:
+            add_item(itemtype)
 
 
 class Editor:
@@ -671,7 +676,6 @@ def run():
         for item in display_list:
             d = {
                 'type': item.typename,
-                'tag': item.id,
             }
             for name, value in item.__dict__.items():
                 if type(value) in [int, float, str]:
@@ -684,9 +688,7 @@ def run():
     def dl_deserialise(data):
         display_list = []
         for d in data:
-            typename = d.pop('type')
-            tag = d.pop('tag')
-            item = GItem.create(typename)
+            item = GItem.create(d.pop('type'), id=d.pop('id'))
             for a, v in d.items():
                 ac = item.fieldtype(a)
                 setattr(item, a, ac(v))
@@ -701,6 +703,7 @@ def run():
 
     def fileAddRandom(count=10):
         display_list = []
+        id_list = set(x.id for x in handler.display_list)
         for i in range(count):
             w_min, w_max = 10, 200
             h_min, h_max = 10, 100
@@ -708,24 +711,24 @@ def run():
             h = randint(h_min, h_max)
             x = randrange(handler.width - w)
             y = randrange(handler.height - h)
-            r = Rect(*handler.grid_align(x, y, w, h))
-            line_width = randint(1, 5)
-            radius = randint(0, min(r.w, r.h) // 2)
-            kind = randrange(6)
-            if kind == 0:
-                item = GEllipse(line_width=line_width)
-            elif kind == 1:
-                item = GFilledEllipse()
-            elif kind == 2:
-                item = GText()
-            elif kind == 3:
-                item = GButton()
-            elif kind == 4:
-                item = GRect(line_width=line_width, radius=radius)
-            elif kind == 5:
-                item = GFilledRect(radius=radius)
-            item.bounds = r
-            item.color = GColor(randrange(0xffffff))
+            x, y, w, h = handler.grid_align(x, y, w, h)
+            itemtype = random.choice([
+                GRect,
+                GFilledRect,
+                GEllipse,
+                GFilledEllipse,
+                GText,
+                GButton,
+            ])
+            item = itemtype(x=x, y=y, w=w, h=h, color = GColor(randrange(0xffffff)))
+            item.assign_unique_id(id_list)
+            id_list.add(item.id)
+            if hasattr(item, 'line_width'):
+                item.line_width = randint(1, 5)
+            if hasattr(item, 'radius'):
+                item.radius = randint(0, min(w, h) // 2)
+            if hasattr(item, 'text'):
+                item.text = item.id.replace('_', ' ')
             display_list.append(item)
         handler.add_items(display_list)
 
@@ -804,6 +807,8 @@ def run():
 
     def value_changed(name, value):
         for item in handler.sel_items:
+            if not hasattr(item, name):
+                continue
             try:
                 cls = item.fieldtype(name)
                 # print(f'setattr({item}, {name}, {cls(value)})')

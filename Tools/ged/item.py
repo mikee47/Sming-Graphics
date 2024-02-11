@@ -71,15 +71,33 @@ class GColor(int):
 
 @dataclass
 class GItem(Rect):
+    id: str = None
     color: GColor = GColor('orange')
 
     @staticmethod
-    def create(typename: str):
-        return getattr(sys.modules[__name__], f'G{typename}')()
+    def create(itemtype, **field_values):
+        if isinstance(itemtype, str):
+            itemtype = getattr(sys.modules[__name__], f'G{itemtype}')
+        return itemtype(**field_values)
 
+    @classmethod
     @property
-    def typename(self):
-        return self.__class__.__name__[1:]
+    def typename(cls):
+        return cls.__name__[1:]
+
+    def assign_unique_id(self, existing_ids_or_list):
+        if isinstance(existing_ids_or_list, set):
+            existing_ids = existing_ids_or_list
+        else:
+            existing_ids = set(item.id for item in existing_ids_or_list)
+        n = 1
+        typename = self.typename
+        while True:
+            id = f'{typename}_{n}'
+            if id not in existing_ids:
+                self.id = id
+                break
+            n += 1
 
     def fieldtype(self, field_name: str):
         return self.__dataclass_fields__[field_name].type
@@ -89,10 +107,6 @@ class GItem(Rect):
 
     def get_bounds(self):
         return Rect(self.x, self.y, self.w, self.h)
-
-    @property
-    def id(self):
-        return 'G%08x' % id(self)
 
 
 @dataclass
@@ -152,12 +166,7 @@ class GFilledEllipse(GItem):
 @dataclass
 class GText(GItem):
     font: str = 'default'
-    text: str = None
-
-    def __post_init__(self):
-        super().__post_init__()
-        if self.text is None:
-            self.text = f'Text {self.id}'
+    text: str = ''
 
     def draw(self, c):
         c.color = str(self.color)
@@ -171,13 +180,8 @@ class GText(GItem):
 @dataclass
 class GButton(GItem):
     font: str = 'default'
-    text: str = None
+    text: str = ''
     text_color: GColor = GColor('white')
-
-    def __post_init__(self):
-        super().__post_init__()
-        if self.text is None:
-            self.text = f'button {self.id}'
 
     def draw(self, c):
         radius = min(self.w, self.h) // 8
