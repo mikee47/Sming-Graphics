@@ -1,6 +1,7 @@
 import os
 import sys
 import copy
+import re
 from enum import Enum, IntEnum
 import random
 from random import randrange, randint
@@ -10,6 +11,8 @@ import json
 import tkinter as tk
 import tkinter.font
 from tkinter import ttk, filedialog, colorchooser
+from gtypes import colormap
+from resource import Font, Image
 from item import *
 
 # Event state modifier masks
@@ -174,7 +177,7 @@ class FontAssets(list):
     def clear(self):
         super().clear()
         tk_def = FontAssets.tk_default().configure()
-        font = GFont(name='default', family = tk_def['family'])
+        font = Font(name='default', family = tk_def['family'])
         self.default = font
         self.append(font)
 
@@ -210,10 +213,53 @@ class FontAssets(list):
     def load(self, font_defs):
         self.clear()
         for name, font_def in font_defs.items():
-            font = GFont(name=name, family=font_def['family'], size=font_def['size'])
+            font = Font(name=name, family=font_def['family'], size=font_def['size'])
             self.append(font)
 
 font_assets = None
+
+
+class ImageAssets(list):
+    def __init__(self):
+        super().__init__()
+        self.clear()
+
+    def get(self, image_name, default=None):
+        try:
+            return next(font for font in self if font.name == font_name)
+        except StopIteration:
+            return default
+
+    @staticmethod
+    def tk_default():
+        return tkinter.font.nametofont('TkDefaultFont')
+
+    @staticmethod
+    def families():
+        # Not all fonts are listed by TK, so include the 'guaranteed supported' ones
+        font_families = list(tk.font.families())
+        tk_def = FontAssets.tk_default().configure()
+        font_families += ['Courier', 'Times', 'Helvetica', tk_def['family']]
+        font_families = list(set(font_families))
+        return sorted(font_families, key=str.lower)
+
+    def names(self):
+        return [font.name for font in self]
+
+    def asdict(self):
+        return dict(
+            (font.name, {
+                'family': font_def.family,
+                'size': font_def.size,
+            }) for font in self)
+
+    def load(self, font_defs):
+        self.clear()
+        for name, font_def in font_defs.items():
+            font = Font(name=name, family=font_def['family'], size=font_def['size'])
+            self.append(font)
+
+image_assets = None
 
 
 class State(Enum):
@@ -557,7 +603,10 @@ class Editor:
 
     @staticmethod
     def text_from_name(name: str):
-        return name.replace('_', ' ').capitalize()
+        words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', name)
+        return ' '.join(words).lower()
+        # return re.sub("([a-z])([A-Z])", "\g<0> \g<1>", name)
+        # return name.replace('_', ' ').capitalize()
 
     def add_field(self, name: str, ctrl, var_type=tk.StringVar):
         row = len(self.fields)
@@ -656,7 +705,7 @@ class FontEditor(Editor):
         self.add_combo_field('name')
         self.add_combo_field('family', font_assets.families())
         self.add_entry_field('size', tk.IntVar)
-        self.add_check_fields('Style', ['normal', 'italic', 'bold', 'bold-italic'])
+        self.add_check_fields('Style', ['normal', 'italic', 'bold', 'boldItalic'])
         self.update()
 
     def value_changed(self, name, value):
@@ -670,7 +719,7 @@ class FontEditor(Editor):
         # print(f'value_changed: "{name}", "{value}", "{font_name}"')
         font = font_assets.get(font_name)
         if font is None:
-            font = GFont(name=font_name)
+            font = Font(name=font_name)
             font_assets.append(font)
         setattr(font, name, value)
         self.update()
@@ -763,7 +812,7 @@ def run():
                 GText,
                 GButton,
             ])
-            item = itemtype(x=x, y=y, w=w, h=h, color = GColor(randrange(0xffffff)))
+            item = itemtype(x=x, y=y, w=w, h=h, color = Color(randrange(0xffffff)))
             item.assign_unique_id(id_list)
             id_list.add(item.id)
             if hasattr(item, 'line_width'):
@@ -889,12 +938,12 @@ def run():
             values = list(values)
             if name == 'font':
                 options = font_assets.names()
-            elif isinstance(values[0], GColor):
+            elif isinstance(values[0], Color):
                 options = sorted(colormap.keys())
                 def select_color(var):
                     res = colorchooser.askcolor(color=var.get())
                     if res[1] is not None:
-                        var.set(GColor(res[1]))
+                        var.set(Color(res[1]))
                 callback = select_color
             else:
                 options = []
