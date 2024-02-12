@@ -1,6 +1,7 @@
 import sys
 import copy
 from gtypes import Rect, Color
+import dataclasses
 from dataclasses import dataclass
 import tkinter as tk
 
@@ -36,6 +37,9 @@ class GItem(Rect):
                 self.id = id
                 break
             n += 1
+
+    def asdict(self):
+        return dataclasses.asdict(self)
 
     def fieldtype(self, field_name: str):
         return self.__dataclass_fields__[field_name].type
@@ -118,15 +122,13 @@ class GText(GItem):
 @dataclass
 class GImage(GItem):
     image: str = ''
+    xoff: int = 0
+    yoff: int = 0
+    tk_image = None  # cached image, tkinter won't show it otherwise
 
     def draw(self, c):
-        c.color = str(self.color)
-        c.line_width = self.line_width
-
-        if self.radius > 1:
-            c.draw_rounded_rect(self, self.radius)
-        else:
-            c.draw_rect(self)
+        self.tk_image = c.handler.tk_image(self.image, Rect(self.xoff, self.yoff, self.w, self.h))
+        c.draw_image(self, self.tk_image)
 
 
 @dataclass

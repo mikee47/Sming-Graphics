@@ -72,6 +72,7 @@ class Element(IntEnum):
 
 
 class Canvas:
+    """Provides the interface for items to draw themselves"""
     def __init__(self, handler, tags):
         self.handler = handler
         self.canvas = handler.canvas
@@ -143,6 +144,10 @@ class Canvas:
         y0 += (y1 - y2) // 2
         self.canvas.coords(id, x0, y0)
 
+    def draw_image(self, rect, tk_image):
+        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
+        self.canvas.create_image(x0, y0, image=tk_image, anchor=tk.NW, tags=self.tags)
+
 
 def union(r1: Rect, r2: Rect):
     x = min(r1.x, r2.x)
@@ -169,11 +174,38 @@ def get_handle_pos(r: Rect, elem: Element):
     }.get(elem)
 
 
-class FontAssets(list):
+class ResourceList(list):
     def __init__(self):
         super().__init__()
         self.clear()
 
+    def get(self, name, default=None):
+        try:
+            return next(r for r in self if r.name == name)
+        except StopIteration:
+            return default
+
+    def names(self):
+        return [r.name for r in self]
+
+    def asdict(self):
+        res = {}
+        for r in self:
+            d = r.asdict()
+            del d['name']
+            res[r.name] = d
+        return res
+
+    def load(self, res_class, res_dict):
+        self.clear()
+        for name, rdef in res_dict.items():
+            r = res_class(name=name)
+            for a, v in rdef.items():
+                setattr(r, a, v)
+            self.append(r)
+
+
+class FontAssets(ResourceList):
     def clear(self):
         super().clear()
         tk_def = FontAssets.tk_default().configure()
@@ -181,12 +213,6 @@ class FontAssets(list):
         self.default = font
         self.append(font)
 
-    def get(self, font_name, default=None):
-        try:
-            return next(font for font in self if font.name == font_name)
-        except StopIteration:
-            return default
-
     @staticmethod
     def tk_default():
         return tkinter.font.nametofont('TkDefaultFont')
@@ -200,64 +226,21 @@ class FontAssets(list):
         font_families = list(set(font_families))
         return sorted(font_families, key=str.lower)
 
-    def names(self):
-        return [font.name for font in self]
-
-    def asdict(self):
-        return dict(
-            (font.name, {
-                'family': font_def.family,
-                'size': font_def.size,
-            }) for font in self)
-
-    def load(self, font_defs):
-        self.clear()
-        for name, font_def in font_defs.items():
-            font = Font(name=name, family=font_def['family'], size=font_def['size'])
-            self.append(font)
+    def load(self, res_dict):
+        super().load(Font, res_dict)
 
 font_assets = None
 
 
-class ImageAssets(list):
-    def __init__(self):
-        super().__init__()
-        self.clear()
+class ImageAssets(ResourceList):
+    def clear(self):
+        super().clear()
+        img = Image(name='none')
+        self.default = img
 
-    def get(self, image_name, default=None):
-        try:
-            return next(font for font in self if font.name == font_name)
-        except StopIteration:
-            return default
 
-    @staticmethod
-    def tk_default():
-        return tkinter.font.nametofont('TkDefaultFont')
-
-    @staticmethod
-    def families():
-        # Not all fonts are listed by TK, so include the 'guaranteed supported' ones
-        font_families = list(tk.font.families())
-        tk_def = FontAssets.tk_default().configure()
-        font_families += ['Courier', 'Times', 'Helvetica', tk_def['family']]
-        font_families = list(set(font_families))
-        return sorted(font_families, key=str.lower)
-
-    def names(self):
-        return [font.name for font in self]
-
-    def asdict(self):
-        return dict(
-            (font.name, {
-                'family': font_def.family,
-                'size': font_def.size,
-            }) for font in self)
-
-    def load(self, font_defs):
-        self.clear()
-        for name, font_def in font_defs.items():
-            font = Font(name=name, family=font_def['family'], size=font_def['size'])
-            self.append(font)
+    def load(self, res_dict):
+        super().load(Image, res_dict)
 
 image_assets = None
 
@@ -343,6 +326,9 @@ class Handler:
     def tk_font(self, font_name: str):
         font = font_assets.get(font_name, font_assets.default)
         return tkinter.font.Font(family=font.family, size=-font.size*self.scale)
+
+    def tk_image(self, image_name: str, crop_rect: Rect):
+        return image_assets.get(image_name, image_assets.default).get_tk_image(crop_rect, self.scale)
 
     def clear(self):
         self.display_list.clear()
@@ -572,6 +558,7 @@ class Handler:
             'R': 'FilledRect',
             'e': 'Ellipse',
             'E': 'FilledEllipse',
+            'i': 'Image',
             't': 'Text',
             'b': 'Button',
         }.get(c)
@@ -580,8 +567,9 @@ class Handler:
 
 
 class Editor:
-    def __init__(self, root, title):
+    def __init__(self, root, title, field_prefix):
         self.frame = ttk.LabelFrame(root, text=title)
+        self.field_prefix = field_prefix
         self.frame.columnconfigure(1, weight=1)
         self.is_updating = False
         self.on_value_changed = None
@@ -605,13 +593,11 @@ class Editor:
     def text_from_name(name: str):
         words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', name)
         return ' '.join(words).lower()
-        # return re.sub("([a-z])([A-Z])", "\g<0> \g<1>", name)
-        # return name.replace('_', ' ').capitalize()
 
     def add_field(self, name: str, ctrl, var_type=tk.StringVar):
         row = len(self.fields)
         self.add_label(self.text_from_name(name), row)
-        var = var_type(name=name)
+        var = var_type(name=self.field_prefix+name)
         ctrl.configure(textvariable=var)
         var.trace_add('write', self.tk_value_changed)
         self.add_control(ctrl, row)
@@ -635,7 +621,7 @@ class Editor:
         self.add_control(frame, row)
         frame.grid(column=0, columnspan=2)
         for name in names:
-            var = tk.BooleanVar(name=name)
+            var = tk.BooleanVar(name=self.field_prefix+name)
             var.trace_add('write', self.tk_value_changed)
             ctrl = ttk.Checkbutton(frame, variable=var, text=self.text_from_name(name))
             ctrl.pack(side=tk.LEFT)
@@ -646,12 +632,13 @@ class Editor:
         if self.is_updating:
             return
         """See 'trace add variable' in TCL docs"""
-        var, _ = self.fields[name1]
+        name = name1[len(self.field_prefix):]
+        var, _ = self.fields[name]
         if var is None:
             return
         try:
             # print(f'value_changed:"{name1}", "{name2}", "{op}", "{var.get()}"')
-            self.value_changed(name1, var.get())
+            self.value_changed(name, var.get())
         except tk.TclError: # Can happen whilst typing if conversion fails, empty strings, etc.
             pass
 
@@ -671,14 +658,14 @@ class Editor:
 
 class ProjectEditor(Editor):
     def __init__(self, root):
-        super().__init__(root, 'Project')
+        super().__init__(root, 'Project', 'proj-')
         for name in ['width', 'height', 'scale', 'grid_alignment']:
             self.add_entry_field(name, tk.IntVar)
 
 
 class PropertyEditor(Editor):
     def __init__(self, root):
-        super().__init__(root, 'Properties')
+        super().__init__(root, 'Properties', 'prop-')
 
     def set_field(self, name=str, values=list, options=list, callback=None):
         value_list = values + [o for o in options if o not in values]
@@ -701,7 +688,7 @@ class PropertyEditor(Editor):
 
 class FontEditor(Editor):
     def __init__(self, root):
-        super().__init__(root, 'Font')
+        super().__init__(root, 'Font', 'font-')
         self.add_combo_field('name')
         self.add_combo_field('family', font_assets.families())
         self.add_entry_field('size', tk.IntVar)
@@ -709,7 +696,6 @@ class FontEditor(Editor):
         self.update()
 
     def value_changed(self, name, value):
-        print(f'value_changed: "{name}", "{value}"')
         if name == 'name':
             font = font_assets.get(value)
             if font:
@@ -745,6 +731,55 @@ class FontEditor(Editor):
             self.is_updating = False
 
 
+class ImageEditor(Editor):
+    def __init__(self, root):
+        super().__init__(root, 'Image', 'img-')
+        self.add_combo_field('name')
+        self.add_combo_field('source')
+        self.add_combo_field('format')
+        self.add_entry_field('width', tk.IntVar)
+        self.add_entry_field('height', tk.IntVar)
+        self.update()
+
+    def value_changed(self, name, value):
+        if name == 'name':
+            image = image_assets.get(value)
+            if image:
+                self.select(image)
+            return
+        image_name = self.get_value('name')
+        # print(f'value_changed: "{name}", "{value}", "{font_name}"')
+        image = image_assets.get(image_name)
+        if image is None:
+            return
+        setattr(image, name, value)
+        self.update()
+        super().value_changed(name, value)
+
+    def update(self):
+        image = self.get_value('name')
+        image_names = image_assets.names()
+        _, c = self.fields['name']
+        c.configure(values=image_names)
+        if not image and image_assets:
+            image = image_assets[0]
+        self.select(image)
+
+    def select(self, image):
+        if isinstance(image, str):
+            image = image_assets.get(image)
+        if not image:
+            for var, _ in self.fields.values():
+                var.set('')
+            return
+        self.is_updating = True
+        try:
+            for k, v in dataclasses.asdict(image).items():
+                self.set_value(k, v)
+        finally:
+            self.is_updating = False
+
+
 def run():
     PROJECT_EXT = '.ged'
     PROJECT_FILTER = [('GED Project', '*' + PROJECT_EXT)]
@@ -769,7 +804,7 @@ def run():
             d = {
                 'type': item.typename,
             }
-            for name, value in item.__dict__.items():
+            for name, value in item.asdict().items():
                 if type(value) in [int, float, str]:
                     d[name] = value
                 else:
@@ -787,11 +822,30 @@ def run():
             display_list.append(item)
         return display_list
 
+    def get_project_data():
+        return {
+            'fonts': font_assets.asdict(),
+            'images': image_assets.asdict(),
+            'layout': dl_serialise(handler.display_list),
+        }
+
+    def load_project(data):
+            font_assets.load(data['fonts'])
+            font_editor.update()
+            image_assets.load(data['images'])
+            image_editor.update()
+            handler.display_list = []
+            display_list = dl_deserialise(data['layout'])
+            handler.clear()
+            handler.add_items(display_list)
+
     # Menus
     def fileClear():
         handler.clear()
         font_assets.clear()
         font_editor.update()
+        image_assets.clear()
+        image_editor.update()
 
     def fileAddRandom(count=10):
         display_list = []
@@ -829,12 +883,7 @@ def run():
         filename = filedialog.askopenfilename(title='Load project', filetypes=PROJECT_FILTER)
         if len(filename) != 0:
             data = json_load(filename)
-            font_assets.load(data['fonts'])
-            font_editor.update()
-            handler.display_list = []
-            display_list = dl_deserialise(data['layout'])
-            handler.clear()
-            handler.add_items(display_list)
+            load_project(data)
 
     def fileSave():
         filename = filedialog.asksaveasfilename(title='Save project', filetypes=PROJECT_FILTER)
@@ -842,14 +891,11 @@ def run():
             ext = os.path.splitext(filename)[1]
             if ext != PROJECT_EXT:
                 filename += PROJECT_EXT
-            data = {
-                'fonts': font_assets.asdict(),
-                'layout': dl_serialise(handler.display_list),
-            }
+            data = get_project_data()
             json_save(data, filename)
 
     def fileList():
-        data = dl_serialise(handler.display_list)
+        data = get_project_data()
         print(json_dumps(data))
 
     root = tk.Tk(className='GED')
@@ -913,6 +959,8 @@ def run():
                 setattr(item, name, cls(value))
                 if name == 'font':
                     font_editor.select(value)
+                elif name == 'image':
+                    image_editor.select(value)
             except ValueError as e:
                 status.set(str(e))
         handler.redraw()
@@ -938,6 +986,8 @@ def run():
             values = list(values)
             if name == 'font':
                 options = font_assets.names()
+            elif name == 'image':
+                options = image_assets.names()
             elif isinstance(values[0], Color):
                 options = sorted(colormap.keys())
                 def select_color(var):
@@ -956,10 +1006,20 @@ def run():
     font_assets = FontAssets()
     font_editor = FontEditor(edit_frame)
     def font_value_changed(name, value):
-        print(f'font_value_changed("{name}", "{value}")')
+        # print(f'font_value_changed("{name}", "{value}")')
         handler.redraw()
     font_editor.on_value_changed = font_value_changed
     font_editor.frame.pack(side=tk.TOP, expand=True, fill=tk.X, ipady=4)
+
+    # Images
+    global image_assets
+    image_assets = ImageAssets()
+    image_editor = ImageEditor(edit_frame)
+    def image_value_changed(name, value):
+        # print(f'image_value_changed("{name}", "{value}")')
+        handler.redraw()
+    image_editor.on_value_changed = image_value_changed
+    image_editor.frame.pack(side=tk.TOP, expand=True, fill=tk.X, ipady=4)
 
     #
     tk.mainloop()
