@@ -33,6 +33,7 @@ class Rect:
 
 @dataclass
 class GFont:
+    name: str = ''
     family: str = ''
     size: int = 12
     # style: list[str] For now, assume all styles are available

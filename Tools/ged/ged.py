@@ -166,17 +166,23 @@ def get_handle_pos(r: Rect, elem: Element):
     }.get(elem)
 
 
-class FontAssets(dict):
+class FontAssets(list):
     def __init__(self):
         super().__init__()
         self.clear()
 
     def clear(self):
         super().clear()
-        font = GFont()
         tk_def = FontAssets.tk_default().configure()
-        font.family = tk_def['family']
-        self.default = self['default'] = font
+        font = GFont(name='default', family = tk_def['family'])
+        self.default = font
+        self.append(font)
+
+    def get(self, font_name, default=None):
+        try:
+            return next(font for font in self if font.name == font_name)
+        except StopIteration:
+            return default
 
     @staticmethod
     def tk_default():
@@ -192,27 +198,20 @@ class FontAssets(dict):
         return sorted(font_families, key=str.lower)
 
     def names(self):
-        return list(self.keys())
-
-    def get_font_name(self, font):
-        try:
-            return next(k for k, v in self.items() if v == font)
-        except StopIteration:
-            return None
+        return [font.name for font in self]
 
     def asdict(self):
-        d = {}
-        for name, font_def in self.items():
-            d[name] = {
+        return dict(
+            (font.name, {
                 'family': font_def.family,
                 'size': font_def.size,
-            }
-        return d
+            }) for font in self)
 
     def load(self, font_defs):
         self.clear()
         for name, font_def in font_defs.items():
-            self[name] = GFont(family=font_def['family'], size=font_def['size'])
+            font = GFont(name=name, family=font_def['family'], size=font_def['size'])
+            self.append(font)
 
 font_assets = None
 
@@ -661,29 +660,38 @@ class FontEditor(Editor):
         self.update()
 
     def value_changed(self, name, value):
+        print(f'value_changed: "{name}", "{value}"')
         if name == 'name':
-            self.select(value)
+            font = font_assets.get(value)
+            if font:
+                self.select(font)
             return
         font_name = self.get_value('name')
-        # print(f'value_changed: "{name1}", "{name2}", "{op}", "{font_name}"')
-        font = font_assets[font_name]
+        # print(f'value_changed: "{name}", "{value}", "{font_name}"')
+        font = font_assets.get(font_name)
+        if font is None:
+            font = GFont(name=font_name)
+            font_assets.append(font)
         setattr(font, name, value)
-        if self.on_value_changed:
-            self.on_value_changed(font_name)
+        self.update()
+        super().value_changed(name, value)
 
     def update(self):
+        font_name = self.get_value('name')
         font_names = font_assets.names()
         _, c = self.fields['name']
         c.configure(values=font_names)
-        self.select(font_names[0])
+        self.select(font_name or font_names[0])
 
-    def select(self, font_name):
-        font = font_assets.get(font_name, font_assets.default)
+    def select(self, font):
+        if font is None:
+            font = font_assets.default
+        elif isinstance(font, str):
+            font = font_assets.get(font, font_assets.default)
         self.is_updating = True
         try:
-            self.set_value('name', font_assets.get_font_name(font))
-            self.set_value('family', font.family)
-            self.set_value('size', font.size)
+            for f in ['name', 'family', 'size']:
+                self.set_value(f, getattr(font, f))
         finally:
             self.is_updating = False
 
@@ -898,7 +906,8 @@ def run():
     global font_assets
     font_assets = FontAssets()
     font_editor = FontEditor(edit_frame)
-    def font_value_changed(font_name):
+    def font_value_changed(name, value):
+        print(f'font_value_changed("{name}", "{value}")')
         handler.redraw()
     font_editor.on_value_changed = font_value_changed
     font_editor.frame.pack(side=tk.TOP, expand=True, fill=tk.X, ipady=4)
