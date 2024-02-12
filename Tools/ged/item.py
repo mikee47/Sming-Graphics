@@ -1,79 +1,16 @@
 import sys
 import copy
+from gtypes import Rect, Color
 from dataclasses import dataclass
-from PIL.ImageColor import colormap
 import tkinter as tk
-
-rev_colormap = {value: name for name, value in colormap.items()}
 
 MIN_ITEM_WIDTH = MIN_ITEM_HEIGHT = 2
 
 
 @dataclass
-class Rect:
-    x: int = 0
-    y: int = 0
-    w: int = 0
-    h: int = 0
-
-    def __post_init__(self):
-        pass
-
-    @property
-    def bounds(self):
-        return copy.copy(self)
-
-    @bounds.setter
-    def bounds(self, rect):
-        self.x, self.y, self.w, self.h = rect.x, rect.y, rect.w, rect.h
-
-    def inflate(self, xo, yo):
-        return Rect(self.x - xo, self.y - yo, self.w + xo*2, self.h + yo*2)
-
-
-@dataclass
-class GFont:
-    name: str = ''
-    family: str = ''
-    size: int = 12
-    # style: list[str] For now, assume all styles are available
-
-
-class GColor(int):
-    def __new__(cls, value):
-        if isinstance(value, str):
-            if value == '' or str.isdigit(value[0]):
-                value = int(value, 0)
-            else:
-                if value[0] != '#':
-                    try:
-                        value = colormap[value]
-                    except KeyError:
-                        raise ValueError(f'Unknown color name {value}')
-                if value[0] != '#':
-                    raise ValueError(f'Bad color {value}')
-                value = int(value[1:], 16)
-        return int.__new__(cls, value)
-
-    def __init__(self, *args, **kwds):
-        pass
-
-    def value_str(self):
-        return '#%06x' % self
-
-    def __str__(self):
-        s = self.value_str()
-        return rev_colormap.get(s, s)
-
-    def __repr__(self):
-        return str(self)
-
-
-
-@dataclass
 class GItem(Rect):
     id: str = None
-    color: GColor = GColor('orange')
+    color: Color = Color('orange')
 
     @staticmethod
     def create(itemtype, **field_values):
@@ -179,10 +116,24 @@ class GText(GItem):
 
 
 @dataclass
+class GImage(GItem):
+    image: str = ''
+
+    def draw(self, c):
+        c.color = str(self.color)
+        c.line_width = self.line_width
+
+        if self.radius > 1:
+            c.draw_rounded_rect(self, self.radius)
+        else:
+            c.draw_rect(self)
+
+
+@dataclass
 class GButton(GItem):
     font: str = 'default'
     text: str = ''
-    text_color: GColor = GColor('white')
+    text_color: Color = Color('white')
 
     def draw(self, c):
         radius = min(self.w, self.h) // 8
