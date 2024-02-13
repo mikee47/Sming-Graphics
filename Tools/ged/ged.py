@@ -669,22 +669,29 @@ class PropertyEditor(Editor):
         super().__init__(root, 'Properties', 'prop-')
 
     def set_field(self, name=str, values=list, options=list, callback=None):
-        value_list = values + [o for o in options if o not in values]
-        if name in self.fields:
-            var, cb = self.fields[name]
-            self.is_updating = True
-            var.set(value=values[0] if len(values) == 1 else '')
-            self.is_updating = False
-            cb.configure(values=value_list)
-            return
+        self.is_updating = True
+        try:
+            value_list = values + [o for o in options if o not in values]
+            if name in self.fields:
+                var, cb = self.fields[name]
+                var.set(value=values[0] if len(values) == 1 else '')
+                cb.configure(values=value_list)
+                return
 
-        var, cb = self.add_combo_field(name, value_list)
-        if len(values) == 1:
-            var.set(values[0])
-        if callback:
-            def handler(evt, callback=callback, var=var):
-                callback(var)
-            cb.bind('<Double-1>', handler)
+            var, cb = self.add_combo_field(name, value_list)
+            if len(values) == 1:
+                var.set(values[0])
+            if callback:
+                def handle_event(evt, callback=callback, var=var):
+                    print(evt.type.name)
+                    if not self.is_updating:
+                        callback(var, evt.type)
+                cb.bind('<Double-1>', handle_event)
+                cb.bind('<FocusIn>', handle_event)
+                cb.bind('<FocusOut>', handle_event)
+
+        finally:
+            self.is_updating = False
 
 
 class FontEditor(Editor):
@@ -961,8 +968,13 @@ def run():
 
     # Properties
     prop = PropertyEditor(edit_frame)
-    prop.frame.pack(fill=tk.X, ipady=4)
 
+    def value_selected(name, value):
+        if name == 'font':
+            res_frame.select(font_editor.frame)
+        elif name == 'image':
+            res_frame.select(image_editor.frame)
+    prop.on_value_select = value_selected
     def value_changed(name, value):
         for item in handler.sel_items:
             if not hasattr(item, name):
@@ -986,7 +998,9 @@ def run():
             prop.clear()
         items = handler.sel_items
         if not items:
+            prop.frame.pack_forget()
             return
+        prop.frame.pack(fill=tk.X, ipady=4)
         if full_change:
             typenames = set(x.typename for x in items)
             prop.set_field('type', list(typenames), [])
@@ -995,19 +1009,33 @@ def run():
             for name, value in dataclasses.asdict(item).items():
                 values = fields.setdefault(name, set())
                 values.add(value)
+        # ID must be unique for each item, don't allow group set
+        if len(items) > 1:
+            del fields['id']
         for name, values in fields.items():
             callback = None
             values = list(values)
             if name == 'font':
                 options = font_assets.names()
+                def select_font(var, event_type):
+                    if event_type == tk.EventType.FocusIn:
+                        res_frame.select(font_editor.frame)
+                callback = select_font
             elif name == 'image':
                 options = image_assets.names()
+                def select_image(var, event_type):
+                    if event_type == tk.EventType.FocusIn:
+                        _, cb = prop.fields['image']
+                        cb.configure(values=image_assets.names())
+                        res_frame.select(image_editor.frame)
+                callback = select_image
             elif isinstance(values[0], Color):
                 options = sorted(colormap.keys())
-                def select_color(var):
-                    res = colorchooser.askcolor(color=var.get())
-                    if res[1] is not None:
-                        var.set(Color(res[1]))
+                def select_color(var, event_type):
+                    if event_type == tk.EventType.ButtonPress:
+                        res = colorchooser.askcolor(color=var.get())
+                        if res[1] is not None:
+                            var.set(Color(res[1]))
                 callback = select_color
             else:
                 options = []
@@ -1015,25 +1043,28 @@ def run():
 
     handler.on_sel_changed = sel_changed
 
+    res_frame = ttk.Notebook(edit_frame)
+    res_frame.pack(fill=tk.X, ipady=4)
+
     # Fonts
     global font_assets
     font_assets = FontAssets()
-    font_editor = FontEditor(edit_frame)
+    font_editor = FontEditor(res_frame)
+    res_frame.add(font_editor.frame, text='Fonts', sticky=tk.NSEW)
     def font_value_changed(name, value):
         # print(f'font_value_changed("{name}", "{value}")')
         handler.redraw()
     font_editor.on_value_changed = font_value_changed
-    font_editor.frame.pack(side=tk.TOP, expand=True, fill=tk.X, ipady=4)
 
     # Images
     global image_assets
     image_assets = ImageAssets()
-    image_editor = ImageEditor(edit_frame)
+    image_editor = ImageEditor(res_frame)
+    res_frame.add(image_editor.frame, text='Images', sticky=tk.NSEW)
     def image_value_changed(name, value):
         # print(f'image_value_changed("{name}", "{value}")')
         handler.redraw()
     image_editor.on_value_changed = image_value_changed
-    image_editor.frame.pack(side=tk.TOP, expand=True, fill=tk.X, ipady=4)
 
     #
     tk.mainloop()
