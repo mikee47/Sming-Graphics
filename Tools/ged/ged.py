@@ -422,8 +422,7 @@ class Handler:
         if sel_changed and self.on_sel_changed:
             self.on_sel_changed(True)
 
-    @staticmethod
-    def get_cursor(elem):
+    def get_cursor(self, elem):
         if elem is None:
             return ''
         return {
@@ -435,7 +434,7 @@ class Handler:
             Element.HANDLE_S: 'sb_v_double_arrow',
             Element.HANDLE_E: 'sb_h_double_arrow',
             Element.HANDLE_W: 'sb_h_double_arrow',
-            Element.ITEM: 'target',
+            Element.ITEM: 'target' if self.state == State.DRAGGING else 'hand1',
         }.get(elem)
 
     def canvas_move(self, evt):
@@ -448,10 +447,11 @@ class Handler:
         if not self.sel_items:
             return
         self.remove_handles()
+        elem = self.sel_elem
         if self.state != State.DRAGGING:
             self.state = State.DRAGGING
+            self.canvas.configure(cursor=self.get_cursor(elem))
             self.orig_bounds = [x.get_bounds() for x in self.sel_items]
-        elem = self.sel_elem
         off = (evt.x - self.sel_pos[0]) // self.scale, (evt.y - self.sel_pos[1]) // self.scale
 
         def resize_item(item, r):
@@ -519,6 +519,7 @@ class Handler:
         if self.state != State.DRAGGING:
             return
         self.state = State.IDLE
+        self.canvas.configure(cursor=self.get_cursor(self.sel_elem))
         self.redraw() # Fix Z-ordering and ensure consistency
 
 
