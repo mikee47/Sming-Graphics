@@ -735,11 +735,24 @@ class ImageEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Image', 'img-')
         self.add_combo_field('name')
-        self.add_combo_field('source')
+        _, cb = self.add_combo_field('source')
+        cb.bind('<Double-1>', self.choose_source)
         self.add_combo_field('format')
         self.add_entry_field('width', tk.IntVar)
         self.add_entry_field('height', tk.IntVar)
         self.update()
+
+    def choose_source(self, evt):
+        IMAGE_FILTER = [('Image files', '*.*')]
+        filename = filedialog.askopenfilename(title='Load project', filetypes=IMAGE_FILTER)
+        if len(filename) == 0:
+            return
+        image_name = self.get_value('name')
+        image = image_assets.get(image_name, None)
+        if image is None:
+            image = Image(name=image_name, source=filename)
+            image_assets.append(image)
+            self.update()
 
     def value_changed(self, name, value):
         if name == 'name':

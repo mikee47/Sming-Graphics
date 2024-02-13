@@ -6,6 +6,9 @@ import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw
 class Resource:
     name: str = ''
 
+    def __post_init__(self):
+        pass
+
     def asdict(self):
         return dataclasses.asdict(self)
 
@@ -24,6 +27,18 @@ class Image(Resource):
     width: int = 64
     height:int = 64
     image = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.source:
+            self.reset_size()
+
+    def reset_size(self):
+        try:
+            img = PIL.Image.open(self.source)
+            self.width, self.height = img.size
+        except:
+            pass
 
     def get_tk_image(self, crop_rect, scale: int = 1):
         w, h = self.width, self.height
