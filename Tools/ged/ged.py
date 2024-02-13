@@ -79,7 +79,7 @@ class Canvas:
         self.tags = tags
         self.color = 'white'
         self.line_width = 1
-        self.font = 'default'
+        self.font = None
 
     def draw_rect(self, rect):
         x0, y0, x1, y1 = self.handler.tk_bounds(rect)
@@ -175,10 +175,6 @@ def get_handle_pos(r: Rect, elem: Element):
 
 
 class ResourceList(list):
-    def __init__(self):
-        super().__init__()
-        self.clear()
-
     def get(self, name, default=None):
         try:
             return next(r for r in self if r.name == name)
@@ -206,12 +202,10 @@ class ResourceList(list):
 
 
 class FontAssets(ResourceList):
-    def clear(self):
-        super().clear()
+    def __init__(self):
         tk_def = FontAssets.tk_default().configure()
-        font = Font(name='default', family = tk_def['family'])
+        font = Font(family = tk_def['family'])
         self.default = font
-        self.append(font)
 
     @staticmethod
     def tk_default():
@@ -233,12 +227,6 @@ font_assets = None
 
 
 class ImageAssets(ResourceList):
-    def clear(self):
-        super().clear()
-        img = Image(name='none')
-        self.default = img
-
-
     def load(self, res_dict):
         super().load(Image, res_dict)
 
@@ -328,7 +316,7 @@ class Handler:
         return tkinter.font.Font(family=font.family, size=-font.size*self.scale)
 
     def tk_image(self, image_name: str, crop_rect: Rect):
-        return image_assets.get(image_name, image_assets.default).get_tk_image(crop_rect, self.scale)
+        return image_assets.get(image_name, Image()).get_tk_image(crop_rect, self.scale)
 
     def clear(self):
         self.display_list.clear()
@@ -682,10 +670,10 @@ class PropertyEditor(Editor):
             if len(values) == 1:
                 var.set(values[0])
             if callback:
-                def handle_event(evt, callback=callback, var=var):
+                def handle_event(evt, callback=callback, var=var, ctrl=cb):
                     print(evt.type.name)
                     if not self.is_updating:
-                        callback(var, evt.type)
+                        callback(var, ctrl, evt.type)
                 cb.bind('<Double-1>', handle_event)
                 cb.bind('<FocusIn>', handle_event)
                 cb.bind('<FocusOut>', handle_event)
@@ -724,7 +712,9 @@ class FontEditor(Editor):
         font_names = font_assets.names()
         _, c = self.fields['name']
         c.configure(values=font_names)
-        self.select(font_name or font_names[0])
+        if not font_name and font_names:
+            font_name = font_names[0]
+        self.select(font_name)
 
     def select(self, font):
         if font is None:
@@ -751,11 +741,13 @@ class ImageEditor(Editor):
         self.update()
 
     def choose_source(self, evt):
+        image_name = self.get_value('name').strip()
+        if not image_name:
+            return
         IMAGE_FILTER = [('Image files', '*.*')]
         filename = filedialog.askopenfilename(title='Load project', filetypes=IMAGE_FILTER)
         if len(filename) == 0:
             return
-        image_name = self.get_value('name')
         image = image_assets.get(image_name, None)
         if image is None:
             image = Image(name=image_name, source=filename)
@@ -1008,7 +1000,8 @@ def run():
         for item in items:
             for name, value in dataclasses.asdict(item).items():
                 values = fields.setdefault(name, set())
-                values.add(value)
+                if value:
+                    values.add(value)
         # ID must be unique for each item, don't allow group set
         if len(items) > 1:
             del fields['id']
@@ -1017,21 +1010,21 @@ def run():
             values = list(values)
             if name == 'font':
                 options = font_assets.names()
-                def select_font(var, event_type):
+                def select_font(var, ctrl, event_type):
                     if event_type == tk.EventType.FocusIn:
+                        ctrl.configure(values=font_assets.names())
                         res_frame.select(font_editor.frame)
                 callback = select_font
             elif name == 'image':
                 options = image_assets.names()
-                def select_image(var, event_type):
+                def select_image(var, ctrl, event_type):
                     if event_type == tk.EventType.FocusIn:
-                        _, cb = prop.fields['image']
-                        cb.configure(values=image_assets.names())
+                        ctrl.configure(values=image_assets.names())
                         res_frame.select(image_editor.frame)
                 callback = select_image
             elif isinstance(values[0], Color):
                 options = sorted(colormap.keys())
-                def select_color(var, event_type):
+                def select_color(var, ctrl, event_type):
                     if event_type == tk.EventType.ButtonPress:
                         res = colorchooser.askcolor(color=var.get())
                         if res[1] is not None:

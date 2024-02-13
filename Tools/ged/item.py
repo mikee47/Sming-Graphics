@@ -107,7 +107,7 @@ class GFilledEllipse(GItem):
 
 @dataclass
 class GText(GItem):
-    font: str = 'default'
+    font: str = ''
     text: str = ''
 
     def draw(self, c):
@@ -133,7 +133,7 @@ class GImage(GItem):
 
 @dataclass
 class GButton(GItem):
-    font: str = 'default'
+    font: str = ''
     text: str = ''
     text_color: Color = Color('white')
 
