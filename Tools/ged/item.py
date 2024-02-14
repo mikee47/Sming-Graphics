@@ -11,7 +11,6 @@ MIN_ITEM_WIDTH = MIN_ITEM_HEIGHT = 2
 @dataclass
 class GItem(Rect):
     id: str = None
-    color: Color = Color('orange')
 
     @staticmethod
     def create(itemtype, **field_values):
@@ -53,6 +52,7 @@ class GItem(Rect):
 
 @dataclass
 class GRect(GItem):
+    color: Color = Color('orange')
     line_width: int = 1
     radius: int = 0
 
@@ -71,6 +71,7 @@ class GRect(GItem):
 
 @dataclass
 class GFilledRect(GItem):
+    color: Color = Color('orange')
     radius: int = 0
 
     def get_min_size(self):
@@ -87,6 +88,7 @@ class GFilledRect(GItem):
 
 @dataclass
 class GEllipse(GItem):
+    color: Color = Color('orange')
     line_width: int = 1
 
     def get_min_size(self):
@@ -100,6 +102,7 @@ class GEllipse(GItem):
 
 @dataclass
 class GFilledEllipse(GItem):
+    color: Color = Color('orange')
     def draw(self, c):
         c.color = str(self.color)
         c.fill_ellipse(self)
@@ -107,6 +110,7 @@ class GFilledEllipse(GItem):
 
 @dataclass
 class GText(GItem):
+    color: Color = Color('orange')
     font: str = ''
     text: str = ''
 
@@ -134,6 +138,7 @@ class GImage(GItem):
 @dataclass
 class GButton(GItem):
     back_color: Color = Color('gray')
+    color: Color = Color('black')
     font: str = ''
     text: str = ''
 
@@ -151,6 +156,7 @@ class GButton(GItem):
 @dataclass
 class GLabel(GItem):
     back_color: Color = Color('gray')
+    color: Color = Color('white')
     font: str = ''
     text: str = ''
 
