@@ -448,6 +448,10 @@ class Handler:
     def canvas_drag(self, evt):
         if not self.sel_items:
             return
+        def align(*values):
+            if evt.state & EVS_SHIFT:
+                return values[0] if len(values) == 1 else values
+            return self.grid_align(*values)
         self.remove_handles()
         elem = self.sel_elem
         if self.state != State.DRAGGING:
@@ -463,7 +467,7 @@ class Handler:
 
         if elem == Element.ITEM:
             x, y = self.sel_bounds.x, self.sel_bounds.y
-            off = self.grid_align(x + off[0]) - x, self.grid_align(y + off[1]) - y
+            off = align(x + off[0]) - x, align(y + off[1]) - y
             for item, orig in zip(self.sel_items, self.orig_bounds):
                 r = item.get_bounds()
                 r.x, r.y = orig.x + off[0], orig.y + off[1]
@@ -472,14 +476,14 @@ class Handler:
             item, orig = self.sel_items[0], self.orig_bounds[0]
             r = item.get_bounds()
             if elem & DIR_N:
-                r.y = self.grid_align(orig.y + off[1])
+                r.y = align(orig.y + off[1])
                 r.h = orig.y + orig.h - r.y
             if elem & DIR_E:
-                r.w = self.grid_align(orig.w + off[0])
+                r.w = align(orig.w + off[0])
             if elem & DIR_S:
-                r.h = self.grid_align(orig.h + off[1])
+                r.h = align(orig.h + off[1])
             if elem & DIR_W:
-                r.x = self.grid_align(orig.x + off[0])
+                r.x = align(orig.x + off[0])
                 r.w = orig.x + orig.w - r.x
             min_size = item.get_min_size()
             if r.w >= min_size[0] and r.h >= min_size[1]:
@@ -504,11 +508,11 @@ class Handler:
                 do_size = (evt.state & EVS_SHIFT) != 0
                 for item, orig in zip(self.sel_items, self.orig_bounds):
                     r = copy.copy(orig)
-                    r.x = self.grid_align(cur_bounds.x + (orig.x - orig_bounds.x) * cur_bounds.w // orig_bounds.w)
-                    r.y = self.grid_align(cur_bounds.y + (orig.y - orig_bounds.y) * cur_bounds.h // orig_bounds.h)
+                    r.x = align(cur_bounds.x + (orig.x - orig_bounds.x) * cur_bounds.w // orig_bounds.w)
+                    r.y = align(cur_bounds.y + (orig.y - orig_bounds.y) * cur_bounds.h // orig_bounds.h)
                     if do_size:
-                        r.w = self.grid_align(orig.w * cur_bounds.w // orig_bounds.w)
-                        r.h = self.grid_align(orig.h * cur_bounds.h // orig_bounds.h)
+                        r.w = align(orig.w * cur_bounds.w // orig_bounds.w)
+                        r.h = align(orig.h * cur_bounds.h // orig_bounds.h)
                         min_size = item.get_min_size()
                         if r.w < min_size[0] or r.h < min_size[1]:
                             continue
