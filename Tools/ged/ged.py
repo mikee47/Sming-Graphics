@@ -460,9 +460,11 @@ class Handler:
             self.draw_item(item)
 
         if elem == Element.ITEM:
+            x, y = self.sel_bounds.x, self.sel_bounds.y
+            off = self.grid_align(x + off[0]) - x, self.grid_align(y + off[1]) - y
             for item, orig in zip(self.sel_items, self.orig_bounds):
                 r = item.get_bounds()
-                r.x, r.y = self.grid_align(orig.x + off[0], orig.y + off[1])
+                r.x, r.y = orig.x + off[0], orig.y + off[1]
                 resize_item(item, r)
         elif len(self.sel_items) == 1:
             item, orig = self.sel_items[0], self.orig_bounds[0]
