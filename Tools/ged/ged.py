@@ -337,8 +337,7 @@ class Handler:
         self.sel_items.clear()
         self.state = State.IDLE
         self.redraw()
-        if self.on_sel_changed:
-            self.on_sel_changed(True)
+        self.sel_changed(True)
 
     def add_items(self, item_list):
         self.display_list.extend(item_list)
@@ -394,8 +393,7 @@ class Handler:
         self.state = State.IDLE
         self.sel_items = items
         self.redraw()
-        if self.on_sel_changed:
-            self.on_sel_changed(True)
+        self.sel_changed(True)
 
     def canvas_select(self, evt):
         self.canvas.focus_set()
@@ -406,8 +404,7 @@ class Handler:
             if not is_multi and self.sel_items:
                 self.remove_handles()
                 self.sel_items = []
-                if self.on_sel_changed:
-                    self.on_sel_changed(True)
+                self.sel_changed(True)
             return
 
         self.sel_elem = elem
@@ -421,8 +418,8 @@ class Handler:
             sel_changed = True
             self.sel_bounds = self.draw_handles()
         self.orig_bounds = [x.get_bounds() for x in self.sel_items]
-        if sel_changed and self.on_sel_changed:
-            self.on_sel_changed(True)
+        if sel_changed:
+            self.sel_changed(True)
 
     def get_cursor(self, elem):
         if elem is None:
@@ -519,9 +516,12 @@ class Handler:
                     resize_item(item, r)
 
         self.draw_handles()
-        if self.on_sel_changed:
-            self.on_sel_changed(False)
+        self.sel_changed(False)
 
+
+    def sel_changed(self, full: bool):
+        if self.on_sel_changed:
+            self.on_sel_changed(full)
 
     def canvas_end_move(self, evt):
         if self.state != State.DRAGGING:
@@ -563,8 +563,7 @@ class Handler:
                 item.x += xo
                 item.y += yo
             self.redraw()
-            if self.on_sel_changed:
-                self.on_sel_changed(False)
+            self.sel_changed(False)
 
         mod = evt.state & (EVS_CONTROL | EVS_SHIFT | EVS_ALTLEFT | EVS_ALTRIGHT)
         if mod & EVS_CONTROL:
@@ -724,7 +723,6 @@ class PropertyEditor(Editor):
                 var.set(values[0])
             if callback:
                 def handle_event(evt, callback=callback, var=var, ctrl=cb):
-                    print(evt.type.name)
                     if not self.is_updating:
                         callback(var, ctrl, evt.type)
                 cb.bind('<Double-1>', handle_event)
@@ -840,7 +838,7 @@ class ImageEditor(Editor):
             return
         self.is_updating = True
         try:
-            for k, v in dataclasses.asdict(image).items():
+            for k, v in image.asdict().items():
                 self.set_value(k, v)
         finally:
             self.is_updating = False
@@ -1023,6 +1021,22 @@ def run():
     prop = PropertyEditor(edit_frame)
 
     def value_changed(name, value):
+        if name == 'type':
+            # Must defer this as caller holds reference to var which messes things up when destroying fields
+            def change_type():
+                new_sel_items = []
+                for item in handler.sel_items:
+                    new_item = GItem.create(value)
+                    for a, v in item.asdict().items():
+                        if hasattr(new_item, a):
+                            setattr(new_item, a, v)
+                    i = handler.display_list.index(item)
+                    handler.display_list[i] = new_item
+                    new_sel_items.append(new_item)
+                handler.select(new_sel_items)
+            root.after(100, change_type)
+            return
+
         for item in handler.sel_items:
             if not hasattr(item, name):
                 continue
@@ -1050,10 +1064,10 @@ def run():
         prop.frame.pack(fill=tk.X, ipady=4)
         if full_change:
             typenames = set(x.typename for x in items)
-            prop.set_field('type', list(typenames), [])
+            prop.set_field('type', list(typenames), TYPENAMES)
         fields = {}
         for item in items:
-            for name, value in dataclasses.asdict(item).items():
+            for name, value in item.asdict().items():
                 values = fields.setdefault(name, set())
                 if str(value):
                     values.add(value)

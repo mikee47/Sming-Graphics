@@ -160,3 +160,7 @@ class GLabel(GItem):
         c.color = str(self.color)
         c.font = self.font
         c.draw_text(self, self.text, tk.CENTER, tk.CENTER)
+
+
+TYPENAMES = tuple(t.typename for t in sys.modules[__name__].__dict__.values()
+    if isinstance(t, type) and t != GItem and issubclass(t, GItem))
