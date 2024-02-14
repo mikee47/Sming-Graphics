@@ -270,6 +270,18 @@ class Handler:
                 self.size_change_pending = True
         c.bind('<Configure>', canvas_configure)
 
+    def load(self, data: dict):
+        for k, v in data.items():
+            setattr(self, k, v)
+
+    def asdict(self):
+        return dict(
+            width=self.width,
+            height=self.height,
+            scale=self.scale,
+            grid_alignment=self.grid_alignment,
+        )
+
     def set_size(self, width, height):
         if width == self.width and height == self.height:
             return
@@ -648,8 +660,6 @@ class Editor:
 class ProjectEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Project', 'proj-')
-        for name in ['width', 'height', 'scale', 'grid_alignment']:
-            self.add_entry_field(name, tk.IntVar)
 
 
 class PropertyEditor(Editor):
@@ -837,20 +847,23 @@ def run():
 
     def get_project_data():
         return {
+            'project': handler.asdict(),
             'fonts': font_assets.asdict(),
             'images': image_assets.asdict(),
             'layout': dl_serialise(handler.display_list),
         }
 
     def load_project(data):
-            font_assets.load(data['fonts'])
-            font_editor.update()
-            image_assets.load(data['images'])
-            image_editor.update()
-            handler.display_list = []
-            display_list = dl_deserialise(data['layout'])
-            handler.clear()
-            handler.add_items(display_list)
+        if 'project' in data:
+            handler.load(data['project'])
+        font_assets.load(data['fonts'])
+        font_editor.update()
+        image_assets.load(data['images'])
+        image_editor.update()
+        handler.display_list = []
+        display_list = dl_deserialise(data['layout'])
+        handler.clear()
+        handler.add_items(display_list)
 
     # Menus
     def fileClear():
@@ -955,18 +968,17 @@ def run():
     # Project
     project = ProjectEditor(edit_frame)
     project.frame.pack(fill=tk.X, ipady=4)
-    for name in project.fields.keys():
-        project.set_value(name, getattr(handler, name))
+    for k, v in handler.asdict().items():
+        var, _ = project.add_entry_field(k, tk.IntVar)
+        var.set(v)
+    def project_value_changed(name, value):
+        setattr(handler, name, value)
+        handler.redraw()
+    project.on_value_changed = project_value_changed
 
     # Properties
     prop = PropertyEditor(edit_frame)
 
-    def value_selected(name, value):
-        if name == 'font':
-            res_frame.select(font_editor.frame)
-        elif name == 'image':
-            res_frame.select(image_editor.frame)
-    prop.on_value_select = value_selected
     def value_changed(name, value):
         for item in handler.sel_items:
             if not hasattr(item, name):
@@ -1000,7 +1012,7 @@ def run():
         for item in items:
             for name, value in dataclasses.asdict(item).items():
                 values = fields.setdefault(name, set())
-                if value:
+                if str(value):
                     values.add(value)
         # ID must be unique for each item, don't allow group set
         if len(items) > 1:
@@ -1022,7 +1034,7 @@ def run():
                         ctrl.configure(values=image_assets.names())
                         res_frame.select(image_editor.frame)
                 callback = select_image
-            elif isinstance(values[0], Color):
+            elif values and isinstance(values[0], Color):
                 options = sorted(colormap.keys())
                 def select_color(var, ctrl, event_type):
                     if event_type == tk.EventType.ButtonPress:
