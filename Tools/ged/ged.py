@@ -261,6 +261,8 @@ class Handler:
         c.bind('<B1-Motion>', self.canvas_drag)
         c.bind('<ButtonRelease-1>', self.canvas_end_move)
         c.bind('<Any-KeyRelease>', self.canvas_key)
+        c.bind('<Control-a>', self.canvas_select_all)
+        c.bind('<Control-d>', self.canvas_duplicate_selection)
 
         # Respond to size changes but slow them down a bit as full redraw is expensive
         self.size_change_pending = False
@@ -567,6 +569,22 @@ class Handler:
         }.get(c)
         if itemtype is not None:
             add_item(itemtype)
+
+    def canvas_select_all(self, evt):
+        self.sel_items = list(self.display_list)
+        self.redraw()
+
+    def canvas_duplicate_selection(self, evt):
+        items = [copy.copy(x) for x in self.sel_items]
+        off = self.grid_align(20)
+        id_list = set(x.id for x in self.display_list)
+        for item in items:
+            item.assign_unique_id(id_list)
+            id_list.add(item.id)
+            item.x += off
+            item.y += off
+        self.sel_items = items
+        self.add_items(items)
 
 
 class Editor:
