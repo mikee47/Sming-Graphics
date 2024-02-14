@@ -260,7 +260,7 @@ class Handler:
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
         c.bind('<ButtonRelease-1>', self.canvas_end_move)
-        c.bind('<Any-KeyRelease>', self.canvas_key)
+        c.bind('<Any-KeyPress>', self.canvas_key)
         c.bind('<Control-a>', self.canvas_select_all)
         c.bind('<Control-d>', self.canvas_duplicate_selection)
 
@@ -553,26 +553,44 @@ class Handler:
             self.add_item(item)
             self.select([item])
 
-        mod = evt.state & (EVS_CONTROL | EVS_SHIFT | EVS_ALTLEFT | EVS_ALTRIGHT)
-        if mod == 0 and evt.keysym == 'Delete':
+        def delete_items():
             for item in self.sel_items:
                 self.display_list.remove(item)
             self.select([])
-            return
-        if len(evt.keysym) != 1 or (mod & EVS_CONTROL):
+
+        def shift_items(xo, yo):
+            for item in self.sel_items:
+                item.x += xo
+                item.y += yo
+            self.redraw()
+            if self.on_sel_changed:
+                self.on_sel_changed(False)
+
+        mod = evt.state & (EVS_CONTROL | EVS_SHIFT | EVS_ALTLEFT | EVS_ALTRIGHT)
+        if mod & EVS_CONTROL:
             return
         c = evt.keysym.upper() if (mod & EVS_SHIFT) else evt.keysym.lower()
-        itemtype = {
-            'r': 'Rect',
-            'R': 'FilledRect',
-            'e': 'Ellipse',
-            'E': 'FilledEllipse',
-            'i': 'Image',
-            't': 'Text',
-            'b': 'Button',
+        g = self.grid_alignment
+        opt = {
+            'delete': (delete_items,),
+            'left': (shift_items, -g, 0),
+            'right': (shift_items, g, 0),
+            'up': (shift_items, 0, -g),
+            'down': (shift_items, 0, g),
+            'LEFT': (shift_items, -1, 0),
+            'RIGHT': (shift_items, 1, 0),
+            'UP': (shift_items, 0, -1),
+            'DOWN': (shift_items, 0, 1),
+            'r': (add_item, 'Rect'),
+            'R': (add_item, 'FilledRect'),
+            'e': (add_item, 'Ellipse'),
+            'E': (add_item, 'FilledEllipse'),
+            'i': (add_item, 'Image'),
+            't': (add_item, 'Text'),
+            'b': (add_item, 'Button'),
         }.get(c)
-        if itemtype is not None:
-            add_item(itemtype)
+        if opt:
+            opt[0](*opt[1:])
 
     def canvas_select_all(self, evt):
         self.sel_items = list(self.display_list)
