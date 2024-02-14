@@ -588,6 +588,7 @@ class Handler:
             'i': (add_item, 'Image'),
             't': (add_item, 'Text'),
             'b': (add_item, 'Button'),
+            'l': (add_item, 'Label'),
         }.get(c)
         if opt:
             opt[0](*opt[1:])

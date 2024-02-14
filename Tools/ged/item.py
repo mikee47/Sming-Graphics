@@ -133,17 +133,30 @@ class GImage(GItem):
 
 @dataclass
 class GButton(GItem):
+    back_color: Color = Color('gray')
     font: str = ''
     text: str = ''
-    text_color: Color = Color('white')
 
     def draw(self, c):
         radius = min(self.w, self.h) // 8
         M = radius // 2
         r = self.get_bounds()
         r.inflate(-M, -M)
-        c.color = str(self.color)
+        c.color = str(self.back_color)
         c.fill_rounded_rect(self, radius)
-        c.color = str(self.text_color)
+        c.color = str(self.color)
         c.font = self.font
         c.draw_text(r, self.text, tk.CENTER, tk.CENTER)
+
+@dataclass
+class GLabel(GItem):
+    back_color: Color = Color('gray')
+    font: str = ''
+    text: str = ''
+
+    def draw(self, c):
+        c.color = str(self.back_color)
+        c.fill_rect(self)
+        c.color = str(self.color)
+        c.font = self.font
+        c.draw_text(self, self.text, tk.CENTER, tk.CENTER)
