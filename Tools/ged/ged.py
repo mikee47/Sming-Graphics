@@ -236,7 +236,7 @@ image_assets = None
 class State(Enum):
     IDLE = 0
     DRAGGING = 1
-    SELECTING = 2
+    PANNING = 2
 
 class Handler:
     def __init__(self, tk_root, width=320, height=240, scale=1, grid_alignment=8):
@@ -250,11 +250,18 @@ class Handler:
         self.state = State.IDLE
 
         self.frame = ttk.Frame(tk_root)
-        c = self.canvas = tk.Canvas(self.frame, background='gray')
-        c.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
-        s = ttk.Scrollbar(self.frame, orient=tk.HORIZONTAL, command=c.xview)
-        s.pack(side=tk.BOTTOM, fill=tk.X)
-        c.configure(xscrollcommand=s.set)
+        c = self.canvas = tk.Canvas(self.frame)
+        hs = ttk.Scrollbar(self.frame, orient=tk.HORIZONTAL, command=c.xview)
+        hs.pack(side=tk.BOTTOM, fill=tk.X)
+        vs = ttk.Scrollbar(self.frame, orient=tk.VERTICAL, command=c.yview)
+        vs.pack(side=tk.RIGHT, fill=tk.Y)
+        c.configure(xscrollcommand=hs.set, yscrollcommand=vs.set)
+        c.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+        # Windows
+        c.bind('<MouseWheel>', self.canvas_mousewheel)
+        # Linux
+        c.bind('<4>', self.canvas_mousewheel)
+        c.bind('<5>', self.canvas_mousewheel)
 
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
@@ -263,14 +270,6 @@ class Handler:
         c.bind('<Any-KeyPress>', self.canvas_key)
         c.bind('<Control-a>', self.canvas_select_all)
         c.bind('<Control-d>', self.canvas_duplicate_selection)
-
-        # Respond to size changes but slow them down a bit as full redraw is expensive
-        self.size_change_pending = False
-        def canvas_configure(evt):
-            if not self.size_change_pending:
-                self.canvas.after(200, self.size_changed)
-                self.size_change_pending = True
-        c.bind('<Configure>', canvas_configure)
 
     def load(self, data: dict):
         for k, v in data.items():
@@ -298,9 +297,9 @@ class Handler:
         self.size_changed()
 
     def size_changed(self):
-        self.size_change_pending = False
-        w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
-        self.draw_offset = ((w - self.width * self.scale) // 2, (h - self.height * self.scale) // 2)
+        w, h = self.tk_scale(self.width, self.height)
+        self.draw_offset = w//2, h//2
+        self.canvas.configure(scrollregion=(0, 0, 2*w, 2*h))
         self.redraw()
 
     def grid_align(self, *values):
@@ -405,6 +404,7 @@ class Handler:
                 self.remove_handles()
                 self.sel_items = []
                 self.sel_changed(True)
+            self.canvas.scan_mark(evt.x, evt.y)
             return
 
         self.sel_elem = elem
@@ -436,14 +436,37 @@ class Handler:
             Element.ITEM: 'target' if self.state == State.DRAGGING else 'hand1',
         }.get(elem)
 
+    def canvas_mousewheel(self, evt):
+        shift = evt.state & EVS_SHIFT
+        control = evt.state & EVS_CONTROL
+        if evt.num == 5:
+            delta = -1
+        elif evt.num == 4:
+            delta = 1
+        else:
+            delta = evt.delta
+        if control and not shift:
+            scale = self.scale + delta
+            if scale >= 1 and scale <= 5:
+                self.set_scale(scale)
+        elif shift and not control:
+            self.canvas.yview_scroll(delta, tk.UNITS)
+        elif not (control or shift):
+            self.canvas.xview_scroll(delta, tk.UNITS)
+
+
     def canvas_move(self, evt):
-        if self.state == State.DRAGGING:
+        if self.state != State.IDLE:
             return
         elem, item = self.get_current()
         self.canvas.configure(cursor= self.get_cursor(elem))
 
     def canvas_drag(self, evt):
         if not self.sel_items:
+            if self.state != State.PANNING:
+                self.state = State.PANNING
+                self.canvas.configure(cursor='target')
+            self.canvas.scan_dragto(evt.x, evt.y, gain=1)
             return
         def align(*values):
             if evt.state & EVS_SHIFT:
@@ -524,11 +547,13 @@ class Handler:
             self.on_sel_changed(full)
 
     def canvas_end_move(self, evt):
-        if self.state != State.DRAGGING:
-            return
-        self.state = State.IDLE
-        self.canvas.configure(cursor=self.get_cursor(self.sel_elem))
-        self.redraw() # Fix Z-ordering and ensure consistency
+        if self.state == State.PANNING:
+            self.state = State.IDLE
+            self.canvas.configure(cursor='')
+        elif self.state == State.DRAGGING:
+            self.state = State.IDLE
+            self.canvas.configure(cursor=self.get_cursor(self.sel_elem))
+            self.redraw() # Fix Z-ordering and ensure consistency
 
 
     def redraw(self):
