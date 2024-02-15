@@ -510,32 +510,40 @@ class Handler:
                 resize_item(item, r)
         else:
             # Scale the bounding rectangle
-            orig = orig_bounds = self.sel_bounds
+            orig = self.sel_bounds
             r = copy.copy(orig)
             if elem & DIR_N:
-                r.y = orig.y + off[1]
-                r.h = orig.y + orig.h - r.y
+                r.y += off[1]
+                r.h += orig.y - r.y
             elif elem & DIR_S:
-                r.h = orig.h + off[1]
+                r.h += off[1]
             if elem & DIR_E:
-                r.w = orig.w + off[0]
+                r.w += off[0]
             elif elem & DIR_W:
-                r.x = orig.x + off[0]
-                r.w = orig.x + orig.w - r.x
-            if r.w > 0 and r.h > 0:
-                cur_bounds = r
-                # Now use scaled rectangle to move/resize items
-                do_size = (evt.state & EVS_SHIFT) != 0
+                r.x += off[0]
+                r.w += orig.x - r.x
+            cur_bounds = r
+            orig_bounds = orig
+            if evt.state & EVS_CONTROL:
+                if r.w > 0 and r.h > 0:
+                    # Use scaled rectangle to resize items
+                    for item, orig in zip(self.sel_items, self.orig_bounds):
+                        r = Rect(
+                            align(cur_bounds.x + (orig.x - orig_bounds.x) * cur_bounds.w // orig_bounds.w),
+                            align(cur_bounds.y + (orig.y - orig_bounds.y) * cur_bounds.h // orig_bounds.h),
+                            align(orig.w * cur_bounds.w // orig_bounds.w),
+                            align(orig.h * cur_bounds.h // orig_bounds.h) )
+                        min_size = item.get_min_size()
+                        if r.w >= min_size[0] and r.h >= min_size[1]:
+                            resize_item(item, r)
+            else:
+                # Adjust item positions only within new bounding rectangle
                 for item, orig in zip(self.sel_items, self.orig_bounds):
                     r = copy.copy(orig)
-                    r.x = align(cur_bounds.x + (orig.x - orig_bounds.x) * cur_bounds.w // orig_bounds.w)
-                    r.y = align(cur_bounds.y + (orig.y - orig_bounds.y) * cur_bounds.h // orig_bounds.h)
-                    if do_size:
-                        r.w = align(orig.w * cur_bounds.w // orig_bounds.w)
-                        r.h = align(orig.h * cur_bounds.h // orig_bounds.h)
-                        min_size = item.get_min_size()
-                        if r.w < min_size[0] or r.h < min_size[1]:
-                            continue
+                    if elem & (DIR_N | DIR_S):
+                        r.y = align(cur_bounds.y + (orig.y - orig_bounds.y) * (cur_bounds.h - orig.h) // (orig_bounds.h - orig.h))
+                    if elem & (DIR_E | DIR_W):
+                        r.x = align(cur_bounds.x + (orig.x - orig_bounds.x) * (cur_bounds.w - orig.w) // (orig_bounds.w - orig.w))
                     resize_item(item, r)
 
         self.draw_handles()
