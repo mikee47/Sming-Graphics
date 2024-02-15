@@ -266,6 +266,8 @@ class Handler:
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
+        c.bind('<3>', self.canvas_pan_mark)
+        c.bind('<B3-Motion>', self.canvas_pan)
         c.bind('<ButtonRelease-1>', self.canvas_end_move)
         c.bind('<Any-KeyPress>', self.canvas_key)
         c.bind('<Control-a>', self.canvas_select_all)
@@ -394,6 +396,9 @@ class Handler:
         self.redraw()
         self.sel_changed(True)
 
+    def canvas_pan_mark(self, evt):
+        self.canvas.scan_mark(evt.x, evt.y)
+
     def canvas_select(self, evt):
         self.canvas.focus_set()
         self.sel_pos = (evt.x, evt.y)
@@ -461,12 +466,15 @@ class Handler:
         elem, item = self.get_current()
         self.canvas.configure(cursor= self.get_cursor(elem))
 
+    def canvas_pan(self, evt):
+        if self.state != State.PANNING:
+            self.state = State.PANNING
+            self.canvas.configure(cursor='target')
+        self.canvas.scan_dragto(evt.x, evt.y, gain=1)
+
     def canvas_drag(self, evt):
         if not self.sel_items:
-            if self.state != State.PANNING:
-                self.state = State.PANNING
-                self.canvas.configure(cursor='target')
-            self.canvas.scan_dragto(evt.x, evt.y, gain=1)
+            self.canvas_pan(evt)
             return
         def align(*values):
             if evt.state & EVS_SHIFT:
