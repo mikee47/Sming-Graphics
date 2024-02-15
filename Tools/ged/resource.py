@@ -66,9 +66,9 @@ class Image(Resource):
         if img:
             box = crop_rect.x, crop_rect.y, crop_rect.x + crop_rect.w, crop_rect.y + crop_rect.h
             img = self.image.crop(box)
-            img = img.resize((img.width * scale, img.height * scale))
+            img = img.resize((round(img.width * scale), round(img.height * scale)))
         else:
-            w, h = crop_rect.w * scale, crop_rect.h * scale
+            w, h = round(crop_rect.w * scale), round(crop_rect.h * scale)
             img = PIL.Image.new('RGB', (w, h), color='red')
             draw = PIL.ImageDraw.Draw(img)
             draw.line((0, 0, w, h), fill=128, width=3)
