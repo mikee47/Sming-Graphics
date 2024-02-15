@@ -266,9 +266,10 @@ class Handler:
         c.bind('<1>', self.canvas_select)
         c.bind('<Motion>', self.canvas_move)
         c.bind('<B1-Motion>', self.canvas_drag)
+        c.bind('<ButtonRelease-1>', self.canvas_end_move)
         c.bind('<3>', self.canvas_pan_mark)
         c.bind('<B3-Motion>', self.canvas_pan)
-        c.bind('<ButtonRelease-1>', self.canvas_end_move)
+        c.bind('<ButtonRelease-3>', self.canvas_end_pan)
         c.bind('<Any-KeyPress>', self.canvas_key)
         c.bind('<Control-a>', self.canvas_select_all)
         c.bind('<Control-d>', self.canvas_duplicate_selection)
@@ -299,9 +300,9 @@ class Handler:
         self.size_changed()
 
     def size_changed(self):
-        w, h = self.tk_scale(self.width, self.height)
-        self.draw_offset = w//2, h//2
-        self.canvas.configure(scrollregion=(0, 0, 2*w, 2*h))
+        xo, yo, w, h = self.tk_canvas_size()
+        self.draw_offset = xo, yo
+        self.canvas.configure(scrollregion=(0, 0, w, h))
         self.redraw()
 
     def grid_align(self, *values):
@@ -311,6 +312,12 @@ class Handler:
         if len(values) == 1:
             return round(values[0] * self.scale)
         return tuple(round(x * self.scale) for x in values)
+
+    def tk_canvas_size(self):
+        """Return 4-tuple (x, y, w, h) where (x,y) is top-left of display area, (w,h) is total canvas size"""
+        w, h = 2 * self.width * self.scale, 2 * self.height * self.scale
+        x, y = w // 4, h // 4
+        return x, y, w, h
 
     def tk_point(self, x, y):
         xo, yo = self.draw_offset
@@ -396,9 +403,6 @@ class Handler:
         self.redraw()
         self.sel_changed(True)
 
-    def canvas_pan_mark(self, evt):
-        self.canvas.scan_mark(evt.x, evt.y)
-
     def canvas_select(self, evt):
         self.canvas.focus_set()
         self.sel_pos = (evt.x, evt.y)
@@ -453,7 +457,14 @@ class Handler:
         if control and not shift:
             scale = self.scale + delta / 5
             if scale >= 1 and scale <= 5:
+                # Use mouse cursor position to determine new top-left corner (x, y)
+                s = scale / self.scale
+                x = round((self.canvas.canvasx(evt.x) * s) - evt.x)
+                y = round((self.canvas.canvasy(evt.y) * s) - evt.y)
                 self.set_scale(scale)
+                _, _, w, h = self.tk_canvas_size()
+                self.canvas.xview_moveto(x / w)
+                self.canvas.yview_moveto(y / h)
         elif shift and not control:
             self.canvas.yview_scroll(delta, tk.UNITS)
         elif not (control or shift):
@@ -466,11 +477,20 @@ class Handler:
         elem, item = self.get_current()
         self.canvas.configure(cursor= self.get_cursor(elem))
 
+    def canvas_pan_mark(self, evt):
+        self.canvas.scan_mark(evt.x, evt.y)
+        self.state = State.PANNING
+        self.canvas.configure(cursor='sizing')
+
     def canvas_pan(self, evt):
         if self.state != State.PANNING:
             self.state = State.PANNING
-            self.canvas.configure(cursor='target')
+            self.canvas.configure(cursor='sizing')
         self.canvas.scan_dragto(evt.x, evt.y, gain=1)
+
+    def canvas_end_pan(self, evt):
+        self.state = State.IDLE
+        self.canvas.configure(cursor='')
 
     def canvas_drag(self, evt):
         if not self.sel_items:
