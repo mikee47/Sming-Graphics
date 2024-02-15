@@ -307,8 +307,8 @@ class Handler:
 
     def tk_scale(self, *values):
         if len(values) == 1:
-            return value * self.scale
-        return tuple(x * self.scale for x in values)
+            return round(values[0] * self.scale)
+        return tuple(round(x * self.scale) for x in values)
 
     def tk_point(self, x, y):
         xo, yo = self.draw_offset
@@ -317,7 +317,7 @@ class Handler:
 
     def canvas_point(self, x, y):
         xo, yo = self.draw_offset
-        return ((x - xo) // self.scale, (y - yo) // self.scale)
+        return round((x - xo) / self.scale), round((y - yo) / self.scale)
 
     def tk_bounds(self, rect):
         xo, yo = self.draw_offset
@@ -326,7 +326,7 @@ class Handler:
 
     def tk_font(self, font_name: str):
         font = font_assets.get(font_name, font_assets.default)
-        return tkinter.font.Font(family=font.family, size=-font.size*self.scale)
+        return tkinter.font.Font(family=font.family, size=-self.tk_scale(font.size))
 
     def tk_image(self, image_name: str, crop_rect: Rect):
         return image_assets.get(image_name, Image()).get_tk_image(crop_rect, self.scale)
@@ -446,7 +446,7 @@ class Handler:
         else:
             delta = evt.delta
         if control and not shift:
-            scale = self.scale + delta
+            scale = self.scale + delta / 5
             if scale >= 1 and scale <= 5:
                 self.set_scale(scale)
         elif shift and not control:
@@ -478,7 +478,7 @@ class Handler:
             self.state = State.DRAGGING
             self.canvas.configure(cursor=self.get_cursor(elem))
             self.orig_bounds = [x.get_bounds() for x in self.sel_items]
-        off = (evt.x - self.sel_pos[0]) // self.scale, (evt.y - self.sel_pos[1]) // self.scale
+        off = round((evt.x - self.sel_pos[0]) / self.scale), round((evt.y - self.sel_pos[1]) / self.scale)
 
         def resize_item(item, r):
             item.bounds = r
