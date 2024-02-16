@@ -1,17 +1,44 @@
 import copy
+import dataclasses
 from dataclasses import dataclass
 from PIL.ImageColor import colormap
 rev_colormap = {value: name for name, value in colormap.items()}
 
 @dataclass
-class Rect:
+class DataObject:
+    def __post_init__(self):
+        pass
+
+    def asdict(self):
+        return dataclasses.asdict(self)
+
+    def fieldtype(self, field_name: str):
+        return self.__dataclass_fields__[field_name].type
+
+    def __getattr__(self, name):
+        name, sep, flag = name.partition('.')
+        if sep:
+            return flag in getattr(self, name)
+        return super().__getattr__(name)
+
+    def __setattr__(self, name, value):
+        name, sep, flag = name.partition('.')
+        if sep:
+            lst = getattr(self, name)
+            if value:
+                lst.append(flag)
+            else:
+                lst.remove(flag)
+            return
+        super().__setattr__(name, value)
+
+
+@dataclass
+class Rect(DataObject):
     x: int = 0
     y: int = 0
     w: int = 0
     h: int = 0
-
-    def __post_init__(self):
-        pass
 
     @property
     def bounds(self):
@@ -53,6 +80,4 @@ class Color(int):
 
     def __repr__(self):
         return str(self)
-
-
 

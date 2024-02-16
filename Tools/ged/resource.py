@@ -1,26 +1,27 @@
 import dataclasses
 from dataclasses import dataclass
 import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw
-from gtypes import Rect
+from gtypes import Rect, DataObject
+from enum import Enum
 
 type TkImage = PIL.ImageTk.PhotoImage
 
 @dataclass
-class Resource:
+class Resource(DataObject):
     name: str = ''
 
-    def __post_init__(self):
-        pass
 
-    def asdict(self):
-        return dataclasses.asdict(self)
-
+class FontStyle(Enum):
+    normal = 0
+    bold = 1
+    italic = 2
+    boldItalic = 3
 
 @dataclass
 class Font(Resource):
     family: str = ''
     size: int = 12
-    # style: list[str] For now, assume all styles are available
+    style: list[str] = dataclasses.field(default_factory=list)
 
 
 @dataclass

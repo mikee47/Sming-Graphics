@@ -1,6 +1,6 @@
 import sys
 import copy
-from gtypes import Rect, Color
+from gtypes import Rect, Color, DataObject
 import dataclasses
 from dataclasses import dataclass
 import tkinter as tk
@@ -17,6 +17,14 @@ class GItem(Rect):
         if isinstance(itemtype, str):
             itemtype = getattr(sys.modules[__name__], f'G{itemtype}')
         return itemtype(**field_values)
+
+    def copy_as(itemtype):
+        """Create a new item and copy over any applicable attributes"""
+        item = self.create(itemtype)
+        for a, v in self.asdict().items():
+            if hasattr(item, a):
+                setattr(item, a, v)
+        return item
 
     @classmethod
     @property
@@ -36,12 +44,6 @@ class GItem(Rect):
                 self.id = id
                 break
             n += 1
-
-    def asdict(self):
-        return dataclasses.asdict(self)
-
-    def fieldtype(self, field_name: str):
-        return self.__dataclass_fields__[field_name].type
 
     def get_min_size(self, offset=0):
         return (MIN_ITEM_WIDTH + offset, MIN_ITEM_HEIGHT + offset)
