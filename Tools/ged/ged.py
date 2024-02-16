@@ -290,6 +290,7 @@ class Handler:
     def load(self, data: dict):
         for k, v in data.items():
             setattr(self, k, v)
+        self.size_changed()
 
     def asdict(self):
         return dict(
