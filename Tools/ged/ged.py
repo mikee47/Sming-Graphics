@@ -326,7 +326,9 @@ class Handler:
 
     def canvas_point(self, x, y):
         xo, yo = self.draw_offset
-        return round((x - xo) / self.scale), round((y - yo) / self.scale)
+        x1 = round((self.canvas.canvasx(x) - xo) / self.scale)
+        y1 = round((self.canvas.canvasy(y) - yo) / self.scale)
+        return x1, y1
 
     def tk_bounds(self, rect):
         xo, yo = self.draw_offset
