@@ -740,19 +740,30 @@ class Editor:
         words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', name)
         return ' '.join(words).lower()
 
-    def add_field(self, name: str, ctrl: tk.Widget, var_type=tk.StringVar):
+    def add_field(self, name: str, ctrl: tk.Widget, var_type: tk.Variable):
         row = len(self.fields)
         self.add_label(self.text_from_name(name), row)
         var = var_type(name=self.field_prefix+name)
-        ctrl.configure(textvariable=var)
+        if isinstance(ctrl, tk.Scale):
+            ctrl.configure(variable=var)
+        else:
+            ctrl.configure(textvariable=var)
         var.trace_add('write', self.tk_value_changed)
         self.add_control(ctrl, row)
         fld = self.fields[name] = (var, ctrl)
         return fld
 
-    def add_entry_field(self, name: str, var_type=tk.StringVar):
+    def add_entry_field(self, name: str, var_type=tk.IntVar):
         c = ttk.Entry(self.frame)
         return self.add_field(name, c, var_type)
+
+    def add_scale_field(self, name: str, var_type: tk.Variable, from_: int | float, to: int | float, resolution: int | float = 1):
+        # Don't get variable trace callbacks for scale widgets (don't know why) so use command
+        def cmd_changed(value, var_type=var_type, name=name):
+            self.value_changed(name, float(value) if var_type == tk.DoubleVar else int(value))
+        c = tk.Scale(self.frame, orient=tk.HORIZONTAL, from_=from_, to=to, resolution=resolution, command=cmd_changed)
+        var, _ = self.add_field(name, c, var_type)
+        return var, c
 
     def add_combo_field(self, name: str, value_list=[], var_type=tk.StringVar):
         c = ttk.Combobox(self.frame, values=value_list)
@@ -805,6 +816,10 @@ class Editor:
 class ProjectEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Project', 'proj-')
+        self.add_entry_field('width')
+        self.add_entry_field('height')
+        self.add_scale_field('scale', tk.DoubleVar, MIN_SCALE, MAX_SCALE, 0.1)
+        self.add_entry_field('grid_alignment')
 
 
 class PropertyEditor(Editor):
@@ -841,7 +856,7 @@ class FontEditor(Editor):
         super().__init__(root, 'Font', 'font-')
         self.add_combo_field('name')
         self.add_combo_field('family', font_assets.families())
-        self.add_entry_field('size', tk.IntVar)
+        self.add_entry_field('size')
         self.add_check_fields('Style', ['normal', 'italic', 'bold', 'boldItalic'])
         self.update()
 
@@ -890,8 +905,8 @@ class ImageEditor(Editor):
         _, cb = self.add_combo_field('source')
         cb.bind('<Double-1>', self.choose_source)
         self.add_combo_field('format')
-        self.add_entry_field('width', tk.IntVar)
-        self.add_entry_field('height', tk.IntVar)
+        self.add_entry_field('width')
+        self.add_entry_field('height')
         self.update()
 
     def choose_source(self, evt):
@@ -1101,10 +1116,6 @@ def run():
     sep = ttk.Separator(toolbar, orient=tk.VERTICAL)
     sep.pack(side=tk.LEFT)
     addButton('List', fileList)
-    def changeScale():
-        scale = 1 + handler.scale % 4
-        handler.set_scale(scale)
-    addButton('scale', changeScale)
 
     # Status bar
     status = tk.StringVar()
@@ -1115,8 +1126,7 @@ def run():
     project = ProjectEditor(edit_frame)
     project.frame.pack(fill=tk.X, ipady=4)
     for k, v in handler.asdict().items():
-        var, _ = project.add_entry_field(k, tk.DoubleVar if k == 'scale' else tk.IntVar)
-        var.set(v)
+        project.set_value(k, v)
     def project_value_changed(name, value):
         if name == 'width':
             handler.set_size(value, handler.height)
