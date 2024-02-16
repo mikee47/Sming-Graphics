@@ -25,17 +25,24 @@ type ItemList = list[GItem]
 EVS_SHIFT = 0x0001
 EVS_LOCK = 0x0002
 EVS_CONTROL = 0x0004
-EVS_ALTLEFT = 0x0008
+EVS_MOD1 = 0x0008 # Left ALT
 EVS_MOD2 = 0x0010 # Numlock
 EVS_MOD3 = 0x0020
 EVS_MOD4 = 0x0040
-EVS_ALTRIGHT = 0x0080 # Mod5
+EVS_MOD5 = 0x0080 # Right ALT
+EVS_BUTTON1 = 0x0100
+EVS_BUTTON2 = 0x0200
+EVS_BUTTON3 = 0x0400
+EVS_BUTTON4 = 0x0800
+EVS_BUTTON5 = 0x1000
 
+# Display scaling
+MIN_SCALE, MAX_SCALE = 1.0, 5.0
 
 def align(boundary: int, *values):
-    if boundary <= 1:
-        return values
     def align_single(value):
+        if boundary <= 1:
+            return value
         n = (value + boundary // 2) // boundary
         return n * boundary
     if len(values) == 1:
@@ -243,6 +250,7 @@ class State(Enum):
     IDLE = 0
     DRAGGING = 1
     PANNING = 2
+    SCALING = 3
 
 class Handler:
     def __init__(self, tk_root, width: int = 320, height: int = 240, scale: float = 1.0, grid_alignment: int = 8):
@@ -307,11 +315,23 @@ class Handler:
         self.height = height
         self.size_changed()
     
-    def set_scale(self, scale: float):
-        if scale == self.scale:
+    def set_scale(self, scale: float, refpos: CanvasPoint = None):
+        if scale == self.scale or scale < MIN_SCALE or scale > MAX_SCALE:
             return
+        if refpos is None:
+            # Use current displayed centre
+            x, y = self.canvas.winfo_width() // 2, self.canvas.winfo_height() // 2
+        else:
+            x, y = refpos
+        # Adjust scrollbars so given point remains unchanged with new scale
+        s = scale / self.scale
+        x = round((self.canvas.canvasx(x) * s) - x)
+        y = round((self.canvas.canvasy(y) * s) - y)
         self.scale = scale
         self.size_changed()
+        _, _, w, h = self.tk_canvas_size()
+        self.canvas.xview_moveto(x / w)
+        self.canvas.yview_moveto(y / h)
         if self.on_scale_changed:
             self.on_scale_changed(self)
 
@@ -467,6 +487,11 @@ class Handler:
     def canvas_mousewheel(self, evt):
         shift = evt.state & EVS_SHIFT
         control = evt.state & EVS_CONTROL
+        if evt.state & EVS_BUTTON3:
+            if self.state != State.SCALING:
+                self.set_cursor('circle')
+            self.state = State.SCALING
+            control = True
         if evt.num == 5:
             delta = -1
         elif evt.num == 4:
@@ -475,41 +500,37 @@ class Handler:
             delta = evt.delta
         if control and not shift:
             scale = round(self.scale + delta / 5, 2)
-            if scale >= 1 and scale <= 5:
-                # Use mouse cursor position to determine new top-left corner (x, y)
-                s = scale / self.scale
-                x = round((self.canvas.canvasx(evt.x) * s) - evt.x)
-                y = round((self.canvas.canvasy(evt.y) * s) - evt.y)
-                self.set_scale(scale)
-                _, _, w, h = self.tk_canvas_size()
-                self.canvas.xview_moveto(x / w)
-                self.canvas.yview_moveto(y / h)
+            self.set_scale(scale, (evt.x, evt.y))
         elif shift and not control:
             self.canvas.yview_scroll(delta, tk.UNITS)
         elif not (control or shift):
             self.canvas.xview_scroll(delta, tk.UNITS)
 
+    def set_cursor(self, cursor: str):
+        self.canvas.configure(cursor=cursor)
 
     def canvas_move(self, evt):
         if self.state != State.IDLE:
             return
         elem, item = self.get_current()
-        self.canvas.configure(cursor= self.get_cursor(elem))
+        self.set_cursor(self.get_cursor(elem))
 
     def canvas_pan_mark(self, evt):
         self.canvas.scan_mark(evt.x, evt.y)
         self.state = State.PANNING
-        self.canvas.configure(cursor='sizing')
+        self.set_cursor('sizing')
 
     def canvas_pan(self, evt):
-        if self.state != State.PANNING:
+        if self.state == State.IDLE:
             self.state = State.PANNING
-            self.canvas.configure(cursor='sizing')
+            self.set_cursor('sizing')
+        elif self.state != State.PANNING:
+            return
         self.canvas.scan_dragto(evt.x, evt.y, gain=1)
 
     def canvas_end_pan(self, evt):
         self.state = State.IDLE
-        self.canvas.configure(cursor='')
+        self.set_cursor('')
 
     def canvas_drag(self, evt):
         if not self.sel_items:
@@ -523,7 +544,7 @@ class Handler:
         elem = self.sel_elem
         if self.state != State.DRAGGING:
             self.state = State.DRAGGING
-            self.canvas.configure(cursor=self.get_cursor(elem))
+            self.set_cursor(self.get_cursor(elem))
             self.orig_bounds = [x.get_bounds() for x in self.sel_items]
         off = round((evt.x - self.sel_pos[0]) / self.scale), round((evt.y - self.sel_pos[1]) / self.scale)
 
@@ -604,10 +625,10 @@ class Handler:
     def canvas_end_move(self, evt):
         if self.state == State.PANNING:
             self.state = State.IDLE
-            self.canvas.configure(cursor='')
+            self.set_cursor('')
         elif self.state == State.DRAGGING:
             self.state = State.IDLE
-            self.canvas.configure(cursor=self.get_cursor(self.sel_elem))
+            self.set_cursor(self.get_cursor(self.sel_elem))
             self.redraw() # Fix Z-ordering and ensure consistency
 
 
@@ -645,7 +666,7 @@ class Handler:
             self.redraw()
             self.sel_changed(False)
 
-        mod = evt.state & (EVS_CONTROL | EVS_SHIFT | EVS_ALTLEFT | EVS_ALTRIGHT)
+        mod = evt.state & (EVS_CONTROL | EVS_SHIFT | EVS_MOD1 | EVS_MOD5)
         if mod & EVS_CONTROL:
             return
         c = evt.keysym.upper() if (mod & EVS_SHIFT) else evt.keysym.lower()
