@@ -12,8 +12,14 @@ import tkinter as tk
 import tkinter.font
 from tkinter import ttk, filedialog, colorchooser
 from gtypes import colormap
-from resource import Font, Image
+from resource import Font, Image, TkImage
 from item import *
+
+type TkVarType = str | int | float # python types used for tk.StringVar, tk.IntVar, tk.DoubleVar
+type CanvasPoint = typle[int, int] # x, y on canvas
+type CanvasRect = tuple[int, int, int, int] # x0, y0, x1, y1 on canvas
+type DisplayPoint = tuple[int, int] # x, y on display
+type ItemList = list[GItem]
 
 # Event state modifier masks
 EVS_SHIFT = 0x0001
@@ -239,11 +245,11 @@ class State(Enum):
     PANNING = 2
 
 class Handler:
-    def __init__(self, tk_root, width=320, height=240, scale=1, grid_alignment=8):
+    def __init__(self, tk_root, width: int = 320, height: int = 240, scale: float = 1.0, grid_alignment: int = 8):
         self.width = width
         self.height = height
         self.scale = scale
-        self.grid_alignment = grid_alignment
+        self.grid_alignment: int = grid_alignment
         self.display_list = []
         self.sel_items = []
         self.on_sel_changed = None
@@ -293,14 +299,14 @@ class Handler:
             grid_alignment=self.grid_alignment,
         )
 
-    def set_size(self, width, height):
+    def set_size(self, width: int, height: int):
         if width == self.width and height == self.height:
             return
         self.width = width
         self.height = height
         self.size_changed()
     
-    def set_scale(self, scale):
+    def set_scale(self, scale: float):
         if scale == self.scale:
             return
         self.scale = scale
@@ -328,28 +334,29 @@ class Handler:
         x, y = w // 4, h // 4
         return x, y, w, h
 
-    def tk_point(self, x, y):
+    def tk_point(self, x: int, y: int):
         xo, yo = self.draw_offset
         x, y = self.tk_scale(x, y)
         return (xo + x, yo + y)
 
-    def canvas_point(self, x, y):
+    def canvas_point(self, x: int, y: int) -> DisplayPoint:
         xo, yo = self.draw_offset
         x1 = round((self.canvas.canvasx(x) - xo) / self.scale)
         y1 = round((self.canvas.canvasy(y) - yo) / self.scale)
         return x1, y1
 
-    def tk_bounds(self, rect):
+    def tk_bounds(self, rect: Rect) -> CanvasRect:
         xo, yo = self.draw_offset
         b = self.tk_scale(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h)
         return (xo + b[0], yo + b[1], xo + b[2], yo + b[3])
 
-    def tk_font(self, font_name: str):
+    def tk_font(self, font_name: str) -> tk.font.Font:
         font = font_assets.get(font_name, font_assets.default)
-        return tkinter.font.Font(family=font.family, size=-self.tk_scale(font.size))
+        return tk.font.Font(family=font.family, size=-self.tk_scale(font.size))
 
-    def tk_image(self, image_name: str, crop_rect: Rect):
-        return image_assets.get(image_name, Image()).get_tk_image(crop_rect, self.scale)
+    def tk_image(self, image_name: str, crop_rect: Rect) -> TkImage:
+        image_resource = image_assets.get(image_name, Image())
+        return image_resource.get_tk_image(crop_rect, self.scale)
 
     def clear(self):
         self.display_list.clear()
@@ -358,24 +365,24 @@ class Handler:
         self.redraw()
         self.sel_changed(True)
 
-    def add_items(self, item_list):
-        self.display_list.extend(item_list)
+    def add_items(self, items: ItemList):
+        self.display_list.extend(items)
         self.redraw()
 
-    def add_item(self, item):
+    def add_item(self, item: GItem):
         self.display_list.append(item)
         self.draw_item(item)
 
-    def draw_item(self, item):
+    def draw_item(self, item: GItem):
         tags = ('item', str(Element.ITEM), item.id)
         c = Canvas(self, tags)
         item.draw(c)
 
-    def remove_item(self, item):
+    def remove_item(self, item: GItem):
         self.canvas.delete(item.id)
         self.display_list.remove(item)
 
-    def get_current(self):
+    def get_current(self) -> tuple[Element, GItem]:
         tags = self.canvas.gettags(tk.CURRENT)
         if len(tags) < 2:
             return None, None
@@ -408,7 +415,7 @@ class Handler:
     def remove_handles(self):
         self.canvas.delete('handle')
 
-    def select(self, items: list):
+    def select(self, items: ItemList):
         self.state = State.IDLE
         self.sel_items = items
         self.redraw()
@@ -441,7 +448,7 @@ class Handler:
         if sel_changed:
             self.sel_changed(True)
 
-    def get_cursor(self, elem):
+    def get_cursor(self, elem: Element):
         if elem is None:
             return ''
         return {
@@ -682,7 +689,7 @@ class Handler:
 
 
 class Editor:
-    def __init__(self, root, title, field_prefix):
+    def __init__(self, root, title: str, field_prefix: str):
         self.frame = ttk.LabelFrame(root, text=title)
         self.field_prefix = field_prefix
         self.frame.columnconfigure(1, weight=1)
@@ -695,21 +702,21 @@ class Editor:
             w.destroy()
         self.fields.clear()
 
-    def add_label(self, text, row):
+    def add_label(self, text: str, row: int):
         label = ttk.Label(self.frame, text=text)
         label.grid(row=row, column=0, sticky=tk.E, padx=8)
         return label
 
-    def add_control(self, ctrl, row):
+    def add_control(self, ctrl: tk.Widget, row: int):
         ctrl.grid(row=row, column=1, sticky=tk.EW, padx=4, pady=2)
         return ctrl
 
     @staticmethod
-    def text_from_name(name: str):
+    def text_from_name(name: str) -> str:
         words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', name)
         return ' '.join(words).lower()
 
-    def add_field(self, name: str, ctrl, var_type=tk.StringVar):
+    def add_field(self, name: str, ctrl: tk.Widget, var_type=tk.StringVar):
         row = len(self.fields)
         self.add_label(self.text_from_name(name), row)
         var = var_type(name=self.field_prefix+name)
@@ -727,7 +734,7 @@ class Editor:
         c = ttk.Combobox(self.frame, values=value_list)
         return self.add_field(name, c, var_type)
 
-    def add_check_fields(self, title, names: list):
+    def add_check_fields(self, title: str, names: list):
         if title:
             frame = ttk.LabelFrame(self.frame, text=title)
         else:
@@ -757,15 +764,15 @@ class Editor:
         except tk.TclError: # Can happen whilst typing if conversion fails, empty strings, etc.
             pass
 
-    def value_changed(self, name, value):
+    def value_changed(self, name: str, value: TkVarType):
         if self.on_value_changed:
             self.on_value_changed(name, value)
 
-    def set_value(self, name, value):
+    def set_value(self, name: str, value: TkVarType):
         var, _ = self.fields[name]
         var.set(value)
 
-    def get_value(self, name):
+    def get_value(self, name: str) -> TkVarType:
         var, _ = self.fields[name]
         return var.get()
 
@@ -814,7 +821,7 @@ class FontEditor(Editor):
         self.add_check_fields('Style', ['normal', 'italic', 'bold', 'boldItalic'])
         self.update()
 
-    def value_changed(self, name, value):
+    def value_changed(self, name: str, value: TkVarType):
         if name == 'name':
             font = font_assets.get(value)
             if font:
@@ -839,7 +846,7 @@ class FontEditor(Editor):
             font_name = font_names[0]
         self.select(font_name)
 
-    def select(self, font):
+    def select(self, font: str | Font):
         if font is None:
             font = font_assets.default
         elif isinstance(font, str):
@@ -877,7 +884,7 @@ class ImageEditor(Editor):
             image_assets.append(image)
             self.update()
 
-    def value_changed(self, name, value):
+    def value_changed(self, name: str, value: TkVarType):
         if name == 'name':
             image = image_assets.get(value)
             if image:
@@ -901,7 +908,7 @@ class ImageEditor(Editor):
             image = image_assets[0]
         self.select(image)
 
-    def select(self, image):
+    def select(self, image: str | Image):
         if isinstance(image, str):
             image = image_assets.get(image)
         if not image:
@@ -927,14 +934,14 @@ def run():
         with open(filename) as f:
             return json_loads(f.read())
 
-    def json_save(data, filename):
+    def json_save(data: dict, filename):
         with open(filename, "w") as f:
             json.dump(data, f, indent=4)
 
     def json_dumps(obj):
         return json.dumps(obj, indent=4)
 
-    def dl_serialise(display_list):
+    def dl_serialise(display_list: ItemList) -> dict:
         data = []
         for item in display_list:
             d = {
@@ -948,7 +955,7 @@ def run():
             data.append(d)
         return data
 
-    def dl_deserialise(data):
+    def dl_deserialise(data: dict) -> ItemList:
         display_list = []
         for d in data:
             item = GItem.create(d.pop('type'), id=d.pop('id'))
@@ -958,7 +965,7 @@ def run():
             display_list.append(item)
         return display_list
 
-    def get_project_data():
+    def get_project_data() -> dict:
         return {
             'project': handler.asdict(),
             'fonts': font_assets.asdict(),
@@ -966,7 +973,7 @@ def run():
             'layout': dl_serialise(handler.display_list),
         }
 
-    def load_project(data):
+    def load_project(data: dict):
         if 'project' in data:
             handler.load(data['project'])
             for k, v in data['project'].items():
@@ -1097,7 +1104,7 @@ def run():
     # Properties
     prop = PropertyEditor(edit_frame)
 
-    def value_changed(name, value):
+    def value_changed(name: str, value: TkVarType):
         if name == 'type':
             # Must defer this as caller holds reference to var which messes things up when destroying fields
             def change_type():
@@ -1190,7 +1197,7 @@ def run():
     font_assets = FontAssets()
     font_editor = FontEditor(res_frame)
     res_frame.add(font_editor.frame, text='Fonts', sticky=tk.NSEW)
-    def font_value_changed(name, value):
+    def font_value_changed(name: str, value: TkVarType):
         # print(f'font_value_changed("{name}", "{value}")')
         handler.redraw()
     font_editor.on_value_changed = font_value_changed
@@ -1200,7 +1207,7 @@ def run():
     image_assets = ImageAssets()
     image_editor = ImageEditor(res_frame)
     res_frame.add(image_editor.frame, text='Images', sticky=tk.NSEW)
-    def image_value_changed(name, value):
+    def image_value_changed(name: str, value: TkVarType):
         # print(f'image_value_changed("{name}", "{value}")')
         handler.redraw()
     image_editor.on_value_changed = image_value_changed
