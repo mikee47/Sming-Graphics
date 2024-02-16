@@ -1,6 +1,9 @@
 import dataclasses
 from dataclasses import dataclass
 import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw
+from gtypes import Rect
+
+type TkImage = PIL.ImageTk.PhotoImage
 
 @dataclass
 class Resource:
@@ -40,7 +43,7 @@ class Image(Resource):
         except:
             pass
 
-    def get_tk_image(self, crop_rect, scale: int = 1):
+    def get_tk_image(self, crop_rect: Rect, scale: float = 1) -> TkImage:
         w, h = self.width, self.height
         img = self.image
         if img and (img.width != w or img.height != h):
