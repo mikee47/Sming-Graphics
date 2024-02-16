@@ -674,6 +674,7 @@ class Handler:
     def canvas_select_all(self, evt):
         self.sel_items = list(self.display_list)
         self.redraw()
+        self.sel_changed(True)
 
     def canvas_duplicate_selection(self, evt):
         items = [copy.copy(x) for x in self.sel_items]
@@ -686,6 +687,7 @@ class Handler:
             item.y += off
         self.sel_items = items
         self.add_items(items)
+        self.sel_changed(True)
 
 
 class Editor:
@@ -1094,8 +1096,14 @@ def run():
         var, _ = project.add_entry_field(k, tk.DoubleVar if k == 'scale' else tk.IntVar)
         var.set(v)
     def project_value_changed(name, value):
-        setattr(handler, name, value)
-        handler.redraw()
+        if name == 'width':
+            handler.set_size(value, handler.height)
+        elif name == 'height':
+            handler.set_size(handler.width, value)
+        elif name == 'scale':
+            handler.set_scale(value)
+        else:
+            setattr(handler, name, value)
     project.on_value_changed = project_value_changed
     def scale_changed(handler):
         project.set_value('scale', handler.scale)
