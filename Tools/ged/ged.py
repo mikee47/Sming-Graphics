@@ -769,20 +769,18 @@ class Editor:
         c = ttk.Combobox(self.frame, values=value_list)
         return self.add_field(name, c, var_type)
 
-    def add_check_fields(self, title: str, names: list):
-        if title:
-            frame = ttk.LabelFrame(self.frame, text=title)
-        else:
-            frame = ttk.Frame(self.frame)
+    def add_check_fields(self, name: str, value_names: list):
+        frame = ttk.LabelFrame(self.frame, text=self.text_from_name(name))
         row = len(self.fields)
         self.add_control(frame, row)
         frame.grid(column=0, columnspan=2)
-        for name in names:
-            var = tk.BooleanVar(name=self.field_prefix+name)
+        for value_name in value_names:
+            full_value_name = f'{name}.{value_name}'
+            var = tk.BooleanVar(name=self.field_prefix+full_value_name)
             var.trace_add('write', self.tk_value_changed)
-            ctrl = ttk.Checkbutton(frame, variable=var, text=self.text_from_name(name))
+            ctrl = ttk.Checkbutton(frame, variable=var, text=self.text_from_name(value_name))
             ctrl.pack(side=tk.LEFT)
-            self.fields[name] = (var, ctrl)
+            self.fields[full_value_name] = (var, ctrl)
             row += 1
 
     def tk_value_changed(self, name1, name2, op):
@@ -811,6 +809,13 @@ class Editor:
         var, _ = self.fields[name]
         return var.get()
 
+    def load_values(self, object):
+        self.is_updating = True
+        try:
+            for name, (var, _) in self.fields.items():
+                var.set(getattr(object, name))
+        finally:
+            self.is_updating = False
 
 
 class ProjectEditor(Editor):
@@ -857,7 +862,7 @@ class FontEditor(Editor):
         self.add_combo_field('name')
         self.add_combo_field('family', font_assets.families())
         self.add_entry_field('size')
-        self.add_check_fields('Style', ['normal', 'italic', 'bold', 'boldItalic'])
+        self.add_check_fields('style', ['normal', 'italic', 'bold', 'boldItalic'])
         self.update()
 
     def value_changed(self, name: str, value: TkVarType):
@@ -890,12 +895,7 @@ class FontEditor(Editor):
             font = font_assets.default
         elif isinstance(font, str):
             font = font_assets.get(font, font_assets.default)
-        self.is_updating = True
-        try:
-            for f in ['name', 'family', 'size']:
-                self.set_value(f, getattr(font, f))
-        finally:
-            self.is_updating = False
+        self.load_values(font)
 
 
 class ImageEditor(Editor):
@@ -954,12 +954,7 @@ class ImageEditor(Editor):
             for var, _ in self.fields.values():
                 var.set('')
             return
-        self.is_updating = True
-        try:
-            for k, v in image.asdict().items():
-                self.set_value(k, v)
-        finally:
-            self.is_updating = False
+        self.load_values(image)
 
 
 def run():
@@ -1125,8 +1120,7 @@ def run():
     # Project
     project = ProjectEditor(edit_frame)
     project.frame.pack(fill=tk.X, ipady=4)
-    for k, v in handler.asdict().items():
-        project.set_value(k, v)
+    project.load_values(handler)
     def project_value_changed(name, value):
         if name == 'width':
             handler.set_size(value, handler.height)
@@ -1150,10 +1144,7 @@ def run():
             def change_type():
                 new_sel_items = []
                 for item in handler.sel_items:
-                    new_item = GItem.create(value)
-                    for a, v in item.asdict().items():
-                        if hasattr(new_item, a):
-                            setattr(new_item, a, v)
+                    new_item = item.copy_as(value)
                     i = handler.display_list.index(item)
                     handler.display_list[i] = new_item
                     new_sel_items.append(new_item)
