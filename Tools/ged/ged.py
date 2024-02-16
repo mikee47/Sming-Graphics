@@ -247,6 +247,7 @@ class Handler:
         self.display_list = []
         self.sel_items = []
         self.on_sel_changed = None
+        self.on_scale_changed = None
         self.state = State.IDLE
 
         self.frame = ttk.Frame(tk_root)
@@ -257,6 +258,12 @@ class Handler:
         vs.pack(side=tk.RIGHT, fill=tk.Y)
         c.configure(xscrollcommand=hs.set, yscrollcommand=vs.set)
         c.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+
+        def set_default_scroll_positions():
+            c.xview_moveto(0.22)
+            c.yview_moveto(0.22)
+        c.after(100, set_default_scroll_positions)
+
         # Windows
         c.bind('<MouseWheel>', self.canvas_mousewheel)
         # Linux
@@ -298,6 +305,8 @@ class Handler:
             return
         self.scale = scale
         self.size_changed()
+        if self.on_scale_changed:
+            self.on_scale_changed(self)
 
     def size_changed(self):
         xo, yo, w, h = self.tk_canvas_size()
@@ -457,7 +466,7 @@ class Handler:
         else:
             delta = evt.delta
         if control and not shift:
-            scale = self.scale + delta / 5
+            scale = round(self.scale + delta / 5, 2)
             if scale >= 1 and scale <= 5:
                 # Use mouse cursor position to determine new top-left corner (x, y)
                 s = scale / self.scale
@@ -960,6 +969,8 @@ def run():
     def load_project(data):
         if 'project' in data:
             handler.load(data['project'])
+            for k, v in data['project'].items():
+                project.set_value(k, v)
         font_assets.load(data['fonts'])
         font_editor.update()
         image_assets.load(data['images'])
@@ -1029,7 +1040,7 @@ def run():
         print(json_dumps(data))
 
     root = tk.Tk(className='GED')
-    root.geometry('800x600')
+    root.geometry('1000x600')
     root.title('Graphical Layout Editor')
 
     pane = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
@@ -1073,12 +1084,15 @@ def run():
     project = ProjectEditor(edit_frame)
     project.frame.pack(fill=tk.X, ipady=4)
     for k, v in handler.asdict().items():
-        var, _ = project.add_entry_field(k, tk.IntVar)
+        var, _ = project.add_entry_field(k, tk.DoubleVar if k == 'scale' else tk.IntVar)
         var.set(v)
     def project_value_changed(name, value):
         setattr(handler, name, value)
         handler.redraw()
     project.on_value_changed = project_value_changed
+    def scale_changed(handler):
+        project.set_value('scale', handler.scale)
+    handler.on_scale_changed = scale_changed
 
     # Properties
     prop = PropertyEditor(edit_frame)
