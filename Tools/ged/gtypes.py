@@ -15,22 +15,6 @@ class DataObject:
     def fieldtype(self, field_name: str):
         return self.__dataclass_fields__[field_name].type
 
-    def __getattr__(self, name):
-        name, sep, flag = name.partition('.')
-        if sep:
-            return flag in getattr(self, name)
-        return super().__getattr__(name)
-
-    def __setattr__(self, name, value):
-        name, sep, flag = name.partition('.')
-        if sep:
-            lst = getattr(self, name)
-            if value:
-                lst.append(flag)
-            else:
-                lst.remove(flag)
-            return
-        super().__setattr__(name, value)
 
 
 @dataclass

@@ -115,6 +115,7 @@ class GText(GItem):
     color: Color = Color('orange')
     font: str = ''
     text: str = ''
+    fontstyle: list[str] = dataclasses.field(default_factory=list)
 
     def draw(self, c):
         c.color = str(self.color)
@@ -143,6 +144,7 @@ class GButton(GItem):
     color: Color = Color('black')
     font: str = ''
     text: str = ''
+    fontstyle: list[str] = dataclasses.field(default_factory=list)
 
     def draw(self, c):
         radius = min(self.w, self.h) // 8

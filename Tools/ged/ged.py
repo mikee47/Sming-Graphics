@@ -769,19 +769,81 @@ class Editor:
         c = ttk.Combobox(self.frame, values=value_list)
         return self.add_field(name, c, var_type)
 
-    def add_check_fields(self, name: str, value_names: list):
-        frame = ttk.LabelFrame(self.frame, text=self.text_from_name(name))
+    def add_check_fields(self, name: str, values: list, callback=None):
         row = len(self.fields)
+        self.add_label(self.text_from_name(name), row)
+        frame = ttk.Frame(self.frame)
         self.add_control(frame, row)
-        frame.grid(column=0, columnspan=2)
-        for value_name in value_names:
-            full_value_name = f'{name}.{value_name}'
-            var = tk.BooleanVar(name=self.field_prefix+full_value_name)
-            var.trace_add('write', self.tk_value_changed)
-            ctrl = ttk.Checkbutton(frame, variable=var, text=self.text_from_name(value_name))
+        var = set()
+        ctrls = {}
+        for value in values:
+            def check_invoked(name=name, value=value, callback=callback):
+                var, ctrls = self.fields[name]
+                ctrl = ctrls[value]
+                state = ctrl.state()
+                if 'selected' in state:
+                    var.add(value)
+                else:
+                    var.remove(value)
+                if callback:
+                    callback(var)
+                for f, c in ctrls.items():
+                    c.state(['selected' if f in var else '!selected'])
+            ctrl = ttk.Checkbutton(frame, text=self.text_from_name(value), command=check_invoked)
+            ctrl.state(['!alternate'])
             ctrl.pack(side=tk.LEFT)
-            self.fields[full_value_name] = (var, ctrl)
+            ctrls[value] = ctrl
+        row += 1
+        self.fields[name] = (var, ctrls)
+
+    def add_check_fields2(self, name: str, value_groups: dict, callback=None):
+        """Split set up into distinct parts"""
+        row = len(self.fields)
+        frame = ttk.LabelFrame(self.frame, text=self.text_from_name(name))
+        frame.grid(column=0, columnspan=2)
+        var = set()
+        ctrls = {}
+        row = 0 # Within our new frame
+        for group, values in value_groups.items():
+            label = ttk.Label(frame, text=self.text_from_name(group))
+            label.grid(row=row, column=0, sticky=tk.E, padx=8)
+            group_frame = ttk.Frame(frame)
+            self.add_control(group_frame, row)
             row += 1
+            def split(value):
+                text, _, value = value.partition('|')
+                return (text, value) if value else (text, text)
+            value_set = {split(x)[1] for x in values} if isinstance(values, set) else []
+            for value in values:
+                text, value = split(value)
+                def check_invoked(name=name, value=value, callback=callback, value_set=value_set):
+                    var, ctrls = self.fields[name]
+                    ctrl = ctrls[value]
+                    state = ctrl.state()
+                    for v in value_set:
+                        if v != value:
+                            var.discard(v)
+                    if 'selected' in state:
+                        var.add(value)
+                    else:
+                        var.discard(value)
+                    if callback:
+                        callback(var, value)
+                    for f, c in ctrls.items():
+                        c.state(['selected' if f in var else '!selected'])
+                    self.value_changed(name, var)
+                ctrl = ttk.Checkbutton(group_frame, text=text, command=check_invoked)
+                ctrl.state(['!alternate'])
+                ctrl.pack(side=tk.LEFT)
+                ctrls[value] = ctrl
+        self.fields[name] = (var, ctrls)
+
+    def update_fields2(self, name, value):
+        var, ctrls = self.fields[name]
+        var.clear()
+        var |= value
+        for f, c in ctrls.items():
+            c.state(['selected' if f in var else '!selected'])
 
     def tk_value_changed(self, name1, name2, op):
         if self.is_updating:
@@ -802,18 +864,25 @@ class Editor:
             self.on_value_changed(name, value)
 
     def set_value(self, name: str, value: TkVarType):
-        var, _ = self.fields[name]
-        var.set(value)
+        var, ctrl = self.fields[name]
+        if isinstance(var, tk.Variable):
+            var.set(value)
+        else:
+            var.clear()
+            var |= set(value)
+            for f, c in ctrl.items():
+                c.state(['selected' if f in value else '!selected'])
+            
 
     def get_value(self, name: str) -> TkVarType:
         var, _ = self.fields[name]
-        return var.get()
+        return var.get() if isinstance(var, tk.Variable) else var
 
     def load_values(self, object):
         self.is_updating = True
         try:
-            for name, (var, _) in self.fields.items():
-                var.set(getattr(object, name))
+            for name in self.fields:
+                self.set_value(name, getattr(object, name))
         finally:
             self.is_updating = False
 
@@ -837,21 +906,33 @@ class PropertyEditor(Editor):
             value_list = values + [o for o in options if o not in values]
             if name in self.fields:
                 var, cb = self.fields[name]
-                var.set(value=values[0] if len(values) == 1 else '')
-                cb.configure(values=value_list)
+                if isinstance(var, tk.Variable):
+                    var.set(value=values[0] if len(values) == 1 else '')
+                    cb.configure(values=value_list)
                 return
 
-            var, cb = self.add_combo_field(name, value_list)
-            if len(values) == 1:
-                var.set(values[0])
-            if callback:
-                def handle_event(evt, callback=callback, var=var, ctrl=cb):
-                    if not self.is_updating:
-                        callback(var, ctrl, evt.type)
-                cb.bind('<Double-1>', handle_event)
-                cb.bind('<FocusIn>', handle_event)
-                cb.bind('<FocusOut>', handle_event)
-
+            if name == 'fontstyle':
+                self.add_check_fields2(name,
+                    {
+                        'typeface': ['Bold', 'Italic'],
+                        'underscore': {'Single|Underscore', 'Double|DoubleUnderscore'},
+                        'overscore': {'Single|Overscore', 'Double|DoubleOverscore'},
+                        'strikeout': {'Single|Strikeout', 'Double|DoubleStrikeout'},
+                        'extra': {'DotMatrix', 'HLine', 'VLine'}
+                    })
+                if len(values) == 1:
+                    self.update_fields2(name, set(values[0]))
+            else:
+                var, cb = self.add_combo_field(name, value_list)
+                if len(values) == 1:
+                    var.set(values[0])
+                if callback:
+                    def handle_event(evt, callback=callback, var=var, ctrl=cb):
+                        if not self.is_updating:
+                            callback(var, ctrl, evt.type)
+                    cb.bind('<Double-1>', handle_event)
+                    cb.bind('<FocusIn>', handle_event)
+                    cb.bind('<FocusOut>', handle_event)
         finally:
             self.is_updating = False
 
@@ -982,8 +1063,10 @@ def run():
                 'type': item.typename,
             }
             for name, value in item.asdict().items():
-                if type(value) in [int, float, str]:
+                if type(value) in [int, float, str, list]:
                     d[name] = value
+                elif isinstance(value, set):
+                    d[name] = list(value)
                 else:
                     d[name] = str(value)
             data.append(d)
@@ -1117,9 +1200,12 @@ def run():
     label = ttk.Label(root, textvariable=status)
     label.pack()
 
+    res_frame = ttk.Notebook(edit_frame)
+    res_frame.pack(fill=tk.X, ipady=4)
+
     # Project
     project = ProjectEditor(edit_frame)
-    project.frame.pack(fill=tk.X, ipady=4)
+    res_frame.add(project.frame, text='Project', sticky=tk.NSEW)
     project.load_values(handler)
     def project_value_changed(name, value):
         if name == 'width':
@@ -1183,9 +1269,14 @@ def run():
         fields = {}
         for item in items:
             for name, value in item.asdict().items():
-                values = fields.setdefault(name, set())
-                if str(value):
-                    values.add(value)
+                if isinstance(value, list):
+                    values = fields.setdefault(name, [])
+                    if value:
+                        values.append(value)
+                else:
+                    values = fields.setdefault(name, set())
+                    if str(value):
+                        values.add(value)
         # ID must be unique for each item, don't allow group set
         if len(items) > 1:
             del fields['id']
@@ -1214,14 +1305,13 @@ def run():
                         if res[1] is not None:
                             var.set(Color(res[1]))
                 callback = select_color
+            # elif name == 'fontstyle':
+            #     pass
             else:
                 options = []
             prop.set_field(name, values, options, callback)
 
     handler.on_sel_changed = sel_changed
-
-    res_frame = ttk.Notebook(edit_frame)
-    res_frame.pack(fill=tk.X, ipady=4)
 
     # Fonts
     global font_assets
