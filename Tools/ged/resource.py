@@ -3,8 +3,9 @@ from dataclasses import dataclass
 import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw
 from gtypes import Rect, DataObject
 from enum import Enum
+from typing import TypeAlias
 
-type TkImage = PIL.ImageTk.PhotoImage
+TkImage: TypeAlias = PIL.ImageTk.PhotoImage
 
 @dataclass
 class Resource(DataObject):

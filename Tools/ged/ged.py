@@ -14,27 +14,35 @@ from tkinter import ttk, filedialog, colorchooser
 from gtypes import colormap
 from resource import Font, Image, TkImage
 from item import *
+from typing import TypeAlias
 
-type TkVarType = str | int | float # python types used for tk.StringVar, tk.IntVar, tk.DoubleVar
-type CanvasPoint = typle[int, int] # x, y on canvas
-type CanvasRect = tuple[int, int, int, int] # x0, y0, x1, y1 on canvas
-type DisplayPoint = tuple[int, int] # x, y on display
-type ItemList = list[GItem]
+TkVarType: TypeAlias = str | int | float # python types used for tk.StringVar, tk.IntVar, tk.DoubleVar
+CanvasPoint: TypeAlias = tuple[int, int] # x, y on canvas
+CanvasRect: TypeAlias = tuple[int, int, int, int] # x0, y0, x1, y1 on canvas
+DisplayPoint: TypeAlias = tuple[int, int] # x, y on display
+ItemList: TypeAlias = list[GItem]
 
 # Event state modifier masks
 EVS_SHIFT = 0x0001
 EVS_LOCK = 0x0002
 EVS_CONTROL = 0x0004
-EVS_MOD1 = 0x0008 # Left ALT
-EVS_MOD2 = 0x0010 # Numlock
-EVS_MOD3 = 0x0020
+EVS_MOD1 = 0x0008 # Linux: Left ALT; Windows: numlock
+EVS_MOD2 = 0x0010 # Linux: Numlock
+EVS_MOD3 = 0x0020 # Windows: scroll lock
 EVS_MOD4 = 0x0040
-EVS_MOD5 = 0x0080 # Right ALT
+EVS_MOD5 = 0x0080 # Linux: Right ALT
 EVS_BUTTON1 = 0x0100
 EVS_BUTTON2 = 0x0200
 EVS_BUTTON3 = 0x0400
 EVS_BUTTON4 = 0x0800
 EVS_BUTTON5 = 0x1000
+
+# Windows-specific codes
+EVS_WIN_LEFTALT = 0x20000
+EVS_WIN_RIGHTALT = 0x20000 | EVS_CONTROL
+
+# MAC codes not checked
+
 
 # Display scaling
 MIN_SCALE, MAX_SCALE = 1.0, 5.0
@@ -395,7 +403,7 @@ class Handler:
         self.draw_item(item)
 
     def draw_item(self, item: GItem):
-        tags = ('item', str(Element.ITEM), item.id)
+        tags = ('item', int(Element.ITEM), item.id)
         c = Canvas(self, tags)
         item.draw(c)
 
@@ -497,7 +505,7 @@ class Handler:
         elif evt.num == 4:
             delta = 1
         else:
-            delta = evt.delta
+            delta = 1 if evt.delta > 0 else -1
         if control and not shift:
             scale = round(self.scale + delta / 5, 2)
             self.set_scale(scale, (evt.x, evt.y))
@@ -666,7 +674,7 @@ class Handler:
             self.redraw()
             self.sel_changed(False)
 
-        mod = evt.state & (EVS_CONTROL | EVS_SHIFT | EVS_MOD1 | EVS_MOD5)
+        mod = evt.state & (EVS_CONTROL | EVS_SHIFT)
         if mod & EVS_CONTROL:
             return
         c = evt.keysym.upper() if (mod & EVS_SHIFT) else evt.keysym.lower()
