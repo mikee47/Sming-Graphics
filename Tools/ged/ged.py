@@ -1,7 +1,6 @@
 import os
 import sys
 import copy
-import re
 from enum import Enum, IntEnum
 import random
 from random import randrange, randint
@@ -15,6 +14,7 @@ from gtypes import colormap
 from resource import Font, Image, TkImage
 from item import *
 from typing import TypeAlias
+from widgets import *
 
 TkVarType: TypeAlias = str | int | float # python types used for tk.StringVar, tk.IntVar, tk.DoubleVar
 CanvasPoint: TypeAlias = tuple[int, int] # x, y on canvas
@@ -722,9 +722,8 @@ class Handler:
 
 
 class Editor:
-    def __init__(self, root, title: str, field_prefix: str):
+    def __init__(self, root, title: str):
         self.frame = ttk.LabelFrame(root, text=title)
-        self.field_prefix = field_prefix
         self.frame.columnconfigure(1, weight=1)
         self.is_updating = False
         self.on_value_changed = None
@@ -735,199 +734,79 @@ class Editor:
             w.destroy()
         self.fields.clear()
 
-    def add_label(self, text: str, row: int):
-        label = ttk.Label(self.frame, text=text)
-        label.grid(row=row, column=0, sticky=tk.E, padx=8)
-        return label
-
-    def add_control(self, ctrl: tk.Widget, row: int):
-        ctrl.grid(row=row, column=1, sticky=tk.EW, padx=4, pady=2)
-        return ctrl
-
     @staticmethod
     def text_from_name(name: str) -> str:
         words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', name)
         return ' '.join(words).lower()
 
-    def add_field(self, name: str, ctrl: tk.Widget, var_type: tk.Variable):
+    def add_field(self, name: str, widget_type, **kwargs):
         row = len(self.fields)
-        self.add_label(self.text_from_name(name), row)
-        var = var_type(name=self.field_prefix+name)
-        if isinstance(ctrl, tk.Scale):
-            ctrl.configure(variable=var)
-        else:
-            ctrl.configure(textvariable=var)
-        var.trace_add('write', self.tk_value_changed)
-        self.add_control(ctrl, row)
-        fld = self.fields[name] = (var, ctrl)
-        return fld
+        LabelWidget(self.frame, self.text_from_name(name)).set_row(row)
+        w = widget_type(self.frame, name, callback=self.value_changed, **kwargs).set_row(row)
+        self.fields[name] = w
+        return w
 
-    def add_entry_field(self, name: str, var_type=tk.IntVar):
-        c = ttk.Entry(self.frame)
-        return self.add_field(name, c, var_type)
+    def add_entry_field(self, name: str, vartype=int):
+        return self.add_field(name, EntryWidget, vartype=vartype)
 
-    def add_scale_field(self, name: str, var_type: tk.Variable, from_: int | float, to: int | float, resolution: int | float = 1):
-        # Don't get variable trace callbacks for scale widgets (don't know why) so use command
-        def cmd_changed(value, var_type=var_type, name=name):
-            self.value_changed(name, float(value) if var_type == tk.DoubleVar else int(value))
-        c = tk.Scale(self.frame, orient=tk.HORIZONTAL, from_=from_, to=to, resolution=resolution, command=cmd_changed)
-        var, _ = self.add_field(name, c, var_type)
-        return var, c
+    def add_text_field(self, name: str):
+        return self.add_field(name, TextWidget)
 
-    def add_combo_field(self, name: str, value_list=[], var_type=tk.StringVar):
-        c = ttk.Combobox(self.frame, values=value_list)
-        return self.add_field(name, c, var_type)
+    def add_scale_field(self, name: str, vartype: type, from_: int | float, to: int | float, resolution: int | float = 1):
+        return self.add_field(name, ScaleWidget, vartype=vartype, from_=from_, to=to, resolution=resolution)
 
-    def add_check_fields(self, name: str, values: list, callback=None):
-        row = len(self.fields)
-        self.add_label(self.text_from_name(name), row)
-        frame = ttk.Frame(self.frame)
-        self.add_control(frame, row)
-        var = set()
-        ctrls = {}
-        for value in values:
-            def check_invoked(name=name, value=value, callback=callback):
-                var, ctrls = self.fields[name]
-                ctrl = ctrls[value]
-                state = ctrl.state()
-                if 'selected' in state:
-                    var.add(value)
-                else:
-                    var.remove(value)
-                if callback:
-                    callback(var)
-                for f, c in ctrls.items():
-                    c.state(['selected' if f in var else '!selected'])
-            ctrl = ttk.Checkbutton(frame, text=self.text_from_name(value), command=check_invoked)
-            ctrl.state(['!alternate'])
-            ctrl.pack(side=tk.LEFT)
-            ctrls[value] = ctrl
-        row += 1
-        self.fields[name] = (var, ctrls)
+    def add_combo_field(self, name: str, values=[], vartype=str):
+        return self.add_field(name, ComboboxWidget, vartype=vartype, values=values)
 
-    def add_check_fields2(self, name: str, value_groups: dict, callback=None):
-        """Split set up into distinct parts"""
-        row = len(self.fields)
-        frame = ttk.LabelFrame(self.frame, text=self.text_from_name(name))
-        frame.grid(column=0, columnspan=2)
-        var = set()
-        ctrls = {}
-        row = 0 # Within our new frame
-        for group, values in value_groups.items():
-            def split(value):
-                text, _, value = value.partition(':')
-                return (text, value) if value else (text, text)
-            group, _, kind = group.partition(':')
-            if kind == 'oneof':
-                value_set = {split(x)[1] for x in values}
-            else:
-                value_set = ()
-                if kind:
-                    raise ValueError(f'Bad field group kind "{kind}"')
-            label = ttk.Label(frame, text=self.text_from_name(group))
-            label.grid(row=row, column=0, sticky=tk.E, padx=8)
-            group_frame = ttk.Frame(frame)
-            self.add_control(group_frame, row)
-            row += 1
-            for value in values:
-                text, value = split(value)
-                def check_invoked(name=name, value=value, callback=callback, value_set=value_set):
-                    var, ctrls = self.fields[name]
-                    ctrl = ctrls[value]
-                    state = ctrl.state()
-                    for v in value_set:
-                        if v != value:
-                            var.discard(v)
-                    if 'selected' in state:
-                        var.add(value)
-                    else:
-                        var.discard(value)
-                    if callback:
-                        callback(var, value)
-                    for f, c in ctrls.items():
-                        c.state(['selected' if f in var else '!selected'])
-                    self.value_changed(name, var)
-                ctrl = ttk.Checkbutton(group_frame, text=text, command=check_invoked)
-                ctrl.state(['!alternate'])
-                ctrl.pack(side=tk.LEFT)
-                ctrls[value] = ctrl
-        self.fields[name] = (var, ctrls)
+    def add_check_fields(self, name: str, values: list):
+        return self.add_field(name, CheckFieldsWidget, values=values)
 
-    def update_fields2(self, name, value):
-        var, ctrls = self.fields[name]
-        var.clear()
-        var |= value
-        for f, c in ctrls.items():
-            c.state(['selected' if f in var else '!selected'])
-
-    def tk_value_changed(self, name1, name2, op):
-        if self.is_updating:
-            return
-        """See 'trace add variable' in TCL docs"""
-        name = name1[len(self.field_prefix):]
-        var, _ = self.fields[name]
-        if var is None:
-            return
-        try:
-            # print(f'value_changed:"{name1}", "{name2}", "{op}", "{var.get()}"')
-            self.value_changed(name, var.get())
-        except tk.TclError: # Can happen whilst typing if conversion fails, empty strings, etc.
-            pass
+    def add_check_fields2(self, name: str, groups: dict):
+        w = GroupedCheckFieldsWidget(self.frame, name, groups, self.value_changed)
+        self.fields[name] = w
+        return w
 
     def value_changed(self, name: str, value: TkVarType):
-        if self.on_value_changed:
+        if not self.is_updating and self.on_value_changed:
             self.on_value_changed(name, value)
 
-    def set_value(self, name: str, value: TkVarType):
-        var, ctrl = self.fields[name]
-        if isinstance(var, tk.Variable):
-            var.set(value)
-        else:
-            var.clear()
-            var |= set(value)
-            for f, c in ctrl.items():
-                c.state(['selected' if f in value else '!selected'])
-            
-
     def get_value(self, name: str) -> TkVarType:
-        var, _ = self.fields[name]
-        return var.get() if isinstance(var, tk.Variable) else var
+        return self.fields[name].get_value()
 
     def load_values(self, object):
         self.is_updating = True
         try:
-            for name in self.fields:
-                self.set_value(name, getattr(object, name))
+            for name, widget in self.fields.items():
+                widget.set_value(getattr(object, name))
         finally:
             self.is_updating = False
 
 
 class ProjectEditor(Editor):
     def __init__(self, root):
-        super().__init__(root, 'Project', 'proj-')
+        super().__init__(root, 'Project')
         self.add_entry_field('width')
         self.add_entry_field('height')
-        self.add_scale_field('scale', tk.DoubleVar, MIN_SCALE, MAX_SCALE, 0.1)
+        self.add_scale_field('scale', float, MIN_SCALE, MAX_SCALE, 0.1)
         self.add_entry_field('grid_alignment')
 
 
 class PropertyEditor(Editor):
     def __init__(self, root):
-        super().__init__(root, 'Properties', 'prop-')
+        super().__init__(root, 'Properties')
 
     def set_field(self, name=str, values=list, options=list, callback=None):
         self.is_updating = True
         try:
             value_list = values + [o for o in options if o not in values]
             if name in self.fields:
-                var, cb = self.fields[name]
-                if isinstance(var, tk.Variable):
-                    var.set(value=values[0] if len(values) == 1 else '')
-                    cb.configure(values=value_list)
+                widget = self.fields[name]
+                widget.set_value(value=values[0] if len(values) == 1 else '')
+                widget.set_choices(value_list)
                 return
 
             if name == 'fontstyle':
-                self.add_check_fields2(name,
+                widget = self.add_check_fields2(name,
                     {
                         'typeface': ('Bold', 'Italic'),
                         'underscore:oneof': ('Single:Underscore', 'Double:DoubleUnderscore'),
@@ -936,25 +815,28 @@ class PropertyEditor(Editor):
                         'extra:oneof': ('DotMatrix', 'HLine', 'VLine')
                     })
                 if len(values) == 1:
-                    self.update_fields2(name, set(values[0]))
+                    widget.set_value(values[0])
             else:
-                var, cb = self.add_combo_field(name, value_list)
+                if name == 'text':
+                    widget = self.add_text_field(name)
+                else:
+                    widget = self.add_combo_field(name, value_list)
                 if len(values) == 1:
-                    var.set(values[0])
+                    widget.set_value(values[0])
                 if callback:
-                    def handle_event(evt, callback=callback, var=var, ctrl=cb):
+                    def handle_event(evt, callback=callback, widget=widget):
                         if not self.is_updating:
-                            callback(var, ctrl, evt.type)
-                    cb.bind('<Double-1>', handle_event)
-                    cb.bind('<FocusIn>', handle_event)
-                    cb.bind('<FocusOut>', handle_event)
+                            callback(widget, evt.type)
+                    widget.bind('<Double-1>', handle_event)
+                    widget.bind('<FocusIn>', handle_event)
+                    widget.bind('<FocusOut>', handle_event)
         finally:
             self.is_updating = False
 
 
 class FontEditor(Editor):
     def __init__(self, root):
-        super().__init__(root, 'Font', 'font-')
+        super().__init__(root, 'Font')
         self.add_combo_field('name')
         self.add_combo_field('family', font_assets.families())
         self.add_entry_field('size')
@@ -980,8 +862,7 @@ class FontEditor(Editor):
     def update(self):
         font_name = self.get_value('name')
         font_names = font_assets.names()
-        _, c = self.fields['name']
-        c.configure(values=font_names)
+        self.fields['name'].set_choices(font_names)
         if not font_name and font_names:
             font_name = font_names[0]
         self.select(font_name)
@@ -996,10 +877,10 @@ class FontEditor(Editor):
 
 class ImageEditor(Editor):
     def __init__(self, root):
-        super().__init__(root, 'Image', 'img-')
+        super().__init__(root, 'Image')
         self.add_combo_field('name')
-        _, cb = self.add_combo_field('source')
-        cb.bind('<Double-1>', self.choose_source)
+        widget = self.add_combo_field('source')
+        widget.bind('<Double-1>', self.choose_source)
         self.add_combo_field('format')
         self.add_entry_field('width')
         self.add_entry_field('height')
@@ -1037,8 +918,7 @@ class ImageEditor(Editor):
     def update(self):
         image = self.get_value('name')
         image_names = image_assets.names()
-        _, c = self.fields['name']
-        c.configure(values=image_names)
+        self.fields['name'].set_choices(image_names)
         if not image and image_assets:
             image = image_assets[0]
         self.select(image)
@@ -1047,8 +927,8 @@ class ImageEditor(Editor):
         if isinstance(image, str):
             image = image_assets.get(image)
         if not image:
-            for var, _ in self.fields.values():
-                var.set('')
+            for widget in self.fields.values():
+                widget.set_value('')
             return
         self.load_values(image)
 
@@ -1106,10 +986,10 @@ def run():
         }
 
     def load_project(data: dict):
-        if 'project' in data:
-            handler.load(data['project'])
-            for k, v in data['project'].items():
-                project.set_value(k, v)
+        fileClear()
+        handler.load(data['project'])
+        for k, v in data['project'].items():
+            project.fields[k].set_value(v)
         font_assets.load(data['fonts'])
         font_editor.update()
         image_assets.load(data['images'])
@@ -1233,7 +1113,7 @@ def run():
             setattr(handler, name, value)
     project.on_value_changed = project_value_changed
     def scale_changed(handler):
-        project.set_value('scale', handler.scale)
+        project.fields['scale'].set_value(handler.scale)
     handler.on_scale_changed = scale_changed
 
     # Properties
@@ -1300,25 +1180,25 @@ def run():
             values = list(values)
             if name == 'font':
                 options = font_assets.names()
-                def select_font(var, ctrl, event_type):
+                def select_font(widget, event_type):
                     if event_type == tk.EventType.FocusIn:
-                        ctrl.configure(values=font_assets.names())
+                        widget.set_choices(font_assets.names())
                         res_frame.select(font_editor.frame)
                 callback = select_font
             elif name == 'image':
                 options = image_assets.names()
-                def select_image(var, ctrl, event_type):
+                def select_image(widget, event_type):
                     if event_type == tk.EventType.FocusIn:
-                        ctrl.configure(values=image_assets.names())
+                        widget.set_choices(image_assets.names())
                         res_frame.select(image_editor.frame)
                 callback = select_image
             elif values and isinstance(values[0], Color):
                 options = sorted(colormap.keys())
-                def select_color(var, ctrl, event_type):
+                def select_color(widget, event_type):
                     if event_type == tk.EventType.ButtonPress:
-                        res = colorchooser.askcolor(color=var.get())
+                        res = colorchooser.askcolor(color=widget.get_value())
                         if res[1] is not None:
-                            var.set(Color(res[1]))
+                            widget.set_value(Color(res[1]))
                 callback = select_color
             # elif name == 'fontstyle':
             #     pass
