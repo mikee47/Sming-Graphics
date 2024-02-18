@@ -101,6 +101,7 @@ class Canvas:
         self.color = 'white'
         self.line_width = 1
         self.font = None
+        self.fontstyle = set()
 
     def draw_rect(self, rect):
         x0, y0, x1, y1 = self.handler.tk_bounds(rect)
@@ -157,7 +158,7 @@ class Canvas:
     def draw_text(self, rect, text, halign, valign):
         x0, y0, x1, y1 = self.handler.tk_bounds(rect)
         id = self.canvas.create_text(x0, y0, width=1+x1-x0,
-            font=self.handler.tk_font(self.font),
+            font=self.handler.tk_font(self.font, self.fontstyle),
             text=text, fill=self.color,
             anchor=tk.NW, justify=tk.CENTER, tags=self.tags)
         _, _, x2, y2 = self.canvas.bbox(id)
@@ -379,9 +380,9 @@ class Handler:
         b = self.tk_scale(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h)
         return (xo + b[0], yo + b[1], xo + b[2], yo + b[3])
 
-    def tk_font(self, font_name: str) -> tk.font.Font:
+    def tk_font(self, font_name: str, style: set) -> tk.font.Font:
         font = font_assets.get(font_name, font_assets.default)
-        return tk.font.Font(family=font.family, size=-self.tk_scale(font.size))
+        return font.get_tk_font(self.scale, style)
 
     def tk_image(self, image_name: str, crop_rect: Rect) -> TkImage:
         image_resource = image_assets.get(image_name, Image())
@@ -813,15 +814,21 @@ class Editor:
         ctrls = {}
         row = 0 # Within our new frame
         for group, values in value_groups.items():
+            def split(value):
+                text, _, value = value.partition(':')
+                return (text, value) if value else (text, text)
+            group, _, kind = group.partition(':')
+            if kind == 'oneof':
+                value_set = {split(x)[1] for x in values}
+            else:
+                value_set = ()
+                if kind:
+                    raise ValueError(f'Bad field group kind "{kind}"')
             label = ttk.Label(frame, text=self.text_from_name(group))
             label.grid(row=row, column=0, sticky=tk.E, padx=8)
             group_frame = ttk.Frame(frame)
             self.add_control(group_frame, row)
             row += 1
-            def split(value):
-                text, _, value = value.partition('|')
-                return (text, value) if value else (text, text)
-            value_set = {split(x)[1] for x in values} if isinstance(values, set) else []
             for value in values:
                 text, value = split(value)
                 def check_invoked(name=name, value=value, callback=callback, value_set=value_set):
@@ -922,11 +929,11 @@ class PropertyEditor(Editor):
             if name == 'fontstyle':
                 self.add_check_fields2(name,
                     {
-                        'typeface': ['Bold', 'Italic'],
-                        'underscore': {'Single|Underscore', 'Double|DoubleUnderscore'},
-                        'overscore': {'Single|Overscore', 'Double|DoubleOverscore'},
-                        'strikeout': {'Single|Strikeout', 'Double|DoubleStrikeout'},
-                        'extra': {'DotMatrix', 'HLine', 'VLine'}
+                        'typeface': ('Bold', 'Italic'),
+                        'underscore:oneof': ('Single:Underscore', 'Double:DoubleUnderscore'),
+                        'overscore:oneof': ('Single:Overscore', 'Double:DoubleOverscore'),
+                        'strikeout:oneof': ('Single:Strikeout', 'Double:DoubleStrikeout'),
+                        'extra:oneof': ('DotMatrix', 'HLine', 'VLine')
                     })
                 if len(values) == 1:
                     self.update_fields2(name, set(values[0]))

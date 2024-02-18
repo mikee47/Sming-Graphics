@@ -1,5 +1,7 @@
 import dataclasses
 from dataclasses import dataclass
+import tkinter as tk
+import tkinter.font
 import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw
 from gtypes import Rect, DataObject
 from enum import Enum
@@ -13,16 +15,44 @@ class Resource(DataObject):
 
 
 class FontStyle(Enum):
-    normal = 0
-    bold = 1
-    italic = 2
-    boldItalic = 3
+    """Style is a set of these values, using strings here but bitfields in library"""
+    # typeface
+    Bold = 0
+    Italic = 1
+    # underscore
+    Underscore = 2
+    DoubleUnderscore = 3
+    # overscore
+    Overscore = 4
+    DoubleOverscore = 5
+    # strikeout
+    Strikeout = 6
+    DoubleStrikeout = 7
+    # extra
+    DotMatrix = 8
+    HLine = 9
+    VLine = 10
+
 
 @dataclass
 class Font(Resource):
     family: str = ''
     size: int = 12
-    style: list[str] = dataclasses.field(default_factory=list)
+    style: list[str] = ()
+
+    def get_tk_font(self, scale, fontstyle: tuple[str]):
+        style = {FontStyle[s] for s in fontstyle}
+        args = {}
+        if style & {FontStyle.Underscore, FontStyle.DoubleUnderscore}:
+            args['underline'] = True
+        if style & {FontStyle.Strikeout, FontStyle.DoubleStrikeout}:
+            args['overstrike'] = True
+        if FontStyle.Italic in style:
+            args['slant'] = 'italic'
+        if FontStyle.Bold in style:
+            args['weight'] = 'bold'
+        return tk.font.Font(family=self.family, size=-round(self.size * scale), **args)
+
 
 
 @dataclass

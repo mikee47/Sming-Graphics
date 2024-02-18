@@ -120,6 +120,7 @@ class GText(GItem):
     def draw(self, c):
         c.color = str(self.color)
         c.font = self.font
+        c.fontstyle = self.fontstyle
         r = self.get_bounds()
         M = 8
         r.inflate(-M, -M)
@@ -155,6 +156,7 @@ class GButton(GItem):
         c.fill_rounded_rect(self, radius)
         c.color = str(self.color)
         c.font = self.font
+        c.fontstyle = self.fontstyle
         c.draw_text(r, self.text, tk.CENTER, tk.CENTER)
 
 @dataclass
