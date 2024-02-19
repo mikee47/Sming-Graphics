@@ -748,6 +748,10 @@ class Editor(ttk.LabelFrame):
         self.on_value_changed = None
         self.fields = {}
 
+    @property
+    def name(self):
+        return self.cget('text')
+
     def reset(self):
         for w in self.winfo_children():
             w.destroy()
@@ -1122,10 +1126,13 @@ def run():
 
     res_frame = ttk.Notebook(edit_frame)
     res_frame.pack(fill=tk.X, ipady=4)
+    def add_editor(editor_class):
+        editor = editor_class(res_frame)
+        res_frame.add(editor, text=editor.name, sticky=tk.NSEW)
+        return editor
 
     # Project
-    project_editor = ProjectEditor(edit_frame)
-    res_frame.add(project_editor, text='Project', sticky=tk.NSEW)
+    project_editor = add_editor(ProjectEditor)
     project_editor.load_values(layout)
     def project_value_changed(name, value):
         if name == 'width':
@@ -1236,8 +1243,7 @@ def run():
     # Fonts
     global font_assets
     font_assets = FontAssets()
-    font_editor = FontEditor(res_frame)
-    res_frame.add(font_editor, text='Fonts', sticky=tk.NSEW)
+    font_editor = add_editor(FontEditor)
     def font_value_changed(name: str, value: TkVarType):
         # print(f'font_value_changed("{name}", "{value}")')
         layout.redraw()
@@ -1246,8 +1252,7 @@ def run():
     # Images
     global image_assets
     image_assets = ImageAssets()
-    image_editor = ImageEditor(res_frame)
-    res_frame.add(image_editor, text='Images', sticky=tk.NSEW)
+    image_editor = add_editor(ImageEditor)
     def image_value_changed(name: str, value: TkVarType):
         # print(f'image_value_changed("{name}", "{value}")')
         layout.redraw()
