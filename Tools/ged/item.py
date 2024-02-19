@@ -132,11 +132,10 @@ class GImage(GItem):
     image: str = ''
     xoff: int = 0
     yoff: int = 0
-    tk_image = None  # cached image, tkinter won't show it otherwise
+    tk_image_ref = None
 
     def draw(self, c):
-        self.tk_image = c.handler.tk_image(self.image, Rect(self.xoff, self.yoff, self.w, self.h))
-        c.draw_image(self, self.tk_image)
+        self.tk_image_ref = c.draw_image(self, self.image, (self.xoff, self.yoff))
 
 
 @dataclass

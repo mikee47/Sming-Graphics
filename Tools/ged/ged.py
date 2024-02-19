@@ -94,9 +94,8 @@ class Element(IntEnum):
 
 class Canvas:
     """Provides the interface for items to draw themselves"""
-    def __init__(self, handler, tags):
-        self.handler = handler
-        self.canvas = handler.canvas
+    def __init__(self, layout, tags):
+        self.layout = layout
         self.tags = tags
         self.color = 'white'
         self.line_width = 1
@@ -104,12 +103,14 @@ class Canvas:
         self.fontstyle = set()
 
     def draw_rect(self, rect):
-        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
-        self.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.line_width, tags=self.tags)
+        layout = self.layout
+        x0, y0, x1, y1 = layout.tk_bounds(rect)
+        layout.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.line_width, tags=self.tags)
 
     def fill_rect(self, rect):
-        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
-        self.canvas.create_rectangle(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
+        layout = self.layout
+        x0, y0, x1, y1 = layout.tk_bounds(rect)
+        layout.canvas.create_rectangle(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
 
     def draw_rounded_rect(self, rect, r):
         x0, y0, x1, y1 = rect.x, rect.y, rect.x + rect.w, rect.y + rect.h
@@ -133,42 +134,52 @@ class Canvas:
         self.fill_rect(Rect(x0+rect.w-r, y0+r, r, rect.h-2*r))
 
     def draw_line(self, x0, y0, x1, y1):
-        x0, y0 = self.handler.tk_point(x0, y0)
-        x1, y1 = self.handler.tk_point(x1, y1)
-        self.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=self.line_width, tags=self.tags)
+        layout = self.layout
+        x0, y0 = layout.tk_point(x0, y0)
+        x1, y1 = layout.tk_point(x1, y1)
+        layout.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=self.line_width, tags=self.tags)
 
     def draw_corner(self, x, y, r, start_angle):
-        x0, y0 = self.handler.tk_point(x, y)
-        x1, y1 = self.handler.tk_point(x+r*2, y+r*2)
-        self.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, outline=self.color, width=self.line_width, style='arc', tags=self.tags)
+        layout = self.layout
+        x0, y0 = layout.tk_point(x, y)
+        x1, y1 = layout.tk_point(x+r*2, y+r*2)
+        layout.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, outline=self.color, width=self.line_width, style='arc', tags=self.tags)
 
     def fill_corner(self, x, y, r, start_angle):
-        x0, y0 = self.handler.tk_point(x, y)
-        x1, y1 = self.handler.tk_point(x+r*2, y+r*2)
-        self.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, fill=self.color, outline='', tags=self.tags)
+        layout = self.layout
+        x0, y0 = layout.tk_point(x, y)
+        x1, y1 = layout.tk_point(x+r*2, y+r*2)
+        layout.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, fill=self.color, outline='', tags=self.tags)
 
     def draw_ellipse(self, rect):
-        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
-        self.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=self.line_width, tags=self.tags)
+        layout = self.layout
+        x0, y0, x1, y1 = layout.tk_bounds(rect)
+        layout.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=self.line_width, tags=self.tags)
 
     def fill_ellipse(self, rect):
-        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
-        self.canvas.create_oval(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
+        layout = self.layout
+        x0, y0, x1, y1 = layout.tk_bounds(rect)
+        layout.canvas.create_oval(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
 
     def draw_text(self, rect, text, halign, valign):
-        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
-        id = self.canvas.create_text(x0, y0, width=1+x1-x0,
-            font=self.handler.tk_font(self.font, self.fontstyle),
+        layout = self.layout
+        x0, y0, x1, y1 = layout.tk_bounds(rect)
+        id = layout.canvas.create_text(x0, y0, width=1+x1-x0,
+            font=layout.tk_font(self.font, self.fontstyle),
             text=text, fill=self.color,
             anchor=tk.NW, justify=tk.CENTER, tags=self.tags)
-        _, _, x2, y2 = self.canvas.bbox(id)
+        _, _, x2, y2 = layout.canvas.bbox(id)
         x0 += (x1 - x2) // 2
         y0 += (y1 - y2) // 2
-        self.canvas.coords(id, x0, y0)
+        layout.canvas.coords(id, x0, y0)
 
-    def draw_image(self, rect, tk_image):
-        x0, y0, x1, y1 = self.handler.tk_bounds(rect)
-        self.canvas.create_image(x0, y0, image=tk_image, anchor=tk.NW, tags=self.tags)
+    def draw_image(self, rect, image: str, offset: CanvasPoint):
+        """Important: Caller must retain copy of returned image otherwise it gets disposed"""
+        layout = self.layout
+        x0, y0, x1, y1 = layout.tk_bounds(rect)
+        tk_image = layout.tk_image(image, Rect(*offset, rect.w, rect.h))
+        layout.canvas.create_image(x0, y0, image=tk_image, anchor=tk.NW, tags=self.tags)
+        return tk_image
 
 
 def union(r1: Rect, r2: Rect):
@@ -261,8 +272,9 @@ class State(Enum):
     PANNING = 2
     SCALING = 3
 
-class Handler:
-    def __init__(self, tk_root, width: int = 320, height: int = 240, scale: float = 1.0, grid_alignment: int = 8):
+class LayoutEditor(ttk.Frame):
+    def __init__(self, master, width: int = 320, height: int = 240, scale: float = 1.0, grid_alignment: int = 8):
+        super().__init__(master)
         self.width = width
         self.height = height
         self.scale = scale
@@ -273,11 +285,10 @@ class Handler:
         self.on_scale_changed = None
         self.state = State.IDLE
 
-        self.frame = ttk.Frame(tk_root)
-        c = self.canvas = tk.Canvas(self.frame)
-        hs = ttk.Scrollbar(self.frame, orient=tk.HORIZONTAL, command=c.xview)
+        c = self.canvas = tk.Canvas(self)
+        hs = ttk.Scrollbar(self, orient=tk.HORIZONTAL, command=c.xview)
         hs.pack(side=tk.BOTTOM, fill=tk.X)
-        vs = ttk.Scrollbar(self.frame, orient=tk.VERTICAL, command=c.yview)
+        vs = ttk.Scrollbar(self, orient=tk.VERTICAL, command=c.yview)
         vs.pack(side=tk.RIGHT, fill=tk.Y)
         c.configure(xscrollcommand=hs.set, yscrollcommand=vs.set)
         c.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
@@ -721,16 +732,16 @@ class Handler:
         self.sel_changed(True)
 
 
-class Editor:
-    def __init__(self, root, title: str):
-        self.frame = ttk.LabelFrame(root, text=title)
-        self.frame.columnconfigure(1, weight=1)
+class Editor(ttk.LabelFrame):
+    def __init__(self, master, title: str):
+        super().__init__(master, text=title)
+        self.columnconfigure(1, weight=1)
         self.is_updating = False
         self.on_value_changed = None
         self.fields = {}
 
-    def clear(self):
-        for w in self.frame.winfo_children():
+    def reset(self):
+        for w in self.winfo_children():
             w.destroy()
         self.fields.clear()
 
@@ -741,8 +752,8 @@ class Editor:
 
     def add_field(self, name: str, widget_type, **kwargs):
         row = len(self.fields)
-        LabelWidget(self.frame, self.text_from_name(name)).set_row(row)
-        w = widget_type(self.frame, name, callback=self.value_changed, **kwargs).set_row(row)
+        LabelWidget(self, self.text_from_name(name)).set_row(row)
+        w = widget_type(self, name, callback=self.value_changed, **kwargs).set_row(row)
         self.fields[name] = w
         return w
 
@@ -761,8 +772,8 @@ class Editor:
     def add_check_fields(self, name: str, values: list):
         return self.add_field(name, CheckFieldsWidget, values=values)
 
-    def add_check_fields2(self, name: str, groups: dict):
-        w = GroupedCheckFieldsWidget(self.frame, name, groups, self.value_changed)
+    def add_grouped_check_fields(self, name: str, groups: dict):
+        w = GroupedCheckFieldsWidget(self, name, groups, self.value_changed)
         self.fields[name] = w
         return w
 
@@ -806,7 +817,7 @@ class PropertyEditor(Editor):
                 return
 
             if name == 'fontstyle':
-                widget = self.add_check_fields2(name,
+                widget = self.add_grouped_check_fields(name,
                     {
                         'typeface': ('Bold', 'Italic'),
                         'underscore:oneof': ('Single:Underscore', 'Double:DoubleUnderscore'),
@@ -979,29 +990,29 @@ def run():
 
     def get_project_data() -> dict:
         return {
-            'project': handler.asdict(),
+            'project': layout.asdict(),
             'fonts': font_assets.asdict(),
             'images': image_assets.asdict(),
-            'layout': dl_serialise(handler.display_list),
+            'layout': dl_serialise(layout.display_list),
         }
 
     def load_project(data: dict):
         fileClear()
-        handler.load(data['project'])
+        layout.load(data['project'])
         for k, v in data['project'].items():
-            project.fields[k].set_value(v)
+            project_editor.fields[k].set_value(v)
         font_assets.load(data['fonts'])
         font_editor.update()
         image_assets.load(data['images'])
         image_editor.update()
-        handler.display_list = []
+        layout.display_list = []
         display_list = dl_deserialise(data['layout'])
-        handler.clear()
-        handler.add_items(display_list)
+        layout.clear()
+        layout.add_items(display_list)
 
     # Menus
     def fileClear():
-        handler.clear()
+        layout.clear()
         font_assets.clear()
         font_editor.update()
         image_assets.clear()
@@ -1009,15 +1020,15 @@ def run():
 
     def fileAddRandom(count=10):
         display_list = []
-        id_list = set(x.id for x in handler.display_list)
+        id_list = set(x.id for x in layout.display_list)
         for i in range(count):
             w_min, w_max = 10, 200
             h_min, h_max = 10, 100
             w = randint(w_min, w_max)
             h = randint(h_min, h_max)
-            x = randrange(handler.width - w)
-            y = randrange(handler.height - h)
-            x, y, w, h = handler.grid_align(x, y, w, h)
+            x = randrange(layout.width - w)
+            y = randrange(layout.height - h)
+            x, y, w, h = layout.grid_align(x, y, w, h)
             itemtype = random.choice([
                 GRect,
                 GFilledRect,
@@ -1036,7 +1047,7 @@ def run():
             if hasattr(item, 'text'):
                 item.text = item.id.replace('_', ' ')
             display_list.append(item)
-        handler.add_items(display_list)
+        layout.add_items(display_list)
 
 
     def fileLoad():
@@ -1066,10 +1077,10 @@ def run():
     pane.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
 
     # Layout editor
-    handler = Handler(pane)
-    handler.set_scale(2)
-    handler.frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
-    pane.add(handler.frame, weight=2)
+    layout = LayoutEditor(pane)
+    layout.set_scale(2)
+    layout.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+    pane.add(layout, weight=2)
 
     # Editors to right
     edit_frame = ttk.Frame(pane, width=240)
@@ -1099,22 +1110,22 @@ def run():
     res_frame.pack(fill=tk.X, ipady=4)
 
     # Project
-    project = ProjectEditor(edit_frame)
-    res_frame.add(project.frame, text='Project', sticky=tk.NSEW)
-    project.load_values(handler)
+    project_editor = ProjectEditor(edit_frame)
+    res_frame.add(project_editor, text='Project', sticky=tk.NSEW)
+    project_editor.load_values(layout)
     def project_value_changed(name, value):
         if name == 'width':
-            handler.set_size(value, handler.height)
+            layout.set_size(value, layout.height)
         elif name == 'height':
-            handler.set_size(handler.width, value)
+            layout.set_size(layout.width, value)
         elif name == 'scale':
-            handler.set_scale(value)
+            layout.set_scale(value)
         else:
-            setattr(handler, name, value)
-    project.on_value_changed = project_value_changed
-    def scale_changed(handler):
-        project.fields['scale'].set_value(handler.scale)
-    handler.on_scale_changed = scale_changed
+            setattr(layout, name, value)
+    project_editor.on_value_changed = project_value_changed
+    def scale_changed(layout):
+        project_editor.fields['scale'].set_value(layout.scale)
+    layout.on_scale_changed = scale_changed
 
     # Properties
     prop = PropertyEditor(edit_frame)
@@ -1124,16 +1135,16 @@ def run():
             # Must defer this as caller holds reference to var which messes things up when destroying fields
             def change_type():
                 new_sel_items = []
-                for item in handler.sel_items:
+                for item in layout.sel_items:
                     new_item = item.copy_as(value)
-                    i = handler.display_list.index(item)
-                    handler.display_list[i] = new_item
+                    i = layout.display_list.index(item)
+                    layout.display_list[i] = new_item
                     new_sel_items.append(new_item)
-                handler.select(new_sel_items)
+                layout.select(new_sel_items)
             root.after(100, change_type)
             return
 
-        for item in handler.sel_items:
+        for item in layout.sel_items:
             if not hasattr(item, name):
                 continue
             try:
@@ -1146,18 +1157,18 @@ def run():
                     image_editor.select(value)
             except ValueError as e:
                 status.set(str(e))
-        handler.redraw()
+        layout.redraw()
     prop.on_value_changed = value_changed
 
     # Selection handling
     def sel_changed(full_change: bool):
         if full_change:
-            prop.clear()
-        items = handler.sel_items
+            prop.reset()
+        items = layout.sel_items
         if not items:
-            prop.frame.pack_forget()
+            prop.pack_forget()
             return
-        prop.frame.pack(fill=tk.X, ipady=4)
+        prop.pack(fill=tk.X, ipady=4)
         if full_change:
             typenames = set(x.typename for x in items)
             prop.set_field('type', list(typenames), TYPENAMES)
@@ -1183,14 +1194,14 @@ def run():
                 def select_font(widget, event_type):
                     if event_type == tk.EventType.FocusIn:
                         widget.set_choices(font_assets.names())
-                        res_frame.select(font_editor.frame)
+                        res_frame.select(font_editor)
                 callback = select_font
             elif name == 'image':
                 options = image_assets.names()
                 def select_image(widget, event_type):
                     if event_type == tk.EventType.FocusIn:
                         widget.set_choices(image_assets.names())
-                        res_frame.select(image_editor.frame)
+                        res_frame.select(image_editor)
                 callback = select_image
             elif values and isinstance(values[0], Color):
                 options = sorted(colormap.keys())
@@ -1206,26 +1217,26 @@ def run():
                 options = []
             prop.set_field(name, values, options, callback)
 
-    handler.on_sel_changed = sel_changed
+    layout.on_sel_changed = sel_changed
 
     # Fonts
     global font_assets
     font_assets = FontAssets()
     font_editor = FontEditor(res_frame)
-    res_frame.add(font_editor.frame, text='Fonts', sticky=tk.NSEW)
+    res_frame.add(font_editor, text='Fonts', sticky=tk.NSEW)
     def font_value_changed(name: str, value: TkVarType):
         # print(f'font_value_changed("{name}", "{value}")')
-        handler.redraw()
+        layout.redraw()
     font_editor.on_value_changed = font_value_changed
 
     # Images
     global image_assets
     image_assets = ImageAssets()
     image_editor = ImageEditor(res_frame)
-    res_frame.add(image_editor.frame, text='Images', sticky=tk.NSEW)
+    res_frame.add(image_editor, text='Images', sticky=tk.NSEW)
     def image_value_changed(name: str, value: TkVarType):
         # print(f'image_value_changed("{name}", "{value}")')
-        handler.redraw()
+        layout.redraw()
     image_editor.on_value_changed = image_value_changed
 
     #
