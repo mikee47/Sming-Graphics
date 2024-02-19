@@ -141,6 +141,7 @@ class GImage(GItem):
 @dataclass
 class GButton(GItem):
     back_color: Color = Color('gray')
+    border: Color = Color('white')
     color: Color = Color('black')
     font: str = ''
     text: str = ''
@@ -153,6 +154,9 @@ class GButton(GItem):
         r.inflate(-M, -M)
         c.color = str(self.back_color)
         c.fill_rounded_rect(self, radius)
+        c.color = str(self.border)
+        c.line_width = 4
+        c.draw_rounded_rect(self, radius)
         c.color = str(self.color)
         c.font = self.font
         c.fontstyle = self.fontstyle
