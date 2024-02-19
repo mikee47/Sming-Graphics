@@ -1021,25 +1021,27 @@ def run():
         return json.dumps(obj, indent=4)
 
     def dl_serialise(display_list: ItemList) -> dict:
-        data = []
+        data = {}
         for item in display_list:
             d = {
                 'type': item.typename,
             }
             for name, value in item.asdict().items():
+                if name == 'id':
+                    continue
                 if type(value) in [int, float, str, list]:
                     d[name] = value
                 elif isinstance(value, set):
                     d[name] = list(value)
                 else:
                     d[name] = str(value)
-            data.append(d)
+            data[item.id] = d
         return data
 
     def dl_deserialise(data: dict) -> ItemList:
         display_list = []
-        for d in data:
-            item = GItem.create(d.pop('type'), id=d.pop('id'))
+        for id, d in data.items():
+            item = GItem.create(d.pop('type'), id=id)
             for a, v in d.items():
                 ac = item.fieldtype(a)
                 setattr(item, a, ac(v))
