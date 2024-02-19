@@ -1,7 +1,7 @@
 import os
 import sys
 import copy
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 import random
 from random import randrange, randint
 import dataclasses
@@ -21,6 +21,13 @@ CanvasPoint: TypeAlias = tuple[int, int] # x, y on canvas
 CanvasRect: TypeAlias = tuple[int, int, int, int] # x0, y0, x1, y1 on canvas
 DisplayPoint: TypeAlias = tuple[int, int] # x, y on display
 ItemList: TypeAlias = list[GItem]
+
+class Tag(StrEnum):
+    """TK Canvas tags to identify class of item"""
+    HANDLE = '@@handle'
+    ITEM = '@@item'
+    BORDER = '@@border'
+    BACKGROUND = '@@background'
 
 # Event state modifier masks
 EVS_SHIFT = 0x0001
@@ -408,14 +415,15 @@ class LayoutEditor(ttk.Frame):
 
     def add_items(self, items: ItemList):
         self.display_list.extend(items)
-        self.redraw()
+        for item in items:
+            self.draw_item(item)
 
     def add_item(self, item: GItem):
         self.display_list.append(item)
         self.draw_item(item)
 
     def draw_item(self, item: GItem):
-        tags = ('item', int(Element.ITEM), item.id)
+        tags = (Tag.ITEM, int(Element.ITEM), item.id)
         c = Canvas(self, tags)
         item.draw(c)
 
@@ -425,17 +433,20 @@ class LayoutEditor(ttk.Frame):
 
     def get_current(self) -> tuple[Element, GItem]:
         tags = self.canvas.gettags(tk.CURRENT)
-        if len(tags) < 2 or tags[0] not in ['handle', 'item']:
+        if len(tags) < 2 or tags[0] not in [Tag.HANDLE, Tag.ITEM]:
             return None, None
         elem = Element(int(tags[1]))
-        if tags[0] == 'handle':
+        if tags[0] == Tag.HANDLE:
             return elem, None
         item = next(x for x in self.display_list if x.id == tags[2])
         return elem, item
 
     def draw_handles(self):
+        self.canvas.delete(Tag.HANDLE)
+        if not self.sel_items:
+            return
         hr = None
-        tags = ('handle', str(Element.ITEM))
+        tags = (Tag.HANDLE, str(Element.ITEM))
         for item in self.sel_items:
             hr = union(hr, item) if hr else item.bounds
             r = tk_inflate(self.tk_bounds(item), 1, 1)
@@ -446,20 +457,18 @@ class LayoutEditor(ttk.Frame):
         for e in Element:
             if e == Element.ITEM:
                 continue
-            tags = ('handle', str(e))
+            tags = (Tag.HANDLE, str(e))
             pt = get_handle_pos(hr, e)
             r = self.tk_bounds(Rect(pt[0], pt[1]))
             r = tk_inflate(r, 4, 4)
             self.canvas.create_rectangle(r, outline='', fill='white', tags=tags)
-        return hr
-
-    def remove_handles(self):
-        self.canvas.delete('handle')
+        if self.state == State.IDLE:
+            self.sel_bounds = hr
 
     def select(self, items: ItemList):
         self.state = State.IDLE
         self.sel_items = items
-        self.redraw()
+        self.draw_handles()
         self.sel_changed(True)
 
     def canvas_select(self, evt):
@@ -469,8 +478,8 @@ class LayoutEditor(ttk.Frame):
         elem, item = self.get_current()
         if not elem:
             if not is_multi and self.sel_items:
-                self.remove_handles()
                 self.sel_items = []
+                self.draw_handles()
                 self.sel_changed(True)
             self.canvas.scan_mark(evt.x, evt.y)
             return
@@ -478,13 +487,12 @@ class LayoutEditor(ttk.Frame):
         self.sel_elem = elem
         sel_changed = False
         if item and not item in self.sel_items:
-            self.remove_handles()
             if is_multi:
                 self.sel_items.append(item)
             else:
                 self.sel_items = [item]
             sel_changed = True
-            self.sel_bounds = self.draw_handles()
+            self.draw_handles()
         self.orig_bounds = [x.get_bounds() for x in self.sel_items]
         if sel_changed:
             self.sel_changed(True)
@@ -560,7 +568,6 @@ class LayoutEditor(ttk.Frame):
             if evt.state & EVS_SHIFT:
                 return values[0] if len(values) == 1 else values
             return self.grid_align(*values)
-        self.remove_handles()
         elem = self.sel_elem
         if self.state != State.DRAGGING:
             self.state = State.DRAGGING
@@ -570,8 +577,10 @@ class LayoutEditor(ttk.Frame):
 
         def resize_item(item, r):
             item.bounds = r
-            self.canvas.delete(item.id)
+            self.canvas.addtag_withtag('updating', item.id)
             self.draw_item(item)
+            self.canvas.tag_raise(item.id, 'updating')
+            self.canvas.delete('updating')
 
         if elem == Element.ITEM:
             x, y = self.sel_bounds.x, self.sel_bounds.y
@@ -649,18 +658,15 @@ class LayoutEditor(ttk.Frame):
         elif self.state == State.DRAGGING:
             self.state = State.IDLE
             self.set_cursor(self.get_cursor(self.sel_elem))
-            self.redraw() # Fix Z-ordering and ensure consistency
-
 
     def redraw(self):
         self.canvas.delete(tk.ALL)
         r = self.tk_bounds(Rect(0, 0, self.width, self.height))
-        self.canvas.create_rectangle(r, outline='', fill='black', tags=('background'))
+        self.canvas.create_rectangle(r, outline='', fill='black', tags=(Tag.BACKGROUND))
         for item in self.display_list:
             self.draw_item(item)
-        self.canvas.create_rectangle(r[0]-1, r[1]-1, r[2]+1, r[3]+1, outline='dimgray', tags=('border'))
-        if self.sel_items:
-            self.sel_bounds = self.draw_handles()
+        self.canvas.create_rectangle(r[0]-1, r[1]-1, r[2]+1, r[3]+1, outline='dimgray', tags=(Tag.BORDER))
+        self.draw_handles()
 
     def canvas_key(self, evt):
         # print(evt)
@@ -677,6 +683,7 @@ class LayoutEditor(ttk.Frame):
         def delete_items():
             for item in self.sel_items:
                 self.display_list.remove(item)
+                self.canvas.delete(item.id)
             self.select([])
 
         def shift_items(xo, yo):
@@ -729,6 +736,7 @@ class LayoutEditor(ttk.Frame):
             item.y += off
         self.sel_items = items
         self.add_items(items)
+        self.draw_handles()
         self.sel_changed(True)
 
 
@@ -1068,7 +1076,7 @@ def run():
     def fileList():
         data = get_project_data()
         print(json_dumps(data))
-        # layout.canvas.delete('handle', 'border')
+        # layout.canvas.delete(Tag.HANDLE, Tag.BORDER)
         # layout.canvas.update()
         # x, y = layout.draw_offset
         # w, h = layout.width * layout.scale, layout.height * layout.scale
