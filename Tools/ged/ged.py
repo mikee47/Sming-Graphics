@@ -425,7 +425,7 @@ class LayoutEditor(ttk.Frame):
 
     def get_current(self) -> tuple[Element, GItem]:
         tags = self.canvas.gettags(tk.CURRENT)
-        if len(tags) < 2:
+        if len(tags) < 2 or tags[0] not in ['handle', 'item']:
             return None, None
         elem = Element(int(tags[1]))
         if tags[0] == 'handle':
@@ -655,10 +655,10 @@ class LayoutEditor(ttk.Frame):
     def redraw(self):
         self.canvas.delete(tk.ALL)
         r = self.tk_bounds(Rect(0, 0, self.width, self.height))
-        self.canvas.create_rectangle(r, outline='', fill='black')
+        self.canvas.create_rectangle(r, outline='', fill='black', tags=('background'))
         for item in self.display_list:
             self.draw_item(item)
-        self.canvas.create_rectangle(r[0]-1, r[1]-1, r[2]+1, r[3]+1, outline='dimgray')
+        self.canvas.create_rectangle(r[0]-1, r[1]-1, r[2]+1, r[3]+1, outline='dimgray', tags=('border'))
         if self.sel_items:
             self.sel_bounds = self.draw_handles()
 
@@ -1068,6 +1068,12 @@ def run():
     def fileList():
         data = get_project_data()
         print(json_dumps(data))
+        # layout.canvas.delete('handle', 'border')
+        # layout.canvas.update()
+        # x, y = layout.draw_offset
+        # w, h = layout.width * layout.scale, layout.height * layout.scale
+        # B = 8
+        # layout.canvas.postscript(file='test.ps', x=x-B, y=y-B, width=w+B*2, height=h+B*2)
 
     root = tk.Tk(className='GED')
     root.geometry('1000x600')
