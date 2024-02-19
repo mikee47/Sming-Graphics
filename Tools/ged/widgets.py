@@ -68,11 +68,12 @@ class TextWidget(ScrolledText, CustomWidget):
     def __init__(self, master, name, callback):
         super().__init__(master, height=4)
         self.callback = callback
-        def on_modified(evt, name=name):
-            if self.callback:
-                self.edit_modified(False)
-                self.callback(name, self.get_value())
-        self.bind('<<Modified>>', on_modified)
+        if self.callback:
+            def on_modified(evt, name=name):
+                if self.callback:
+                    self.edit_modified(False)
+                    self.callback(name, self.get_value())
+            self.bind('<<Modified>>', on_modified)
 
     def get_value(self):
         # TK always appends a newline, so remove it
@@ -95,6 +96,49 @@ class ComboboxWidget(ttk.Combobox, CustomWidget):
 
     def set_choices(self, choices):
         self.configure(values=choices)
+
+
+class ListboxWidget(tk.Listbox, CustomWidget):
+    def __init__(self, master, callback):
+        self.callback = callback
+        self.itemlist = []
+        self.listvar = tk.StringVar()
+        self.selection = None
+        super().__init__(master, listvariable=self.listvar, selectmode=tk.EXTENDED)
+        if self.callback:
+            def on_select(evt):
+                sel = self.curselection()
+                if sel == self.selection:
+                    return
+                self.selection = sel
+                self.callback()
+            self.bind('<<ListboxSelect>>', on_select)
+
+    def get_value(self):
+        return None
+        # return self.var.get()
+
+    def set_value(self, value):
+        pass
+        # self.var.set(value)
+
+    def get_selection(self):
+        return [self.itemlist[i] for i in self.curselection()]
+
+    def set_choices(self, choices):
+        self.listvar.set(list(item.id for item in choices))
+        self.itemlist = choices
+
+    def select(self, sel_items):
+        self.select_clear(0, tk.END)
+        i_last = -1
+        for i, item in enumerate(self.itemlist):
+            if item not in sel_items:
+                continue
+            self.select_set(i)
+            i_last = i
+        if i_last >= 0:
+            self.see(i_last)
 
 
 class ScaleWidget(tk.Scale, CustomWidget):

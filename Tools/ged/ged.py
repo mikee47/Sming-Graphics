@@ -857,6 +857,52 @@ class PropertyEditor(Editor):
             self.is_updating = False
 
 
+class ItemEditor(Editor):
+    def __init__(self, root):
+        super().__init__(root, 'Items')
+        self.on_select = None
+        def select_changed():
+            if self.on_select:
+                self.on_select()
+        self.listbox = ListboxWidget(self, select_changed).set_row(0)
+
+    # def value_changed(self, name: str, value: TkVarType):
+    #     if name == 'name':
+    #         font = font_assets.get(value)
+    #         if font:
+    #             self.select(font)
+    #         return
+    #     font_name = self.get_value('name')
+    #     # print(f'value_changed: "{name}", "{value}", "{font_name}"')
+    #     font = font_assets.get(font_name)
+    #     if font is None:
+    #         font = Font(name=font_name)
+    #         font_assets.append(font)
+    #     setattr(font, name, value)
+    #     self.update()
+    #     super().value_changed(name, value)
+
+    def update(self, items):
+        self.listbox.set_choices(items)
+ 
+    def select(self, sel_items):
+        self.listbox.select(sel_items)
+
+    @property
+    def sel_items(self):
+        return self.listbox.get_selection()
+
+    def show_item(self, item):
+        self.listbox.show_item(item)
+
+    # def select(self, font: str | Font):
+    #     if font is None:
+    #         font = font_assets.default
+    #     elif isinstance(font, str):
+    #         font = font_assets.get(font, font_assets.default)
+    #     self.load_values(font)
+
+
 class FontEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Font')
@@ -1021,6 +1067,7 @@ def run():
         display_list = dl_deserialise(data['layout'])
         layout.clear()
         layout.add_items(display_list)
+        item_editor.update(layout.display_list)
 
     # Menus
     def fileClear():
@@ -1060,6 +1107,7 @@ def run():
                 item.text = item.id.replace('_', ' ')
             display_list.append(item)
         layout.add_items(display_list)
+        layout.sel_changed(False)
 
 
     def fileLoad():
@@ -1186,6 +1234,8 @@ def run():
         if full_change:
             prop.reset()
         items = layout.sel_items
+        item_editor.update(layout.display_list)
+        item_editor.select(layout.sel_items)
         if not items:
             prop.pack_forget()
             return
@@ -1239,6 +1289,12 @@ def run():
             prop.set_field(name, values, options, callback)
 
     layout.on_sel_changed = sel_changed
+
+    # Items
+    item_editor = add_editor(ItemEditor)
+    def item_select():
+        layout.select(item_editor.sel_items)
+    item_editor.on_select = item_select
 
     # Fonts
     global font_assets
