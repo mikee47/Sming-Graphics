@@ -864,7 +864,7 @@ class ItemEditor(Editor):
         def select_changed():
             if self.on_select:
                 self.on_select()
-        self.listbox = ListboxWidget(self, select_changed).set_row(0)
+        self.listbox = TreeviewWidget(self, select_changed).set_row(0)
 
     # def value_changed(self, name: str, value: TkVarType):
     #     if name == 'name':

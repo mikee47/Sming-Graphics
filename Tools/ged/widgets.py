@@ -141,6 +141,68 @@ class ListboxWidget(tk.Listbox, CustomWidget):
             self.see(i_last)
 
 
+class TreeviewWidget(ttk.Frame, CustomWidget):
+    def __init__(self, master, callback):
+        self.callback = callback
+        self.itemlist = []
+        self.is_selecting = False
+        COLUMNS = dict(
+            type='Type'
+        )
+
+        super().__init__(master)
+        tree = self.tree = ttk.Treeview(self, columns=list(COLUMNS))
+        vscroll = ttk.Scrollbar(self, orient=tk.VERTICAL, command=tree.yview)
+        vscroll.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.configure(yscrollcommand=vscroll.set)
+        tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+
+        for k, v in COLUMNS.items():
+            tree.heading(k, text=v, anchor=tk.W)
+        if self.callback:
+            def on_select(evt):
+                if not self.is_selecting:
+                    self.callback()
+            tree.bind('<<TreeviewSelect>>', on_select)
+
+    def get_value(self):
+        return None
+        # return self.var.get()
+
+    def set_value(self, value):
+        pass
+        # self.var.set(value)
+
+    def get_selection(self):
+        index = dict((item.id, item) for item in self.itemlist)
+        return [index[id] for id in self.tree.selection()]
+
+    def set_choices(self, choices):
+        tree = self.tree
+        idlist = set(tree.get_children(''))
+        choice_ids = set(item.id for item in choices)
+        del_ids = [id for id in idlist if id not in choice_ids]
+        if del_ids:
+            tree.delete(*del_ids)
+        for i, item in enumerate(choices):
+            if item.id in idlist:
+                tree.move(item.id, '', i)
+                tree.item(item.id, text=item.id, values=(item.typename))
+            else:
+                tree.insert('', i, item.id, text=item.id, values=(item.typename))
+        self.itemlist = choices
+
+    def select(self, sel_items):
+        self.is_selecting = True
+        tree = self.tree
+        tree.selection_set([item.id for item in sel_items])
+        if sel_items:
+            tree.see(sel_items[-1].id)
+            tree.see(sel_items[0].id)
+        tree.update()
+        self.is_selecting = False
+
+
 class ScaleWidget(tk.Scale, CustomWidget):
     def __init__(self, master, name, vartype, callback, from_, to, resolution):
         self.callback = callback
