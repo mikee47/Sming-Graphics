@@ -693,64 +693,6 @@ class LayoutEditor(ttk.Frame):
             self.redraw()
             self.sel_changed(False)
 
-        def z_sort(items, reverse: bool):
-            items.sort(reverse=reverse, key=lambda x: self.display_list.index(x))
-            return items
-            # z = [(self.display_list.index(x), x) for x in items]
-            # z.sort(key=lambda e: e[0])
-
-
-        def z_top():
-            """Move item with highest Z-order to top, stack others immediately below it"""
-            if not self.sel_items:
-                return
-            z = z_sort(self.sel_items, False)
-            dl = self.display_list
-            for item in z:
-                dl.remove(item)
-                dl.append(item)
-            self.redraw()
-            self.sel_changed(False)
-
-        def z_bottom():
-            """Move item with lowest Z-order to bottom, stack others immediately above it"""
-            if not self.sel_items:
-                return
-            z = z_sort(self.sel_items, True)
-            dl = self.display_list
-            for item in z:
-                dl.remove(item)
-                dl.insert(0, item)
-            self.redraw()
-            self.sel_changed(False)
-
-        def z_up():
-            """Raise item with highest Z-order one place, stack others immediately below it"""
-            if not self.sel_items:
-                return
-            z = z_sort(self.sel_items, False)
-            dl = self.display_list
-            i = min(dl.index(z[-1]) + 1, len(dl) - 1)
-            for item in z:
-                dl.remove(item)
-                dl.insert(i, item)
-            self.redraw()
-            self.sel_changed(False)
-
-        def z_down():
-            """Lower item with lowest Z-order one place, stack others immediately above it"""
-            if not self.sel_items:
-                return
-            z = z_sort(self.sel_items, True)
-            dl = self.display_list
-            i = max(dl.index(z[-1]) - 1, 0)
-            for item in z:
-                dl.remove(item)
-                dl.insert(i, item)
-            self.redraw()
-            self.sel_changed(False)
-
-
         mod = evt.state & (EVS_CONTROL | EVS_SHIFT)
         if mod & EVS_CONTROL:
             return
@@ -774,13 +716,35 @@ class LayoutEditor(ttk.Frame):
             't': (add_item, 'Text'),
             'b': (add_item, 'Button'),
             'l': (add_item, 'Label'),
-            'home': (z_top,),
-            'end': (z_bottom,),
-            'prior': (z_up,),
-            'next': (z_down,),
+            'home': (self.z_move, 'top'),
+            'end': (self.z_move, 'bottom'),
+            'prior': (self.z_move, 'raise'),
+            'next': (self.z_move, 'lower'),
         }.get(c)
         if opt:
             opt[0](*opt[1:])
+
+    def z_move(self, cmd: str):
+        """Move item with highest Z-order to top, stack others immediately below it"""
+        if not self.sel_items:
+            return
+        dl = self.display_list
+        z_list = self.sel_items
+        z_list.sort(reverse=cmd in ['bottom', 'lower'], key=lambda x: dl.index(x))
+        # z = [(self.display_list.index(x), x) for x in items]
+        # z.sort(key=lambda e: e[0])
+        i = {
+            'top': len(dl),
+            'bottom': 0,
+            'raise': min(dl.index(z_list[-1]) + 1, len(dl) - 1),
+            'lower': max(dl.index(z_list[-1]) - 1, 0),
+        }[cmd]
+        for item in z_list:
+            dl.remove(item)
+            dl.insert(i, item)
+        self.redraw()
+        self.sel_changed(False)
+
 
     def canvas_select_all(self, evt):
         self.sel_items = list(self.display_list)
@@ -926,34 +890,21 @@ class ItemEditor(Editor):
         def select_changed():
             if self.on_select:
                 self.on_select()
-        self.listbox = TreeviewWidget(self, select_changed)
-        self.listbox.pack(expand=True, fill=tk.BOTH)
+        tree = self.tree = TreeviewWidget(self, select_changed)
+        tree.pack(expand=True, fill=tk.BOTH)
 
-    # def value_changed(self, name: str, value: TkVarType):
-    #     if name == 'name':
-    #         font = font_assets.get(value)
-    #         if font:
-    #             self.select(font)
-    #         return
-    #     font_name = self.get_value('name')
-    #     # print(f'value_changed: "{name}", "{value}", "{font_name}"')
-    #     font = font_assets.get(font_name)
-    #     if font is None:
-    #         font = Font(name=font_name)
-    #         font_assets.append(font)
-    #     setattr(font, name, value)
-    #     self.update()
-    #     super().value_changed(name, value)
+    def bind(self, *args):
+        self.tree.bind(*args)
 
     def update(self, items):
-        self.listbox.set_choices(items)
+        self.tree.set_choices(items)
  
     def select(self, sel_items):
-        self.listbox.select(sel_items)
+        self.tree.select(sel_items)
 
     @property
     def sel_items(self):
-        return self.listbox.get_selection()
+        return self.tree.get_selection()
 
 
 class FontEditor(Editor):
@@ -1348,6 +1299,10 @@ def run():
     def item_select():
         layout.select(item_editor.sel_items)
     item_editor.on_select = item_select
+    item_editor.bind('<Key-Home>', lambda _: layout.z_move('top'))
+    item_editor.bind('<Key-End>', lambda _: layout.z_move('bottom'))
+    item_editor.bind('<Key-Prior>', lambda _: layout.z_move('raise'))
+    item_editor.bind('<Key-Next>', lambda _: layout.z_move('lower'))
 
     # Fonts
     global font_assets

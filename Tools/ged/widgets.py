@@ -165,6 +165,9 @@ class TreeviewWidget(ttk.Frame, CustomWidget):
                     self.callback()
             tree.bind('<<TreeviewSelect>>', on_select)
 
+    def bind(self, *args):
+        self.tree.bind(*args)
+
     def get_value(self):
         return None
         # return self.var.get()
