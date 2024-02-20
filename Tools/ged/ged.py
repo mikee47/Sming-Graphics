@@ -926,7 +926,8 @@ class ItemEditor(Editor):
         def select_changed():
             if self.on_select:
                 self.on_select()
-        self.listbox = TreeviewWidget(self, select_changed).set_row(0)
+        self.listbox = TreeviewWidget(self, select_changed)
+        self.listbox.pack(expand=True, fill=tk.BOTH)
 
     # def value_changed(self, name: str, value: TkVarType):
     #     if name == 'name':
@@ -1203,8 +1204,7 @@ def run():
     pane.add(layout, weight=2)
 
     # Editors to right
-    edit_frame = ttk.Frame(pane, width=240)
-    edit_frame.pack(fill=tk.BOTH)
+    edit_frame = ttk.PanedWindow(pane, orient=tk.VERTICAL, width=240)
     pane.add(edit_frame)
 
     # Toolbar
@@ -1227,7 +1227,7 @@ def run():
     label.pack()
 
     res_frame = ttk.Notebook(edit_frame)
-    res_frame.pack(fill=tk.X, ipady=4)
+    edit_frame.add(res_frame, weight=1)
     def add_editor(editor_class):
         editor = editor_class(res_frame)
         res_frame.add(editor, text=editor.name, sticky=tk.NSEW)
@@ -1252,6 +1252,7 @@ def run():
 
     # Properties
     prop = PropertyEditor(edit_frame)
+    edit_frame.add(prop, weight=2)
 
     def value_changed(name: str, value: TkVarType):
         if name == 'type':
@@ -1291,9 +1292,7 @@ def run():
         item_editor.update(layout.display_list)
         item_editor.select(layout.sel_items)
         if not items:
-            prop.pack_forget()
             return
-        prop.pack(fill=tk.X, ipady=4)
         if full_change:
             typenames = set(x.typename for x in items)
             prop.set_field('type', list(typenames), TYPENAMES)
