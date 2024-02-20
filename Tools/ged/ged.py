@@ -693,6 +693,64 @@ class LayoutEditor(ttk.Frame):
             self.redraw()
             self.sel_changed(False)
 
+        def z_sort(items, reverse: bool):
+            items.sort(reverse=reverse, key=lambda x: self.display_list.index(x))
+            return items
+            # z = [(self.display_list.index(x), x) for x in items]
+            # z.sort(key=lambda e: e[0])
+
+
+        def z_top():
+            """Move item with highest Z-order to top, stack others immediately below it"""
+            if not self.sel_items:
+                return
+            z = z_sort(self.sel_items, False)
+            dl = self.display_list
+            for item in z:
+                dl.remove(item)
+                dl.append(item)
+            self.redraw()
+            self.sel_changed(False)
+
+        def z_bottom():
+            """Move item with lowest Z-order to bottom, stack others immediately above it"""
+            if not self.sel_items:
+                return
+            z = z_sort(self.sel_items, True)
+            dl = self.display_list
+            for item in z:
+                dl.remove(item)
+                dl.insert(0, item)
+            self.redraw()
+            self.sel_changed(False)
+
+        def z_up():
+            """Raise item with highest Z-order one place, stack others immediately below it"""
+            if not self.sel_items:
+                return
+            z = z_sort(self.sel_items, False)
+            dl = self.display_list
+            i = min(dl.index(z[-1]) + 1, len(dl) - 1)
+            for item in z:
+                dl.remove(item)
+                dl.insert(i, item)
+            self.redraw()
+            self.sel_changed(False)
+
+        def z_down():
+            """Lower item with lowest Z-order one place, stack others immediately above it"""
+            if not self.sel_items:
+                return
+            z = z_sort(self.sel_items, True)
+            dl = self.display_list
+            i = max(dl.index(z[-1]) - 1, 0)
+            for item in z:
+                dl.remove(item)
+                dl.insert(i, item)
+            self.redraw()
+            self.sel_changed(False)
+
+
         mod = evt.state & (EVS_CONTROL | EVS_SHIFT)
         if mod & EVS_CONTROL:
             return
@@ -716,6 +774,10 @@ class LayoutEditor(ttk.Frame):
             't': (add_item, 'Text'),
             'b': (add_item, 'Button'),
             'l': (add_item, 'Label'),
+            'home': (z_top,),
+            'end': (z_bottom,),
+            'prior': (z_up,),
+            'next': (z_down,),
         }.get(c)
         if opt:
             opt[0](*opt[1:])
@@ -891,16 +953,6 @@ class ItemEditor(Editor):
     @property
     def sel_items(self):
         return self.listbox.get_selection()
-
-    def show_item(self, item):
-        self.listbox.show_item(item)
-
-    # def select(self, font: str | Font):
-    #     if font is None:
-    #         font = font_assets.default
-    #     elif isinstance(font, str):
-    #         font = font_assets.get(font, font_assets.default)
-    #     self.load_values(font)
 
 
 class FontEditor(Editor):
