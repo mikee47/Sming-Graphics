@@ -14,6 +14,34 @@ class Resource(DataObject):
     name: str = ''
 
 
+class ResourceList(list):
+    def get(self, name, default=None):
+        try:
+            return next(r for r in self if r.name == name)
+        except StopIteration:
+            return default
+
+    def names(self):
+        return [r.name for r in self]
+
+    def asdict(self):
+        res = {}
+        for r in self:
+            d = r.asdict()
+            del d['name']
+            res[r.name] = d
+        return res
+
+    def load(self, res_class, res_dict):
+        self.clear()
+        for name, rdef in res_dict.items():
+            r = res_class(name=name)
+            for a, v in rdef.items():
+                setattr(r, a, v)
+            self.append(r)
+
+
+
 class FontStyle(Enum):
     """Style is a set of these values, using strings here but bitfields in library"""
     # typeface
@@ -53,6 +81,28 @@ class Font(Resource):
             args['weight'] = 'bold'
         return tk.font.Font(family=self.family, size=-round(self.size * scale), **args)
 
+
+class FontList(ResourceList):
+    def __init__(self):
+        tk_def = FontList.tk_default().configure()
+        font = Font(family = tk_def['family'])
+        self.default = font
+
+    @staticmethod
+    def tk_default():
+        return tkinter.font.nametofont('TkDefaultFont')
+
+    @staticmethod
+    def families():
+        # Not all fonts are listed by TK, so include the 'guaranteed supported' ones
+        font_families = list(tk.font.families())
+        tk_def = FontList.tk_default().configure()
+        font_families += ['Courier', 'Times', 'Helvetica', tk_def['family']]
+        font_families = list(set(font_families))
+        return sorted(font_families, key=str.lower)
+
+    def load(self, res_dict):
+        super().load(Font, res_dict)
 
 
 @dataclass
@@ -109,3 +159,8 @@ class Image(Resource):
             draw.line((0, 0, w, h), fill=128, width=3)
             draw.line((0, h, w, 0), fill=128, width=3)
         return PIL.ImageTk.PhotoImage(img)
+
+
+class ImageList(ResourceList):
+    def load(self, res_dict):
+        super().load(Image, res_dict)
