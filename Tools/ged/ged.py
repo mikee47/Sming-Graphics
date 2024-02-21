@@ -897,7 +897,7 @@ class ItemEditor(Editor):
         self.tree.bind(*args)
 
     def update(self, items):
-        self.tree.set_choices(items)
+        self.tree.set_choices(reversed(items))
  
     def select(self, sel_items):
         self.tree.select(sel_items)

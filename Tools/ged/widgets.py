@@ -181,6 +181,7 @@ class TreeviewWidget(ttk.Frame, CustomWidget):
         return [index[id] for id in self.tree.selection()]
 
     def set_choices(self, choices):
+        choices = list(choices)
         tree = self.tree
         idlist = set(tree.get_children(''))
         choice_ids = set(item.id for item in choices)
