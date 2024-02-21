@@ -11,7 +11,7 @@ import tkinter as tk
 import tkinter.font
 from tkinter import ttk, filedialog, colorchooser
 from gtypes import colormap
-from resource import Font, Image, TkImage
+import resource
 from item import *
 from typing import TypeAlias
 from widgets import *
@@ -214,62 +214,7 @@ def get_handle_pos(r: Rect, elem: Element):
     }.get(elem)
 
 
-class ResourceList(list):
-    def get(self, name, default=None):
-        try:
-            return next(r for r in self if r.name == name)
-        except StopIteration:
-            return default
-
-    def names(self):
-        return [r.name for r in self]
-
-    def asdict(self):
-        res = {}
-        for r in self:
-            d = r.asdict()
-            del d['name']
-            res[r.name] = d
-        return res
-
-    def load(self, res_class, res_dict):
-        self.clear()
-        for name, rdef in res_dict.items():
-            r = res_class(name=name)
-            for a, v in rdef.items():
-                setattr(r, a, v)
-            self.append(r)
-
-
-class FontAssets(ResourceList):
-    def __init__(self):
-        tk_def = FontAssets.tk_default().configure()
-        font = Font(family = tk_def['family'])
-        self.default = font
-
-    @staticmethod
-    def tk_default():
-        return tkinter.font.nametofont('TkDefaultFont')
-
-    @staticmethod
-    def families():
-        # Not all fonts are listed by TK, so include the 'guaranteed supported' ones
-        font_families = list(tk.font.families())
-        tk_def = FontAssets.tk_default().configure()
-        font_families += ['Courier', 'Times', 'Helvetica', tk_def['family']]
-        font_families = list(set(font_families))
-        return sorted(font_families, key=str.lower)
-
-    def load(self, res_dict):
-        super().load(Font, res_dict)
-
 font_assets = None
-
-
-class ImageAssets(ResourceList):
-    def load(self, res_dict):
-        super().load(Image, res_dict)
-
 image_assets = None
 
 
@@ -402,8 +347,8 @@ class LayoutEditor(ttk.Frame):
         font = font_assets.get(font_name, font_assets.default)
         return font.get_tk_font(self.scale, style)
 
-    def tk_image(self, image_name: str, crop_rect: Rect) -> TkImage:
-        image_resource = image_assets.get(image_name, Image())
+    def tk_image(self, image_name: str, crop_rect: Rect) -> resource.TkImage:
+        image_resource = image_assets.get(image_name, resource.Image())
         return image_resource.get_tk_image(crop_rect, self.scale)
 
     def clear(self):
@@ -926,7 +871,7 @@ class FontEditor(Editor):
         # print(f'value_changed: "{name}", "{value}", "{font_name}"')
         font = font_assets.get(font_name)
         if font is None:
-            font = Font(name=font_name)
+            font = resource.Font(name=font_name)
             font_assets.append(font)
         setattr(font, name, value)
         self.update()
@@ -940,7 +885,7 @@ class FontEditor(Editor):
             font_name = font_names[0]
         self.select(font_name)
 
-    def select(self, font: str | Font):
+    def select(self, font: str | resource.Font):
         if font is None:
             font = font_assets.default
         elif isinstance(font, str):
@@ -969,7 +914,7 @@ class ImageEditor(Editor):
             return
         image = image_assets.get(image_name, None)
         if image is None:
-            image = Image(name=image_name, source=filename)
+            image = resource.Image(name=image_name, source=filename)
             image_assets.append(image)
             self.update()
 
@@ -996,7 +941,7 @@ class ImageEditor(Editor):
             image = image_assets[0]
         self.select(image)
 
-    def select(self, image: str | Image):
+    def select(self, image: str | resource.Image):
         if isinstance(image, str):
             image = image_assets.get(image)
         if not image:
@@ -1306,7 +1251,7 @@ def run():
 
     # Fonts
     global font_assets
-    font_assets = FontAssets()
+    font_assets = resource.FontList()
     font_editor = add_editor(FontEditor)
     def font_value_changed(name: str, value: TkVarType):
         # print(f'font_value_changed("{name}", "{value}")')
@@ -1315,7 +1260,7 @@ def run():
 
     # Images
     global image_assets
-    image_assets = ImageAssets()
+    image_assets = resource.ImageList()
     image_editor = add_editor(ImageEditor)
     def image_value_changed(name: str, value: TkVarType):
         # print(f'image_value_changed("{name}", "{value}")')
