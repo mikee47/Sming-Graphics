@@ -15,6 +15,7 @@ import resource
 from item import *
 from typing import TypeAlias
 from widgets import *
+import remote
 
 TkVarType: TypeAlias = str | int | float # python types used for tk.StringVar, tk.IntVar, tk.DoubleVar
 CanvasPoint: TypeAlias = tuple[int, int] # x, y on canvas
@@ -1114,6 +1115,78 @@ def run():
         # B = 8
         # layout.canvas.postscript(file='test.ps', x=x-B, y=y-B, width=w+B*2, height=h+B*2)
 
+    def fileGenerateResource():
+        images = {}
+        for img in image_assets:
+            d = dict(
+                source = img.source,
+                transform = dict(width=img.width, height=img.height),
+            )
+            if img.format:
+                d['format'] = img.format
+            images[img.name] = d
+
+        fonts = {}
+        for font in font_assets:
+            d = dict(
+                size = font.size
+            )
+            if 'normal' in font.typeface:
+                d['normal'] = font.name
+            print(font.get_detail('bold'))
+
+
+        def findFontFiles():
+            import freetype
+
+            dirs = []
+            if sys.platform == "win32":
+                windir = os.environ.get("WINDIR")
+                if windir:
+                    dirs.append(os.path.join(windir, "fonts"))
+            elif sys.platform in ("linux", "linux2"):
+                lindirs = os.environ.get("XDG_DATA_DIRS", "")
+                if not lindirs:
+                    lindirs = "/usr/share"
+                dirs += [os.path.join(lindir, "fonts") for lindir in lindirs.split(":")]
+            elif sys.platform == "darwin":
+                dirs += [
+                    "/Library/Fonts",
+                    "/System/Library/Fonts",
+                    os.path.expanduser("~/Library/Fonts"),
+                ]
+            else:
+                raise SystemError("Unsupported platform: " % sys.platform)
+
+            fontfiles = []
+            for directory in [os.path.expandvars(path) for path in dirs]:
+                for walkroot, walkdir, walkfilenames in os.walk(directory):
+                    fontfiles += [os.path.join(walkroot, name) for name in walkfilenames]
+
+            for filename in fontfiles:
+                try:
+                    face = freetype.Face(filename)
+                except:
+                    continue
+                print(face.family_name.decode(), face.style_name.decode(), hex(face.style_flags))
+
+        findFontFiles()
+
+
+
+
+    def fileSend():
+        client = remote.Client('192.168.13.10', 23)
+        data = remote.serialise(layout.display_list)
+        client.send('CMD:clear;\n'.encode())
+        for line in data:
+            client.send(line.encode() + b'\n')
+        client.send('CMD:render;\n'.encode())
+            # print(line)
+        # for item in data.values():
+        #     s = ','.join(f'{name}={value}' for name, value in item.items()) + '\r\n'
+        #     client.send(s.encode())
+
     root = tk.Tk(className='GED')
     root.geometry('1000x600')
     root.title('Graphical Layout Editor')
@@ -1144,6 +1217,8 @@ def run():
     sep = ttk.Separator(toolbar, orient=tk.VERTICAL)
     sep.pack(side=tk.LEFT)
     addButton('List', fileList)
+    addButton('Gen .rc', fileGenerateResource)
+    addButton('Send', fileSend)
 
     # Status bar
     status = tk.StringVar()
