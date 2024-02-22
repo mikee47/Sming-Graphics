@@ -12,9 +12,11 @@ class DataObject:
     def asdict(self):
         return dataclasses.asdict(self)
 
-    def fieldtype(self, field_name: str):
-        return self.__dataclass_fields__[field_name].type
-
+    def __setattr__(self, name, value):
+        fld = self.__dataclass_fields__.get(name)
+        if fld:
+            value = fld.type(value)
+        super().__setattr__(name, value)
 
 
 @dataclass
