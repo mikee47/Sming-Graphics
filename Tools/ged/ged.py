@@ -98,6 +98,9 @@ class Element(IntEnum):
     def is_handle(self):
         return (self & ELEMENT_CLASS_MASK) == EC_HANDLE
 
+# Globals
+font_assets = None
+image_assets = None
 
 class Canvas:
     """Provides the interface for items to draw themselves"""
@@ -168,23 +171,21 @@ class Canvas:
         x0, y0, x1, y1 = layout.tk_bounds(rect)
         layout.canvas.create_oval(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
 
-    def draw_text(self, rect, text, halign, valign):
+    def draw_text(self, rect, text):
         layout = self.layout
-        x0, y0, x1, y1 = layout.tk_bounds(rect)
-        id = layout.canvas.create_text(x0, y0, width=1+x1-x0,
-            font=layout.tk_font(self.font, self.fontstyle),
-            text=text, fill=self.color,
-            anchor=tk.NW, justify=tk.CENTER, tags=self.tags)
-        _, _, x2, y2 = layout.canvas.bbox(id)
-        x0 += (x1 - x2) // 2
-        y0 += (y1 - y2) // 2
-        layout.canvas.coords(id, x0, y0)
+        font = font_assets.get(self.font, font_assets.default)
+        tk_image = font.draw_tk_image(rect.w, rect.h, layout.scale, self.fontstyle, self.color, text)
+        x, y = layout.tk_point(rect.x, rect.y)
+        layout.canvas.create_image(x, y, image=tk_image, anchor=tk.NW, tags=self.tags)
+        return tk_image
 
     def draw_image(self, rect, image: str, offset: CanvasPoint):
         """Important: Caller must retain copy of returned image otherwise it gets disposed"""
         layout = self.layout
         x0, y0, x1, y1 = layout.tk_bounds(rect)
-        tk_image = layout.tk_image(image, Rect(*offset, rect.w, rect.h))
+        crop_rect = Rect(*offset, rect.w, rect.h)
+        image_asset = image_assets.get(image, resource.Image())
+        tk_image = image_asset.get_tk_image(crop_rect, layout.scale)
         layout.canvas.create_image(x0, y0, image=tk_image, anchor=tk.NW, tags=self.tags)
         return tk_image
 
@@ -212,10 +213,6 @@ def get_handle_pos(r: Rect, elem: Element):
         Element.HANDLE_W: (r.x, r.y + r.h // 2),
         Element.HANDLE_NW: (r.x, r.y),
     }.get(elem)
-
-
-font_assets = None
-image_assets = None
 
 
 class State(Enum):
@@ -342,14 +339,6 @@ class LayoutEditor(ttk.Frame):
         xo, yo = self.draw_offset
         b = self.tk_scale(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h)
         return (xo + b[0], yo + b[1], xo + b[2], yo + b[3])
-
-    def tk_font(self, font_name: str, style: set) -> tk.font.Font:
-        font = font_assets.get(font_name, font_assets.default)
-        return font.get_tk_font(self.scale, style)
-
-    def tk_image(self, image_name: str, crop_rect: Rect) -> resource.TkImage:
-        image_resource = image_assets.get(image_name, resource.Image())
-        return image_resource.get_tk_image(crop_rect, self.scale)
 
     def clear(self):
         self.display_list.clear()

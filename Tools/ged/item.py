@@ -124,7 +124,7 @@ class GText(GItem):
         r = self.get_bounds()
         M = 8
         r.inflate(-M, -M)
-        c.draw_text(r, self.text, tk.CENTER, tk.CENTER)
+        self._tk_image_ref = c.draw_text(r, self.text)
 
 
 @dataclass
@@ -132,10 +132,9 @@ class GImage(GItem):
     image: str = ''
     xoff: int = 0
     yoff: int = 0
-    tk_image_ref = None
 
     def draw(self, c):
-        self.tk_image_ref = c.draw_image(self, self.image, (self.xoff, self.yoff))
+        self._tk_image_ref = c.draw_image(self, self.image, (self.xoff, self.yoff))
 
 
 @dataclass
@@ -160,7 +159,7 @@ class GButton(GItem):
         c.color = str(self.color)
         c.font = self.font
         c.fontstyle = self.fontstyle
-        c.draw_text(r, self.text, tk.CENTER, tk.CENTER)
+        self._tk_image_ref = c.draw_text(r, self.text)
 
 @dataclass
 class GLabel(GItem):
@@ -168,13 +167,15 @@ class GLabel(GItem):
     color: Color = Color('white')
     font: str = ''
     text: str = ''
+    fontstyle: list[str] = dataclasses.field(default_factory=list)
 
     def draw(self, c):
         c.color = str(self.back_color)
         c.fill_rect(self)
         c.color = str(self.color)
         c.font = self.font
-        c.draw_text(self, self.text, tk.CENTER, tk.CENTER)
+        c.fontstyle = self.fontstyle
+        self._tk_image_ref = c.draw_text(self, self.text)
 
 
 TYPENAMES = tuple(t.typename for t in sys.modules[__name__].__dict__.values()

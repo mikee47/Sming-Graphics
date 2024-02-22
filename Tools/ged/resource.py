@@ -1,11 +1,15 @@
+import sys
+import os
 import dataclasses
 from dataclasses import dataclass
 import tkinter as tk
 import tkinter.font
-import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw
-from gtypes import Rect, DataObject
+import freetype
+import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw, PIL.ImageFont
+from gtypes import Rect, DataObject, Color
 from enum import Enum
 from typing import TypeAlias
+import textwrap
 
 TkImage: TypeAlias = PIL.ImageTk.PhotoImage
 
@@ -69,6 +73,75 @@ class FontStyle(Enum):
 
 
 @dataclass
+class FaceInfo:
+    flags: int
+    style: str
+    path: str
+
+class SystemFonts(dict):
+    def __init__(self):
+        self.scan()
+
+    def scan(self):
+        self.clear()
+        dirs = []
+        if sys.platform == "win32":
+            windir = os.environ.get("WINDIR")
+            if windir:
+                dirs.append(os.path.join(windir, "fonts"))
+        elif sys.platform in ("linux", "linux2"):
+            lindirs = os.environ.get("XDG_DATA_DIRS", "")
+            if not lindirs:
+                lindirs = "/usr/share"
+            dirs += [os.path.join(lindir, "fonts") for lindir in lindirs.split(":")]
+        elif sys.platform == "darwin":
+            dirs += [
+                "/Library/Fonts",
+                "/System/Library/Fonts",
+                os.path.expanduser("~/Library/Fonts"),
+            ]
+        else:
+            raise SystemError("Unsupported platform: " % sys.platform)
+
+        fontfiles = []
+        for directory in [os.path.expandvars(path) for path in dirs]:
+            for walkroot, walkdir, walkfilenames in os.walk(directory):
+                fontfiles += [os.path.join(walkroot, name) for name in walkfilenames]
+
+        # freetype.FT_STYLE_FLAGS
+        for filename in fontfiles:
+            try:
+                face = freetype.Face(filename)
+            except:
+                continue
+            name = face.family_name.decode()
+            ft_italic = face.style_flags & freetype.FT_STYLE_FLAGS['FT_STYLE_FLAG_ITALIC']
+            ft_bold = face.style_flags & freetype.FT_STYLE_FLAGS['FT_STYLE_FLAG_BOLD']
+            if ft_italic:
+                style = FaceStyle.boldItalic if ft_bold else FaceStyle.italic
+            else:
+                style = FaceStyle.bold if ft_bold else FaceStyle.normal
+            info = FaceInfo(hex(face.style_flags), style, filename)
+            self.setdefault(name, []).append(info)
+            family_name = face.family_name.decode()
+            style_name = face.style_name.decode()
+            print(f'{family_name} / {style_name} / {face.style_flags:x} / {style}')
+            try:
+                varinfo = face.get_variation_info()
+                print('  ', varinfo.axes)
+                print('  ', varinfo.instances)
+            except:
+                pass
+        return
+        for name, faces in self.items():
+            print(name)
+            for face in faces:
+                print('', face)
+
+system_fonts = SystemFonts()
+
+
+@dataclass
 class Font(Resource):
     family: str = ''
     size: int = 12
@@ -87,6 +160,57 @@ class Font(Resource):
             args['weight'] = 'bold'
         return tk.font.Font(family=self.family, size=-round(self.size * scale), **args)
 
+    def draw_tk_image(self, width, height, scale, fontstyle, color, text):
+        color = Color(color).value_str()
+        img = PIL.Image.new('RGBA', (width, height))
+        draw = PIL.ImageDraw.Draw(img)
+        faces = system_fonts.get(self.family)
+        if faces:
+            face = faces[0]
+            font = PIL.ImageFont.truetype(face.path, self.size)
+            draw.font = font
+            ascent, descent = font.getmetrics()
+            line_height = ascent + descent
+            # Break text up into words for wrapping
+            paragraphs = [textwrap.wrap(para, 1, break_long_words = False,
+                    replace_whitespace = False, drop_whitespace=False)
+                    for para in text.splitlines()]
+            # Measure and build list of lines and their length in pixels
+            lines = []
+            for para in paragraphs:
+                text = ''
+                x = 0
+                space = (0, '')
+                for word in para:
+                    w = draw.textlength(word)
+                    if word.isspace():
+                        space = (w, word)
+                    else:
+                        if x > 0 and (x + space[0] + w) > width:
+                            lines.append((x, text))
+                            text = ''
+                            x = 0
+                        else:
+                            x += space[0]
+                            text += space[1]
+                        space = (0, '')
+                        x += w
+                        text += word
+                if x > 0 or not para:
+                    lines.append((x, text))
+            # Draw centred
+            h = line_height * len(lines)
+            y = (height - h) // 2
+            for w, text in lines:
+                x = (width - w) // 2
+                draw.text((x, y), text, fill=color)
+                # draw.rectangle((x,y,x+w,y+line_height), outline='white')
+                y += ascent + descent
+
+        img = img.resize((round(width * scale), round(height * scale)),
+            resample=PIL.Image.Resampling.NEAREST)
+        return PIL.ImageTk.PhotoImage(img)
+
 
 class FontList(ResourceList):
     def __init__(self):
@@ -100,12 +224,7 @@ class FontList(ResourceList):
 
     @staticmethod
     def families():
-        # Not all fonts are listed by TK, so include the 'guaranteed supported' ones
-        font_families = list(tk.font.families())
-        tk_def = FontList.tk_default().configure()
-        font_families += ['Courier', 'Times', 'Helvetica', tk_def['family']]
-        font_families = list(set(font_families))
-        return sorted(font_families, key=str.lower)
+        return sorted(system_fonts)
 
     def load(self, res_dict):
         super().load(Font, res_dict)
@@ -157,7 +276,8 @@ class Image(Resource):
         if img:
             box = crop_rect.x, crop_rect.y, crop_rect.x + crop_rect.w, crop_rect.y + crop_rect.h
             img = self.image.crop(box)
-            img = img.resize((round(img.width * scale), round(img.height * scale)))
+            img = img.resize((round(img.width * scale), round(img.height * scale)),
+                resample=PIL.Image.Resampling.NEAREST)
         else:
             w, h = round(crop_rect.w * scale), round(crop_rect.h * scale)
             img = PIL.Image.new('RGB', (w, h), color='red')
