@@ -200,10 +200,10 @@ class TreeviewWidget(ttk.Frame, CustomWidget):
         self.is_selecting = True
         tree = self.tree
         tree.selection_set([item.id for item in sel_items])
-        if sel_items:
-            tree.see(sel_items[-1].id)
-            tree.see(sel_items[0].id)
         tree.update()
+        focus = tree.focus()
+        if focus:
+            tree.see(focus)
         self.is_selecting = False
 
 
