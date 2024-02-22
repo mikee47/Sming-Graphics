@@ -41,6 +41,12 @@ class ResourceList(list):
             self.append(r)
 
 
+class FaceStyle(Enum):
+    normal = 0
+    bold = 1
+    italic = 2
+    boldItalic = 3
+
 
 class FontStyle(Enum):
     """Style is a set of these values, using strings here but bitfields in library"""
@@ -66,7 +72,7 @@ class FontStyle(Enum):
 class Font(Resource):
     family: str = ''
     size: int = 12
-    style: list[str] = ()
+    facestyle: list[str] = ()
 
     def get_tk_font(self, scale, fontstyle: tuple[str]):
         style = {FontStyle[s] for s in fontstyle}

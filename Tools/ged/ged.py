@@ -802,7 +802,7 @@ class PropertyEditor(Editor):
             if name == 'fontstyle':
                 widget = self.add_grouped_check_fields(name,
                     {
-                        'typeface': ('Bold', 'Italic'),
+                        'faceStyle': ('Bold', 'Italic'),
                         'underscore:oneof': ('Single:Underscore', 'Double:DoubleUnderscore'),
                         'overscore:oneof': ('Single:Overscore', 'Double:DoubleOverscore'),
                         'strikeout:oneof': ('Single:Strikeout', 'Double:DoubleStrikeout'),
@@ -858,7 +858,7 @@ class FontEditor(Editor):
         self.add_combo_field('name')
         self.add_combo_field('family', font_assets.families())
         self.add_entry_field('size')
-        self.add_check_fields('style', ['normal', 'italic', 'bold', 'boldItalic'])
+        self.add_check_fields('facestyle', [x.name for x in resource.FaceStyle])
         self.update()
 
     def value_changed(self, name: str, value: TkVarType):
