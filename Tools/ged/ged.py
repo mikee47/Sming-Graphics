@@ -992,8 +992,7 @@ def run():
         for id, d in data.items():
             item = GItem.create(d.pop('type'), id=id)
             for a, v in d.items():
-                ac = item.fieldtype(a)
-                setattr(item, a, ac(v))
+                setattr(item, a, v)
             display_list.append(item)
         return display_list
 
@@ -1168,9 +1167,7 @@ def run():
             if not hasattr(item, name):
                 continue
             try:
-                cls = item.fieldtype(name)
-                # print(f'setattr({item}, {name}, {cls(value)})')
-                setattr(item, name, cls(value))
+                setattr(item, name, value)
                 if name == 'font':
                     font_editor.select(value)
                 elif name == 'image':
