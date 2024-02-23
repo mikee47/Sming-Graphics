@@ -113,7 +113,8 @@ system_fonts = SystemFonts()
 class Font(Resource):
     family: str = ''
     size: int = 12
-    facestyle: list[str] = ()
+    mono: bool = False
+    facestyle: list[str] = dataclasses.field(default_factory=list)
 
     def get_tk_font(self, scale, fontstyle: tuple[str]):
         style = {FontStyle[s] for s in fontstyle}
@@ -128,12 +129,14 @@ class Font(Resource):
             args['weight'] = 'bold'
         return tk.font.Font(family=self.family, size=-round(self.size * scale), **args)
 
-    def draw_tk_image(self, width, height, scale, fontstyle, align, color, text):
+    def draw_tk_image(self, width, height, scale, fontstyle, fontscale, align, color, text):
         fontstyle = {FontStyle[s] for s in fontstyle}
         align = {Align[s] for s in align}
         color = Color(color).value_str()
-        img = PIL.Image.new('RGBA', (width, height))
+        w_box, h_box = width // fontscale, height // fontscale
+        img = PIL.Image.new('RGBA', (w_box, h_box))
         draw = PIL.ImageDraw.Draw(img)
+        draw.fontmode = '1' if self.mono else 'L'
         faces = system_fonts.get(self.family)
         if faces:
             if FontStyle.Italic in fontstyle:
@@ -170,7 +173,7 @@ class Font(Resource):
                     if word.isspace():
                         space = (w, word)
                     else:
-                        if x > 0 and (x + space[0] + w) > width:
+                        if x > 0 and (x + space[0] + w) > w_box:
                             lines.append((x, text))
                             text = ''
                             x = 0
@@ -184,17 +187,17 @@ class Font(Resource):
                     lines.append((x, text))
             h = line_height * len(lines)
             if Align.Middle in align:
-                y = (height - h) // 2
+                y = (h_box - h) // 2
             elif Align.Bottom in align:
-                y = height - h
+                y = h_box - h
             else:
                 y = 0
             for w, text in lines:
                 if w > 0:
                     if Align.Centre in align:
-                        x = (width - w) // 2
+                        x = (w_box - w) // 2
                     elif Align.Right in align:
-                        x = width - w
+                        x = w_box - w
                     else:
                         x = 0
                     draw.text((x, y), text, fill=color)

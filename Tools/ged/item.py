@@ -117,11 +117,13 @@ class GText(GItem):
     text: str = ''
     align: list[str] = dataclasses.field(default_factory=list)
     fontstyle: list[str] = dataclasses.field(default_factory=list)
+    fontscale: int = 1
 
     def draw(self, c):
         c.color = str(self.color)
         c.font = self.font
         c.fontstyle = self.fontstyle
+        c.scale = self.fontscale
         c.align = self.align
         r = self.get_bounds()
         M = 8
@@ -146,6 +148,7 @@ class GButton(GItem):
     color: Color = Color('black')
     font: str = ''
     text: str = ''
+    fontscale: int = 1
     fontstyle: list[str] = dataclasses.field(default_factory=list)
 
     def draw(self, c):
@@ -160,6 +163,7 @@ class GButton(GItem):
         c.draw_rounded_rect(self, radius)
         c.color = str(self.color)
         c.font = self.font
+        c.scale = self.fontscale
         c.fontstyle = self.fontstyle
         c.align = {Align.Centre.name, Align.Middle.name}
         self._tk_image_ref = c.draw_text(r, self.text)
@@ -170,6 +174,8 @@ class GLabel(GItem):
     color: Color = Color('white')
     font: str = ''
     text: str = ''
+    halign: str = ''
+    fontscale: int = 1
     fontstyle: list[str] = dataclasses.field(default_factory=list)
 
     def draw(self, c):
@@ -177,8 +183,9 @@ class GLabel(GItem):
         c.fill_rect(self)
         c.color = str(self.color)
         c.font = self.font
+        c.scale = self.fontscale
         c.fontstyle = self.fontstyle
-        c.align = {Align.Centre.name, Align.Middle.name}
+        c.align = {self.halign or Align.Left.name, Align.Middle.name}
         self._tk_image_ref = c.draw_text(self, self.text)
 
 

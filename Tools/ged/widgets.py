@@ -224,20 +224,40 @@ class ScaleWidget(tk.Scale, CustomWidget):
         self.set(value)
 
 
+class CheckFieldWidget(ttk.Checkbutton, CustomWidget):
+    def __init__(self, master, name, callback):
+        self.callback = callback
+        def check_invoked(name=name):
+            if self.callback:
+                self.callback(name, self.get_value())
+        super().__init__(master, text=self.text_from_name(name), command=check_invoked)
+        self.state(['!alternate'])
+
+    def get_value(self):
+        return 'selected' in self.state()
+
+    def set_value(self, value):
+        self.state(['selected' if value else '!selected'])
+
+
 class CheckFieldsWidget(ttk.Frame, CustomWidget):
-    def __init__(self, master, name, values, callback):
+    def __init__(self, master, name, is_set: bool, values, callback):
         super().__init__(master)
         self.callback = callback
-        self.var = set()
+        self.is_set = is_set
+        self.var = set() if is_set else ''
         self.ctrls = {}
         for value in values:
             def check_invoked(name=name, value=value):
                 ctrl = self.ctrls[value]
                 state = ctrl.state()
-                if 'selected' in state:
-                    self.var.add(value)
-                else:
-                    self.var.discard(value)
+                if self.is_set:
+                    if 'selected' in state:
+                        self.var.add(value)
+                    else:
+                        self.var.discard(value)
+                elif 'selected' in state:
+                    self.var = value
                 if self.callback:
                     self.callback(name, self.var)
                 self.update_checks()
@@ -247,14 +267,19 @@ class CheckFieldsWidget(ttk.Frame, CustomWidget):
             self.ctrls[value] = ctrl
 
     def update_checks(self):
+        def is_selected(f):
+            return f == f in self.var if self.is_set else f == self.var
         for f, c in self.ctrls.items():
-            c.state(['selected' if f in self.var else '!selected'])
+            c.state(['selected' if is_selected(f) else '!selected'])
 
     def get_value(self):
         return self.var
 
     def set_value(self, value):
-        self.var = set(value)
+        if self.is_set:
+            self.var = set(value)
+        else:
+            self.var = str(value)
         self.update_checks()
 
 
@@ -272,12 +297,12 @@ class GroupedCheckFieldsWidget(ttk.LabelFrame, CustomWidget):
                 text, _, value = value.partition(':')
                 return (text, value) if value else (text, text)
             group, _, kind = group.partition(':')
-            if kind == 'oneof':
-                value_set = {split(x)[1] for x in values}
-            else:
+            if kind == 'set':
                 value_set = ()
+            else:
                 if kind:
                     raise ValueError(f'Bad field group kind "{kind}"')
+                value_set = {split(x)[1] for x in values}
             LabelWidget(self, self.text_from_name(group)).set_row(row)
             group_frame = FrameWidget(self).set_row(row)
             row += 1
