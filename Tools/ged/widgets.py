@@ -64,6 +64,22 @@ class EntryWidget(ttk.Entry, CustomWidget):
         self.var.set(value)
 
 
+class SpinboxWidget(ttk.Spinbox, CustomWidget):
+    def __init__(self, master, name, from_: int, to: int, increment: int, callback):
+        self.callback = callback
+        def spin_invoked(name=name):
+            if self.callback:
+                self.callback(name, self.get_value())
+        super().__init__(master, text=self.text_from_name(name), command=spin_invoked,
+            from_=from_, to=to, increment=increment)
+
+    def get_value(self):
+        return self.get()
+
+    def set_value(self, value):
+        self.set(value)
+
+
 class TextWidget(ScrolledText, CustomWidget):
     def __init__(self, master, name, callback):
         super().__init__(master, height=4)

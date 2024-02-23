@@ -733,6 +733,9 @@ class Editor(ttk.LabelFrame):
     def add_entry_field(self, name: str, vartype=int):
         return self.add_field(name, EntryWidget, vartype=vartype)
 
+    def add_spinbox_field(self, name: str, from_: int, to: int, increment: int = 1):
+        return self.add_field(name, SpinboxWidget, from_=from_, to=to, increment=increment)
+
     def add_text_field(self, name: str):
         return self.add_field(name, TextWidget)
 
@@ -811,11 +814,16 @@ class PropertyEditor(Editor):
                 widget = self.add_check_fields(name, False, ('Left', 'Centre', 'Right'))
             elif name == 'valign':
                 widget = self.add_check_fields(name, False, ('Top', 'Middle', 'Bottom'))
+            elif name == 'text':
+                widget = self.add_text_field(name)
+            elif name == 'fontscale':
+                widget = self.add_spinbox_field(name, 1, 16)
+            elif name in ['xoff', 'yoff']:
+                widget = self.add_spinbox_field(name, -100, 100)
+            elif name == 'radius':
+                widget = self.add_spinbox_field(name, 0, 255)
             else:
-                if name == 'text':
-                    widget = self.add_text_field(name)
-                else:
-                    widget = self.add_combo_field(name, value_list)
+                widget = self.add_combo_field(name, value_list)
                 if callback:
                     def handle_event(evt, callback=callback, widget=widget):
                         if not self.is_updating:
@@ -858,7 +866,7 @@ class FontEditor(Editor):
         super().__init__(root, 'Font')
         self.add_combo_field('name')
         self.add_combo_field('family', font_assets.families())
-        self.add_entry_field('size')
+        self.add_spinbox_field('size', 5, 100)
         self.add_check_field('mono')
         self.add_check_fields('facestyle', True, [x.name for x in resource.FaceStyle])
         self.update()
@@ -1101,7 +1109,7 @@ def run():
     pane.add(layout, weight=2)
 
     # Editors to right
-    edit_frame = ttk.PanedWindow(pane, orient=tk.VERTICAL, width=240)
+    edit_frame = ttk.PanedWindow(pane, orient=tk.VERTICAL, width=320)
     pane.add(edit_frame)
 
     # Toolbar
