@@ -1,5 +1,6 @@
 import sys
 import os
+import subprocess
 import dataclasses
 from dataclasses import dataclass
 import tkinter as tk
@@ -57,6 +58,14 @@ class SystemFonts(dict):
 
     def scan(self):
         self.clear()
+
+        fclist = subprocess.check_output(['fc-list']).decode().splitlines()
+        fontfiles = set()
+        for f in fclist:
+            x = f.split(':')
+            if len(x) >= 2:
+                fontfiles.add(x[0])
+
         dirs = []
         if sys.platform == "win32":
             windir = os.environ.get("WINDIR")
@@ -76,12 +85,10 @@ class SystemFonts(dict):
         else:
             raise SystemError("Unsupported platform: " % sys.platform)
 
-        fontfiles = []
         for directory in [os.path.expandvars(path) for path in dirs]:
             for walkroot, walkdir, walkfilenames in os.walk(directory):
-                fontfiles += [os.path.join(walkroot, name) for name in walkfilenames]
+                fontfiles |= {os.path.join(walkroot, name) for name in walkfilenames}
 
-        # freetype.FT_STYLE_FLAGS
         for filename in fontfiles:
             try:
                 face = freetype.Face(filename)
