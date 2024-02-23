@@ -1,8 +1,45 @@
 import copy
 import dataclasses
+from enum import Enum
 from dataclasses import dataclass
 from PIL.ImageColor import colormap
 rev_colormap = {value: name for name, value in colormap.items()}
+
+class FaceStyle(Enum):
+    normal = 0
+    bold = 1
+    italic = 2
+    boldItalic = 3
+
+
+class FontStyle(Enum):
+    """Style is a set of these values, using strings here but bitfields in library"""
+    # typeface
+    Bold = 0
+    Italic = 1
+    # underscore
+    Underscore = 2
+    DoubleUnderscore = 3
+    # overscore
+    Overscore = 4
+    DoubleOverscore = 5
+    # strikeout
+    Strikeout = 6
+    DoubleStrikeout = 7
+    # extra
+    DotMatrix = 8
+    HLine = 9
+    VLine = 10
+
+
+class Align(Enum):
+    Left = 0
+    Centre = 1
+    Right = 2
+    Top = 3
+    Middle = 4
+    Bottom = 5
+
 
 @dataclass
 class DataObject:

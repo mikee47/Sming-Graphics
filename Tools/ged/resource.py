@@ -6,7 +6,7 @@ import tkinter as tk
 import tkinter.font
 import freetype
 import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw, PIL.ImageFont
-from gtypes import Rect, DataObject, Color
+from gtypes import Rect, DataObject, Color, FaceStyle, FontStyle, Align
 from enum import Enum
 from typing import TypeAlias
 import textwrap
@@ -43,33 +43,6 @@ class ResourceList(list):
             for a, v in rdef.items():
                 setattr(r, a, v)
             self.append(r)
-
-
-class FaceStyle(Enum):
-    normal = 0
-    bold = 1
-    italic = 2
-    boldItalic = 3
-
-
-class FontStyle(Enum):
-    """Style is a set of these values, using strings here but bitfields in library"""
-    # typeface
-    Bold = 0
-    Italic = 1
-    # underscore
-    Underscore = 2
-    DoubleUnderscore = 3
-    # overscore
-    Overscore = 4
-    DoubleOverscore = 5
-    # strikeout
-    Strikeout = 6
-    DoubleStrikeout = 7
-    # extra
-    DotMatrix = 8
-    HLine = 9
-    VLine = 10
 
 
 @dataclass
@@ -125,18 +98,13 @@ class SystemFonts(dict):
             self.setdefault(name, []).append(info)
             family_name = face.family_name.decode()
             style_name = face.style_name.decode()
-            print(f'{family_name} / {style_name} / {face.style_flags:x} / {style}')
-            try:
-                varinfo = face.get_variation_info()
-                print('  ', varinfo.axes)
-                print('  ', varinfo.instances)
-            except:
-                pass
-        return
-        for name, faces in self.items():
-            print(name)
-            for face in faces:
-                print('', face)
+            # print(f'{family_name} / {style_name} / {face.style_flags:x} / {style}')
+            # try:
+            #     varinfo = face.get_variation_info()
+            #     print('  ', varinfo.axes)
+            #     print('  ', varinfo.instances)
+            # except:
+            #     pass
 
 system_fonts = SystemFonts()
 
@@ -160,13 +128,29 @@ class Font(Resource):
             args['weight'] = 'bold'
         return tk.font.Font(family=self.family, size=-round(self.size * scale), **args)
 
-    def draw_tk_image(self, width, height, scale, fontstyle, color, text):
+    def draw_tk_image(self, width, height, scale, fontstyle, align, color, text):
+        fontstyle = {FontStyle[s] for s in fontstyle}
+        align = {Align[s] for s in align}
         color = Color(color).value_str()
         img = PIL.Image.new('RGBA', (width, height))
         draw = PIL.ImageDraw.Draw(img)
         faces = system_fonts.get(self.family)
         if faces:
-            face = faces[0]
+            if FontStyle.Italic in fontstyle:
+                face_style = FaceStyle.boldItalic if FontStyle.Bold in fontstyle else FaceStyle.italic
+            else:
+                face_style = FaceStyle.bold if FontStyle.Bold in fontstyle else FaceStyle.normal
+            # print(face_style)
+            # for f in faces:
+            #     print('  ', f)
+            try:
+                face = next(f for f in faces if f.style == face_style)
+                # print(f'Found {face}')
+            except StopIteration:
+                try:
+                    face = next(f for f in faces if f.style == FaceStyle.normal)
+                except StopIteration:
+                    face = faces[0]
             font = PIL.ImageFont.truetype(face.path, self.size)
             draw.font = font
             ascent, descent = font.getmetrics()
@@ -198,13 +182,39 @@ class Font(Resource):
                         text += word
                 if x > 0 or not para:
                     lines.append((x, text))
-            # Draw centred
             h = line_height * len(lines)
-            y = (height - h) // 2
+            if Align.Middle in align:
+                y = (height - h) // 2
+            elif Align.Bottom in align:
+                y = height - h
+            else:
+                y = 0
             for w, text in lines:
-                x = (width - w) // 2
-                draw.text((x, y), text, fill=color)
-                # draw.rectangle((x,y,x+w,y+line_height), outline='white')
+                if w > 0:
+                    if Align.Centre in align:
+                        x = (width - w) // 2
+                    elif Align.Right in align:
+                        x = width - w
+                    else:
+                        x = 0
+                    draw.text((x, y), text, fill=color)
+                    # draw.rectangle((x,y,x+w,y+line_height), outline='white')
+                    def hline(y):
+                        draw.line((x, y, x + w, y), fill=color)
+                    if FontStyle.Underscore in fontstyle or FontStyle.DoubleUnderscore in fontstyle:
+                        hline(y + ascent)
+                    if FontStyle.DoubleUnderscore in fontstyle:
+                        hline(y + ascent + 3)
+                    if FontStyle.Overscore in fontstyle or FontStyle.DoubleOverscore in fontstyle:
+                        hline(y + 3)
+                    if FontStyle.DoubleOverscore in fontstyle:
+                        hline(y)
+                    yc = y + line_height // 2
+                    if FontStyle.Strikeout in fontstyle:
+                        hline(yc)
+                    if FontStyle.DoubleStrikeout in fontstyle:
+                        hline(yc - 1)
+                        hline(yc + 1)
                 y += ascent + descent
 
         img = img.resize((round(width * scale), round(height * scale)),
