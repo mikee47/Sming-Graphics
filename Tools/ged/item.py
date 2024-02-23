@@ -1,6 +1,6 @@
 import sys
 import copy
-from gtypes import Rect, Color, DataObject
+from gtypes import Rect, Color, DataObject, Align
 import dataclasses
 from dataclasses import dataclass
 import tkinter as tk
@@ -115,12 +115,14 @@ class GText(GItem):
     color: Color = Color('orange')
     font: str = ''
     text: str = ''
+    align: list[str] = dataclasses.field(default_factory=list)
     fontstyle: list[str] = dataclasses.field(default_factory=list)
 
     def draw(self, c):
         c.color = str(self.color)
         c.font = self.font
         c.fontstyle = self.fontstyle
+        c.align = self.align
         r = self.get_bounds()
         M = 8
         r.inflate(-M, -M)
@@ -159,6 +161,7 @@ class GButton(GItem):
         c.color = str(self.color)
         c.font = self.font
         c.fontstyle = self.fontstyle
+        c.align = {Align.Centre.name, Align.Middle.name}
         self._tk_image_ref = c.draw_text(r, self.text)
 
 @dataclass
@@ -175,6 +178,7 @@ class GLabel(GItem):
         c.color = str(self.color)
         c.font = self.font
         c.fontstyle = self.fontstyle
+        c.align = {Align.Centre.name, Align.Middle.name}
         self._tk_image_ref = c.draw_text(self, self.text)
 
 

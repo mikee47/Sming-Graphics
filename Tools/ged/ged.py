@@ -174,7 +174,7 @@ class Canvas:
     def draw_text(self, rect, text):
         layout = self.layout
         font = font_assets.get(self.font, font_assets.default)
-        tk_image = font.draw_tk_image(rect.w, rect.h, layout.scale, self.fontstyle, self.color, text)
+        tk_image = font.draw_tk_image(rect.w, rect.h, layout.scale, self.fontstyle, self.align, self.color, text)
         x, y = layout.tk_point(rect.x, rect.y)
         layout.canvas.create_image(x, y, image=tk_image, anchor=tk.NW, tags=self.tags)
         return tk_image
@@ -797,15 +797,17 @@ class PropertyEditor(Editor):
                         'strikeout:oneof': ('Single:Strikeout', 'Double:DoubleStrikeout'),
                         'extra:oneof': ('DotMatrix', 'HLine', 'VLine')
                     })
-                if len(values) == 1:
-                    widget.set_value(values[0])
+            elif name == 'align':
+                widget = self.add_grouped_check_fields(name,
+                    {
+                        'horiz:oneof': ('Left', 'Centre', 'Right'),
+                        'vert:oneof': ('Top', 'Middle', 'Bottom')
+                    })
             else:
                 if name == 'text':
                     widget = self.add_text_field(name)
                 else:
                     widget = self.add_combo_field(name, value_list)
-                if len(values) == 1:
-                    widget.set_value(values[0])
                 if callback:
                     def handle_event(evt, callback=callback, widget=widget):
                         if not self.is_updating:
@@ -813,6 +815,8 @@ class PropertyEditor(Editor):
                     widget.bind('<Double-1>', handle_event)
                     widget.bind('<FocusIn>', handle_event)
                     widget.bind('<FocusOut>', handle_event)
+            if len(values) == 1:
+                widget.set_value(values[0])
         finally:
             self.is_updating = False
 
