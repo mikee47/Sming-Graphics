@@ -109,6 +109,7 @@ class Canvas:
         self.tags = tags
         self.color = 'white'
         self.line_width = 1
+        self.scale = 1
         self.font = None
         self.fontstyle = set()
 
@@ -174,7 +175,7 @@ class Canvas:
     def draw_text(self, rect, text):
         layout = self.layout
         font = font_assets.get(self.font, font_assets.default)
-        tk_image = font.draw_tk_image(rect.w, rect.h, layout.scale, self.fontstyle, self.align, self.color, text)
+        tk_image = font.draw_tk_image(rect.w, rect.h, layout.scale, self.fontstyle, self.scale, self.align, self.color, text)
         x, y = layout.tk_point(rect.x, rect.y)
         layout.canvas.create_image(x, y, image=tk_image, anchor=tk.NW, tags=self.tags)
         return tk_image
@@ -741,8 +742,11 @@ class Editor(ttk.LabelFrame):
     def add_combo_field(self, name: str, values=[], vartype=str):
         return self.add_field(name, ComboboxWidget, vartype=vartype, values=values)
 
-    def add_check_fields(self, name: str, values: list):
-        return self.add_field(name, CheckFieldsWidget, values=values)
+    def add_check_field(self, name: str):
+        return self.add_field(name, CheckFieldWidget)
+
+    def add_check_fields(self, name: str, is_set: bool, values: list):
+        return self.add_field(name, CheckFieldsWidget, is_set=is_set, values=values)
 
     def add_grouped_check_fields(self, name: str, groups: dict):
         w = GroupedCheckFieldsWidget(self, name, groups, self.value_changed)
@@ -791,18 +795,22 @@ class PropertyEditor(Editor):
             if name == 'fontstyle':
                 widget = self.add_grouped_check_fields(name,
                     {
-                        'faceStyle': ('Bold', 'Italic'),
-                        'underscore:oneof': ('Single:Underscore', 'Double:DoubleUnderscore'),
-                        'overscore:oneof': ('Single:Overscore', 'Double:DoubleOverscore'),
-                        'strikeout:oneof': ('Single:Strikeout', 'Double:DoubleStrikeout'),
-                        'extra:oneof': ('DotMatrix', 'HLine', 'VLine')
+                        'faceStyle:set': ('Bold', 'Italic'),
+                        'underscore': ('Single:Underscore', 'Double:DoubleUnderscore'),
+                        'overscore': ('Single:Overscore', 'Double:DoubleOverscore'),
+                        'strikeout': ('Single:Strikeout', 'Double:DoubleStrikeout'),
+                        'extra': ('DotMatrix', 'HLine', 'VLine')
                     })
             elif name == 'align':
                 widget = self.add_grouped_check_fields(name,
                     {
-                        'horiz:oneof': ('Left', 'Centre', 'Right'),
-                        'vert:oneof': ('Top', 'Middle', 'Bottom')
+                        'horiz': ('Left', 'Centre', 'Right'),
+                        'vert': ('Top', 'Middle', 'Bottom')
                     })
+            elif name == 'halign':
+                widget = self.add_check_fields(name, False, ('Left', 'Centre', 'Right'))
+            elif name == 'valign':
+                widget = self.add_check_fields(name, False, ('Top', 'Middle', 'Bottom'))
             else:
                 if name == 'text':
                     widget = self.add_text_field(name)
@@ -851,7 +859,8 @@ class FontEditor(Editor):
         self.add_combo_field('name')
         self.add_combo_field('family', font_assets.families())
         self.add_entry_field('size')
-        self.add_check_fields('facestyle', [x.name for x in resource.FaceStyle])
+        self.add_check_field('mono')
+        self.add_check_fields('facestyle', True, [x.name for x in resource.FaceStyle])
         self.update()
 
     def value_changed(self, name: str, value: TkVarType):
