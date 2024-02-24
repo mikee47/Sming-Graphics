@@ -775,6 +775,7 @@ class Editor(ttk.LabelFrame):
 class ProjectEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Project')
+        self.filename = None
         self.add_entry_field('width')
         self.add_entry_field('height')
         self.add_scale_field('scale', float, MIN_SCALE, MAX_SCALE, 0.1)
@@ -919,14 +920,21 @@ class ImageEditor(Editor):
         if not image_name:
             return
         IMAGE_FILTER = [('Image files', '*.*')]
-        filename = filedialog.askopenfilename(title='Load project', filetypes=IMAGE_FILTER)
+        filename = filedialog.askopenfilename(
+            title='Load project',
+            initialfile=self.get_value('source'),
+            filetypes=IMAGE_FILTER
+        )
         if len(filename) == 0:
             return
+        filename = os.path.relpath(filename)
         image = image_assets.get(image_name, None)
         if image is None:
             image = resource.Image(name=image_name, source=filename)
             image_assets.append(image)
-            self.update()
+        else:
+            image.source = filename
+        self.update()
 
     def value_changed(self, name: str, value: TkVarType):
         if name == 'name':
@@ -1036,6 +1044,7 @@ def run():
         font_editor.update()
         image_assets.clear()
         image_editor.update()
+        project_editor.filename = None
 
     def fileAddRandom(count=10):
         display_list = []
@@ -1071,19 +1080,29 @@ def run():
 
 
     def fileLoad():
-        filename = filedialog.askopenfilename(title='Load project', filetypes=PROJECT_FILTER)
+        filename = filedialog.askopenfilename(
+            title='Load project',
+            initialfile=project_editor.filename,
+            filetypes=PROJECT_FILTER
+        )
         if len(filename) != 0:
+            os.chdir(os.path.dirname(filename))
             data = json_load(filename)
             load_project(data)
+            project_editor.filename = filename
 
     def fileSave():
-        filename = filedialog.asksaveasfilename(title='Save project', filetypes=PROJECT_FILTER)
+        filename = filedialog.asksaveasfilename(
+            title='Save project',
+            initialfile=project_editor.filename,
+            filetypes=PROJECT_FILTER)
         if len(filename) != 0:
             ext = os.path.splitext(filename)[1]
             if ext != PROJECT_EXT:
                 filename += PROJECT_EXT
             data = get_project_data()
             json_save(data, filename)
+            project_editor.filename = filename
 
     def fileList():
         data = get_project_data()
