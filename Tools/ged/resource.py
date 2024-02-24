@@ -109,6 +109,29 @@ class SystemFonts(dict):
             # except:
             #     pass
 
+    def load(self, family: str, fontstyle: FontStyle, size: int):
+        faces = self.get(family)
+        if not faces:
+            return PIL.ImageFont.load_default(size)
+
+        if FontStyle.Italic in fontstyle:
+            face_style = FaceStyle.boldItalic if FontStyle.Bold in fontstyle else FaceStyle.italic
+        else:
+            face_style = FaceStyle.bold if FontStyle.Bold in fontstyle else FaceStyle.normal
+        # print(face_style)
+        # for f in faces:
+        #     print('  ', f)
+        try:
+            face = next(f for f in faces if f.style == face_style)
+            # print(f'Found {face}')
+        except StopIteration:
+            try:
+                face = next(f for f in faces if f.style == FaceStyle.normal)
+            except StopIteration:
+                return PIL.ImageFont.load_default(size)
+        return PIL.ImageFont.truetype(face.path, size)
+
+
 system_fonts = SystemFonts()
 
 
@@ -127,88 +150,71 @@ class Font(Resource):
         img = PIL.Image.new('RGBA', (w_box, h_box))
         draw = PIL.ImageDraw.Draw(img)
         draw.fontmode = '1' if self.mono else 'L'
-        faces = system_fonts.get(self.family)
-        if faces:
-            if FontStyle.Italic in fontstyle:
-                face_style = FaceStyle.boldItalic if FontStyle.Bold in fontstyle else FaceStyle.italic
-            else:
-                face_style = FaceStyle.bold if FontStyle.Bold in fontstyle else FaceStyle.normal
-            # print(face_style)
-            # for f in faces:
-            #     print('  ', f)
-            try:
-                face = next(f for f in faces if f.style == face_style)
-                # print(f'Found {face}')
-            except StopIteration:
-                try:
-                    face = next(f for f in faces if f.style == FaceStyle.normal)
-                except StopIteration:
-                    face = faces[0]
-            font = PIL.ImageFont.truetype(face.path, self.size)
-            draw.font = font
-            ascent, descent = font.getmetrics()
-            line_height = ascent + descent
-            # Break text up into words for wrapping
-            paragraphs = [textwrap.wrap(para, 1, break_long_words = False,
-                    replace_whitespace = False, drop_whitespace=False)
-                    for para in text.splitlines()]
-            # Measure and build list of lines and their length in pixels
-            lines = []
-            for para in paragraphs:
-                text = ''
-                x = 0
-                space = (0, '')
-                for word in para:
-                    w = draw.textlength(word)
-                    if word.isspace():
-                        space = (w, word)
-                    else:
-                        if x > 0 and (x + space[0] + w) > w_box:
-                            lines.append((x, text))
-                            text = ''
-                            x = 0
-                        else:
-                            x += space[0]
-                            text += space[1]
-                        space = (0, '')
-                        x += w
-                        text += word
-                if x > 0 or not para:
-                    lines.append((x, text))
-            h = line_height * len(lines)
-            if Align.Middle in align:
-                y = (h_box - h) // 2
-            elif Align.Bottom in align:
-                y = h_box - h
-            else:
-                y = 0
-            for w, text in lines:
-                if w > 0:
-                    if Align.Centre in align:
-                        x = (w_box - w) // 2
-                    elif Align.Right in align:
-                        x = w_box - w
-                    else:
+        font = system_fonts.load(self.family, fontstyle, self.size)
+        draw.font = font
+        ascent, descent = font.getmetrics()
+        line_height = ascent + descent
+        # Break text up into words for wrapping
+        paragraphs = [textwrap.wrap(para, 1, break_long_words = False,
+                replace_whitespace = False, drop_whitespace=False)
+                for para in text.splitlines()]
+        # Measure and build list of lines and their length in pixels
+        lines = []
+        for para in paragraphs:
+            text = ''
+            x = 0
+            space = (0, '')
+            for word in para:
+                w = draw.textlength(word)
+                if word.isspace():
+                    space = (w, word)
+                else:
+                    if x > 0 and (x + space[0] + w) > w_box:
+                        lines.append((x, text))
+                        text = ''
                         x = 0
-                    draw.text((x, y), text, fill=color)
-                    # draw.rectangle((x,y,x+w,y+line_height), outline='white')
-                    def hline(y):
-                        draw.line((x, y, x + w, y), fill=color)
-                    if FontStyle.Underscore in fontstyle or FontStyle.DoubleUnderscore in fontstyle:
-                        hline(y + ascent)
-                    if FontStyle.DoubleUnderscore in fontstyle:
-                        hline(y + ascent + 3)
-                    if FontStyle.Overscore in fontstyle or FontStyle.DoubleOverscore in fontstyle:
-                        hline(y + 3)
-                    if FontStyle.DoubleOverscore in fontstyle:
-                        hline(y)
-                    yc = y + line_height // 2
-                    if FontStyle.Strikeout in fontstyle:
-                        hline(yc)
-                    if FontStyle.DoubleStrikeout in fontstyle:
-                        hline(yc - 1)
-                        hline(yc + 1)
-                y += ascent + descent
+                    else:
+                        x += space[0]
+                        text += space[1]
+                    space = (0, '')
+                    x += w
+                    text += word
+            if x > 0 or not para:
+                lines.append((x, text))
+        h = line_height * len(lines)
+        if Align.Middle in align:
+            y = (h_box - h) // 2
+        elif Align.Bottom in align:
+            y = h_box - h
+        else:
+            y = 0
+        for w, text in lines:
+            if w > 0:
+                if Align.Centre in align:
+                    x = (w_box - w) // 2
+                elif Align.Right in align:
+                    x = w_box - w
+                else:
+                    x = 0
+                draw.text((x, y), text, fill=color)
+                # draw.rectangle((x,y,x+w,y+line_height), outline='white')
+                def hline(y):
+                    draw.line((x, y, x + w, y), fill=color)
+                if FontStyle.Underscore in fontstyle or FontStyle.DoubleUnderscore in fontstyle:
+                    hline(y + ascent)
+                if FontStyle.DoubleUnderscore in fontstyle:
+                    hline(y + ascent + 3)
+                if FontStyle.Overscore in fontstyle or FontStyle.DoubleOverscore in fontstyle:
+                    hline(y + 3)
+                if FontStyle.DoubleOverscore in fontstyle:
+                    hline(y)
+                yc = y + line_height // 2
+                if FontStyle.Strikeout in fontstyle:
+                    hline(yc)
+                if FontStyle.DoubleStrikeout in fontstyle:
+                    hline(yc - 1)
+                    hline(yc + 1)
+            y += ascent + descent
 
         img = img.resize((round(width * scale), round(height * scale)),
             resample=PIL.Image.Resampling.NEAREST)
