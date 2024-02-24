@@ -3,16 +3,12 @@ import os
 import subprocess
 import dataclasses
 from dataclasses import dataclass
-import tkinter as tk
-import tkinter.font
 import freetype
-import PIL.Image, PIL.ImageTk, PIL.ImageOps, PIL.ImageDraw, PIL.ImageFont
+import PIL.Image, PIL.ImageOps, PIL.ImageDraw, PIL.ImageFont
+from PIL.ImageTk import PhotoImage as TkImage
 from gtypes import Rect, DataObject, Color, FaceStyle, FontStyle, Align
 from enum import Enum
-from typing import TypeAlias
 import textwrap
-
-TkImage: TypeAlias = PIL.ImageTk.PhotoImage
 
 @dataclass
 class Resource(DataObject):
@@ -123,19 +119,6 @@ class Font(Resource):
     mono: bool = False
     facestyle: list[str] = dataclasses.field(default_factory=list)
 
-    def get_tk_font(self, scale, fontstyle: tuple[str]):
-        style = {FontStyle[s] for s in fontstyle}
-        args = {}
-        if style & {FontStyle.Underscore, FontStyle.DoubleUnderscore}:
-            args['underline'] = True
-        if style & {FontStyle.Strikeout, FontStyle.DoubleStrikeout}:
-            args['overstrike'] = True
-        if FontStyle.Italic in style:
-            args['slant'] = 'italic'
-        if FontStyle.Bold in style:
-            args['weight'] = 'bold'
-        return tk.font.Font(family=self.family, size=-round(self.size * scale), **args)
-
     def draw_tk_image(self, width, height, scale, fontstyle, fontscale, align, color, text):
         fontstyle = {FontStyle[s] for s in fontstyle}
         align = {Align[s] for s in align}
@@ -229,18 +212,12 @@ class Font(Resource):
 
         img = img.resize((round(width * scale), round(height * scale)),
             resample=PIL.Image.Resampling.NEAREST)
-        return PIL.ImageTk.PhotoImage(img)
+        return TkImage(img)
 
 
 class FontList(ResourceList):
     def __init__(self):
-        tk_def = FontList.tk_default().configure()
-        font = Font(family = tk_def['family'])
-        self.default = font
-
-    @staticmethod
-    def tk_default():
-        return tkinter.font.nametofont('TkDefaultFont')
+        self.default = Font(family=next(iter(system_fonts)))
 
     @staticmethod
     def families():
@@ -304,7 +281,7 @@ class Image(Resource):
             draw = PIL.ImageDraw.Draw(img)
             draw.line((0, 0, w, h), fill=128, width=3)
             draw.line((0, h, w, 0), fill=128, width=3)
-        return PIL.ImageTk.PhotoImage(img)
+        return TkImage(img)
 
 
 class ImageList(ResourceList):
