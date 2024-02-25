@@ -808,8 +808,8 @@ class PropertyEditor(Editor):
             elif name == 'align':
                 widget = self.add_grouped_check_fields(name,
                     {
-                        'horiz': ('Left', 'Centre', 'Right'),
-                        'vert': ('Top', 'Middle', 'Bottom')
+                        'horizontal': ('Left', 'Centre', 'Right'),
+                        'vertical': ('Top', 'Middle', 'Bottom')
                     })
             elif name == 'halign':
                 widget = self.add_check_fields(name, False, ('Left', 'Centre', 'Right'))
