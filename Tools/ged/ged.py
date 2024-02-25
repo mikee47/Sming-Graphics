@@ -472,7 +472,7 @@ class LayoutEditor(ttk.Frame):
         else:
             delta = 1 if evt.delta > 0 else -1
         if control and not shift:
-            scale = round(self.scale + delta / 5, 2)
+            scale = round(self.scale + delta / 10, 2)
             self.set_scale(scale, (evt.x, evt.y))
         elif shift and not control:
             self.canvas.yview_scroll(delta, tk.UNITS)
