@@ -8,7 +8,7 @@ class LabelWidget(ttk.Label):
         super().__init__(master, text=text)
 
     def set_row(self, row: int):
-        self.grid(row=row, column=0, sticky=tk.E, padx=8)
+        self.grid(row=row, column=0, sticky=tk.E, padx=2)
         return self
 
 
@@ -19,7 +19,7 @@ class CustomWidget:
         return ' '.join(words).lower()
 
     def set_row(self, row: int):
-        self.grid(row=row, column=1, sticky=tk.EW, padx=4, pady=2)
+        self.grid(row=row, column=1, sticky=tk.EW, padx=2, pady=1)
         return self
 
     @staticmethod
@@ -303,7 +303,7 @@ class GroupedCheckFieldsWidget(ttk.LabelFrame, CustomWidget):
     def __init__(self, master, name, groups: dict, callback):
         """Split set up into distinct parts"""
         super().__init__(master, text=self.text_from_name(name))
-        self.grid(column=0, columnspan=2)
+        self.grid(column=0, columnspan=2, sticky=tk.EW)
         self.callback = callback
         self.var = set()
         self.ctrls = {}
@@ -320,8 +320,7 @@ class GroupedCheckFieldsWidget(ttk.LabelFrame, CustomWidget):
                     raise ValueError(f'Bad field group kind "{kind}"')
                 value_set = {split(x)[1] for x in values}
             LabelWidget(self, self.text_from_name(group)).set_row(row)
-            group_frame = FrameWidget(self).set_row(row)
-            row += 1
+            col = 1
             for value in values:
                 text, value = split(value)
                 def check_invoked(name=name, value=value, value_set=value_set):
@@ -337,10 +336,12 @@ class GroupedCheckFieldsWidget(ttk.LabelFrame, CustomWidget):
                     if self.callback:
                         self.callback(name, self.var)
                     self.update_checks()
-                ctrl = ttk.Checkbutton(group_frame, text=text, command=check_invoked)
+                ctrl = ttk.Checkbutton(self, text=text, command=check_invoked)
                 ctrl.state(['!alternate'])
-                ctrl.pack(side=tk.LEFT)
+                ctrl.grid(row=row, column=col)
+                col += 1
                 self.ctrls[value] = ctrl
+            row += 1
 
     def update_checks(self):
         for f, c in self.ctrls.items():
