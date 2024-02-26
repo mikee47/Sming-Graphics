@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import freetype
 import PIL.Image, PIL.ImageOps, PIL.ImageDraw, PIL.ImageFont
 from PIL.ImageTk import PhotoImage as TkImage
-from gtypes import Rect, DataObject, Color, FaceStyle, FontStyle, Align
+from gtypes import Rect, DataObject, Color, ColorFormat, FaceStyle, FontStyle, Align
 from enum import Enum
 import textwrap
 
@@ -142,10 +142,10 @@ class Font(Resource):
     mono: bool = False
     facestyle: list[str] = dataclasses.field(default_factory=list)
 
-    def draw_tk_image(self, width, height, scale, fontstyle, fontscale, align, color, text):
+    def draw_tk_image(self, width: int, height: int, scale: int, fontstyle, fontscale: int, halign: Align, valign: Align, back_color, color, text):
         fontstyle = {FontStyle[s] for s in fontstyle}
-        align = {Align[s] for s in align}
-        color = Color(color).value_str()
+        back_color = Color(back_color).value_str(ColorFormat.pillow)
+        color = Color(color).value_str(ColorFormat.pillow)
         w_box, h_box = width // fontscale, height // fontscale
         img = PIL.Image.new('RGBA', (w_box, h_box))
         draw = PIL.ImageDraw.Draw(img)
@@ -182,17 +182,17 @@ class Font(Resource):
             if x > 0 or not para:
                 lines.append((x, text))
         h = line_height * len(lines)
-        if Align.Middle in align:
+        if valign == Align.Middle:
             y = (h_box - h) // 2
-        elif Align.Bottom in align:
+        elif valign == Align.Bottom:
             y = h_box - h
         else:
             y = 0
         for w, text in lines:
             if w > 0:
-                if Align.Centre in align:
+                if halign == Align.Centre:
                     x = (w_box - w) // 2
-                elif Align.Right in align:
+                elif halign == Align.Right:
                     x = w_box - w
                 else:
                     x = 0

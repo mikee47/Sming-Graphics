@@ -62,7 +62,7 @@ class GRect(GItem):
         return super().get_min_size((self.line_width + self.radius) * 2)
 
     def draw(self, c):
-        c.color = str(self.color)
+        c.color = self.color
         c.line_width = self.line_width
 
         if self.radius > 1:
@@ -80,7 +80,7 @@ class GFilledRect(GItem):
         return super().get_min_size(self.radius * 2)
 
     def draw(self, c):
-        c.color = str(self.color)
+        c.color = self.color
 
         if self.radius > 1:
             c.fill_rounded_rect(self, self.radius)
@@ -97,7 +97,7 @@ class GEllipse(GItem):
         return super().get_min_size(self.line_width * 2)
 
     def draw(self, c):
-        c.color = str(self.color)
+        c.color = self.color
         c.line_width = self.line_width
         c.draw_ellipse(self)
 
@@ -106,25 +106,29 @@ class GEllipse(GItem):
 class GFilledEllipse(GItem):
     color: Color = Color('orange')
     def draw(self, c):
-        c.color = str(self.color)
+        c.color = self.color
         c.fill_ellipse(self)
 
 
 @dataclass
 class GText(GItem):
+    back_color: Color = ''
     color: Color = Color('orange')
     font: str = ''
     text: str = ''
-    align: list[str] = dataclasses.field(default_factory=list)
+    halign: str = 'Left'
+    valign: str = 'Top'
     fontstyle: list[str] = dataclasses.field(default_factory=list)
     fontscale: int = 1
 
     def draw(self, c):
-        c.color = str(self.color)
+        c.back_color = self.back_color
+        c.color = self.color
         c.font = self.font
         c.fontstyle = self.fontstyle
         c.scale = self.fontscale
-        c.align = self.align
+        c.halign = Align[self.halign]
+        c.valign = Align[self.valign]
         r = self.get_bounds()
         M = 8
         r.inflate(-M, -M)
@@ -156,16 +160,17 @@ class GButton(GItem):
         M = radius // 2
         r = self.get_bounds()
         r.inflate(-M, -M)
-        c.color = str(self.back_color)
+        c.color = self.back_color
         c.fill_rounded_rect(self, radius)
-        c.color = str(self.border)
+        c.color = self.border
         c.line_width = 4
         c.draw_rounded_rect(self, radius)
-        c.color = str(self.color)
+        c.color = self.color
         c.font = self.font
         c.scale = self.fontscale
         c.fontstyle = self.fontstyle
-        c.align = {Align.Centre.name, Align.Middle.name}
+        c.halign = Align.Centre
+        c.valign = Align.Middle
         self._tk_image_ref = c.draw_text(r, self.text)
 
 @dataclass
@@ -174,18 +179,19 @@ class GLabel(GItem):
     color: Color = Color('white')
     font: str = ''
     text: str = ''
-    halign: str = ''
+    halign: str = 'Centre'
     fontscale: int = 1
     fontstyle: list[str] = dataclasses.field(default_factory=list)
 
     def draw(self, c):
-        c.color = str(self.back_color)
+        c.color = self.back_color
         c.fill_rect(self)
-        c.color = str(self.color)
+        c.color = self.color
         c.font = self.font
         c.scale = self.fontscale
         c.fontstyle = self.fontstyle
-        c.align = {self.halign or Align.Left.name, Align.Middle.name}
+        c.halign = Align[self.halign]
+        c.valign = Align.Middle
         self._tk_image_ref = c.draw_text(self, self.text)
 
 
