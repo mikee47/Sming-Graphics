@@ -17,16 +17,12 @@ class FontStyle(Enum):
     # typeface
     Bold = 0
     Italic = 1
-    # underscore
     Underscore = 2
-    DoubleUnderscore = 3
-    # overscore
-    Overscore = 4
-    DoubleOverscore = 5
-    # strikeout
-    Strikeout = 6
+    Overscore = 3
+    Strikeout = 4
+    DoubleUnderscore = 5
+    DoubleOverscore = 6
     DoubleStrikeout = 7
-    # extra
     DotMatrix = 8
     HLine = 9
     VLine = 10

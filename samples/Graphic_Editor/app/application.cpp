@@ -108,7 +108,9 @@ struct PropertySet {
 		} else if(name == "text") {
 			text = uri_unescape(value);
 		} else if(name == "fontstyle") {
-			//
+			auto n = strtoul(value.c_str(), nullptr, 0);
+			fontstyles = FontStyles(n);
+			Serial << "FontStyle " << fontstyles << ", " << value << ", " << n << endl;
 		} else if(name == "fontscale") {
 			fontscale = value.toInt();
 		} else if(name == "image") {
@@ -142,9 +144,9 @@ struct PropertySet {
 		}
 		if(type == "Text") {
 			// font
-			// fontstyle
 			TextBuilder textBuilder(scene.assets, rect());
 			textBuilder.setFont(nullptr);
+			textBuilder.setStyle(fontstyles);
 			textBuilder.setColor(color, back_color);
 			textBuilder.setScale(fontscale);
 			textBuilder.setTextAlign(halign);
@@ -186,7 +188,7 @@ struct PropertySet {
 	uint16_t radius = 0;
 	String font;
 	String text;
-	// fontstyle: list[str] = dataclasses.field(default_factory=list)
+	FontStyles fontstyles{};
 	uint8_t fontscale = 1;
 	String image;
 	int16_t xoff = 0;

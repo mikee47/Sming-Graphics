@@ -1,6 +1,6 @@
 import socket, struct
 from item import *
-from gtypes import ColorFormat
+from gtypes import ColorFormat, FontStyle
 import urllib.parse
 
 class Client:
@@ -23,14 +23,19 @@ def serialise(layout: list) -> list[str]:
                 s = Align[value].value
             elif name == 'valign':
                 s = Align[value].value
+            elif name == 'fontstyle':
+                n = 0
+                for x in value:
+                    n |= 1 << FontStyle[x].value
+                s = hex(n)
+            elif name == 'text':
+                s = urllib.parse.quote(value.replace('\n', '\r\n').encode())
             elif type(value) in [int, float]:
                 s = value
             elif type(value) is Color:
                 s = value.value_str(ColorFormat.graphics)[1:]
             elif type(value) in [set, list]:
                 s = ",".join(value)
-            elif name == 'text':
-                s = urllib.parse.quote(value.replace('\n', '\r\n').encode())
             line += f'{name}={s};'
         data.append(line)
     return data
