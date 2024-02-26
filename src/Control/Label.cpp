@@ -7,12 +7,11 @@ void Label::draw(SceneObject& scene) const
 {
 	auto backColor = getColor(Element::back);
 
-	Rect r = bounds.size();
+	Rect r = bounds;
 	// scene.drawRect(getColor(Element::border), r);
 	// r.inflate(-2, -2);
 	scene.fillRect(backColor, r);
-	TextBuilder text(scene);
-	text.setClip(r);
+	TextBuilder text(scene.assets, bounds);
 	text.setFont(getFont());
 	text.setColor(getColor(Element::text));
 	text.setBackColor(backColor);

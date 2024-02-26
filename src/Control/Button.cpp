@@ -6,12 +6,13 @@ namespace Graphics
 void Button::draw(SceneObject& scene) const
 {
 	auto backColor = getColor(Element::back);
-	Rect r = bounds.size();
+	Rect r = bounds;
 	r.inflate(-1, -1);
 	scene.drawRect(Pen(getColor(Element::border), 4), r, 6);
 	r.inflate(-2, -2);
 	scene.fillRect(backColor, r, 6);
-	TextBuilder text(scene);
+	TextBuilder text(scene.assets, bounds);
+	text.setFont(getFont());
 	text.setColor(getColor(Element::text));
 	text.setBackColor(backColor);
 	text.setTextAlign(Align::Centre);
