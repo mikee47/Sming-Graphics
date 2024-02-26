@@ -559,6 +559,16 @@ bool Virtual::begin(const String& ipaddr, uint16_t port, uint16_t width, uint16_
 	return sizeChanged();
 }
 
+bool Virtual::setDisplaySize(uint16_t width, uint16_t height, Orientation orientation)
+{
+	if(nativeSize.w == width && nativeSize.h == height && orientation == this->orientation) {
+		return true;
+	}
+	nativeSize = Size{width, height};
+	this->orientation = orientation;
+	return sizeChanged();
+}
+
 bool Virtual::sizeChanged()
 {
 	CommandList list(addrWindow, 32);

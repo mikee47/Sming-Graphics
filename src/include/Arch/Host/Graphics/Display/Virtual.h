@@ -64,6 +64,8 @@ public:
 		return mode;
 	}
 
+	bool setDisplaySize(uint16_t width, uint16_t height, Orientation orientation);
+
 	/* Device */
 
 	String getName() const override
