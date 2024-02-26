@@ -117,7 +117,7 @@ class Canvas:
     def draw_rect(self, rect):
         layout = self.layout
         x0, y0, x1, y1 = layout.tk_bounds(rect)
-        layout.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.line_width, tags=self.tags)
+        layout.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.line_width*layout.scale, tags=self.tags)
 
     def fill_rect(self, rect):
         layout = self.layout
@@ -149,13 +149,15 @@ class Canvas:
         layout = self.layout
         x0, y0 = layout.tk_point(x0, y0)
         x1, y1 = layout.tk_point(x1, y1)
-        layout.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=self.line_width, tags=self.tags)
+        w = self.line_width * layout.scale
+        layout.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=w, tags=self.tags)
 
     def draw_corner(self, x, y, r, start_angle):
         layout = self.layout
         x0, y0 = layout.tk_point(x, y)
         x1, y1 = layout.tk_point(x+r*2, y+r*2)
-        layout.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, outline=self.color, width=self.line_width, style='arc', tags=self.tags)
+        w = self.line_width * layout.scale
+        layout.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, outline=self.color, width=w, style='arc', tags=self.tags)
 
     def fill_corner(self, x, y, r, start_angle):
         layout = self.layout
@@ -166,7 +168,8 @@ class Canvas:
     def draw_ellipse(self, rect):
         layout = self.layout
         x0, y0, x1, y1 = layout.tk_bounds(rect)
-        layout.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=self.line_width, tags=self.tags)
+        w = self.line_width * layout.scale
+        layout.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=w, tags=self.tags)
 
     def fill_ellipse(self, rect):
         layout = self.layout
