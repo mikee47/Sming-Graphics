@@ -46,7 +46,7 @@ void Screen::draw(SceneObject& scene)
 
 	for(auto& c : controls) {
 		if(c.isDirty()) {
-			scene.drawObject(c, c.getBounds());
+			scene.drawObject(c, scene.getSize());
 		}
 	}
 }

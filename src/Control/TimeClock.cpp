@@ -12,7 +12,7 @@ void TimeClock::update()
 
 void TimeClock::draw(SceneObject& scene) const
 {
-	Point c(bounds.w / 2, bounds.h / 2);
+	Point c = bounds.centre();
 	int radOuter = std::min(c.x, c.y);
 	int radInner = 6;
 	// scene.fillCircle(Color::Black, c, radOuter);
