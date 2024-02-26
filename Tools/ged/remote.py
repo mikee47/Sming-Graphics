@@ -29,8 +29,8 @@ def serialise(layout: list) -> list[str]:
                 s = value.value_str(ColorFormat.graphics)[1:]
             elif type(value) in [set, list]:
                 s = ",".join(value)
-            else:
-                s = urllib.parse.quote(value.encode())
+            elif name == 'text':
+                s = urllib.parse.quote(value.replace('\n', '\r\n').encode())
             line += f'{name}={s};'
         data.append(line)
     return data

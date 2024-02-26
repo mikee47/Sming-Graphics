@@ -121,6 +121,8 @@ struct PropertySet {
 			halign = Align(value.toInt());
 		} else if(name == "valign") {
 			valign = Align(value.toInt());
+		} else if(name == "orient") {
+			orientation = Orientation(value.toInt());
 		}
 	}
 
@@ -191,6 +193,8 @@ struct PropertySet {
 	int16_t yoff = 0;
 	Align halign{};
 	Align valign{};
+	// Size command
+	Orientation orientation{};
 };
 
 CustomLabel::CustomLabel(const PropertySet& props)
@@ -233,16 +237,31 @@ bool processClientData(TcpClient& client, char* data, int size)
 			return String(p, psep - p);
 		};
 
-		String tag = fetch(':');
-		String value = fetch(';');
-		// Serial << tag << " (" << value << ")" << endl;
-		switch(tag[0]) {
+		PropertySet props;
+		char dataKind = fetch(':')[0];
+		String instr = fetch(';');
+		// Serial << dataKind << " : " << instr << endl;
+		String tag;
+		String value;
+		while(*lineptr) {
+			tag = fetch('=');
+			value = fetch(';');
+			// Serial << "  " << tag << " = " << value << endl;
+			props.setProperty(tag, value);
+		}
+		switch(dataKind) {
 		case '@':
-			if(value == "clear") {
+			if(instr == "size") {
+#ifdef ENABLE_VIRTUAL_SCREEN
+				tft.setDisplaySize(props.w, props.h, props.orientation);
+#else
+				tft.setOrientation(props.orientation);
+#endif
+			} else if(instr == "clear") {
 				delete scene;
 				scene = new SceneObject(tft.getSize());
 				scene->clear();
-			} else if(value == "render") {
+			} else if(instr == "render") {
 				renderQueue.render(scene, [](SceneObject* scene) {
 					Serial << "Render done" << endl;
 					delete scene;
@@ -256,15 +275,7 @@ bool processClientData(TcpClient& client, char* data, int size)
 				Serial << "NO SCENE!";
 				break;
 			}
-			String objectClass = value;
-			PropertySet props;
-			while(*lineptr) {
-				tag = fetch('=');
-				value = fetch(';');
-				// Serial << "  " << tag << " = " << value << endl;
-				props.setProperty(tag, value);
-			}
-			auto obj = props.createObject(*scene, objectClass);
+			auto obj = props.createObject(*scene, instr);
 			if(obj) {
 				scene->addObject(obj);
 			}
@@ -294,7 +305,6 @@ void init()
 
 	Serial << _F("Display start") << endl;
 	initDisplay();
-	tft.setOrientation(Orientation::deg270);
 
 	WifiStation.enable(true);
 	WifiStation.config(WIFI_SSID, WIFI_PWD);

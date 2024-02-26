@@ -264,7 +264,8 @@ class CheckFieldsWidget(ttk.Frame, CustomWidget):
         self.var = set() if is_set else ''
         self.ctrls = {}
         for value in values:
-            def check_invoked(name=name, value=value):
+            tag, _, text = value.partition(':')
+            def check_invoked(name=name, value=tag):
                 ctrl = self.ctrls[value]
                 state = ctrl.state()
                 if self.is_set:
@@ -277,10 +278,10 @@ class CheckFieldsWidget(ttk.Frame, CustomWidget):
                 if self.callback:
                     self.callback(name, self.var)
                 self.update_checks()
-            ctrl = ttk.Checkbutton(self, text=self.text_from_name(value), command=check_invoked)
+            ctrl = ttk.Checkbutton(self, text=text or value, command=check_invoked)
             ctrl.state(['!alternate'])
             ctrl.pack(side=tk.LEFT)
-            self.ctrls[value] = ctrl
+            self.ctrls[tag] = ctrl
 
     def update_checks(self):
         def is_selected(f):
