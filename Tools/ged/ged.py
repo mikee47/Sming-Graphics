@@ -252,6 +252,7 @@ class LayoutEditor(ttk.Frame):
         super().__init__(master)
         self.width = width
         self.height = height
+        self.orientation = 0 # Not used internally
         self.scale = scale
         self.grid_alignment: int = grid_alignment
         self.display_list = []
@@ -300,6 +301,7 @@ class LayoutEditor(ttk.Frame):
             width=self.width,
             height=self.height,
             scale=self.scale,
+            orientation=self.orientation,
             grid_alignment=self.grid_alignment,
         )
 
@@ -803,6 +805,7 @@ class ProjectEditor(Editor):
         self.filename = None
         self.add_entry_field('width')
         self.add_entry_field('height')
+        self.add_check_fields('orientation', False, ['0:0°', '1:90°','2:180°', '3:270°'])
         self.add_scale_field('scale', float, MIN_SCALE, MAX_SCALE, 0.1)
         self.add_entry_field('grid_alignment')
 
@@ -1196,7 +1199,8 @@ def run():
     def fileSend():
         client = remote.Client('192.168.13.10', 23)
         data = remote.serialise(layout.display_list)
-        client.send_line('@:clear;')
+        client.send_line(f'@:size;w={layout.width};h={layout.height};orient={layout.orientation};')
+        client.send_line(f'@:clear')
         for line in data:
             client.send_line(line)
         client.send_line('@:render;')
@@ -1258,6 +1262,8 @@ def run():
             layout.set_size(value, layout.height)
         elif name == 'height':
             layout.set_size(layout.width, value)
+        elif name == 'orientation':
+            layout.orientation = int(value)
         elif name == 'scale':
             layout.set_scale(value)
         else:
