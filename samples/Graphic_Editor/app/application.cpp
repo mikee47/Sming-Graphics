@@ -18,9 +18,61 @@ namespace
 RenderQueue renderQueue(tft);
 TcpServer server;
 
-class PropertySet
+class PropertySet;
+
+class CustomLabel : public Label
 {
 public:
+	CustomLabel(const PropertySet& props);
+
+	Color getColor(Element element) const override
+	{
+		switch(element) {
+		case Element::text:
+			return color;
+		case Element::back:
+			return back_color;
+		default:
+			return Label::getColor(element);
+		}
+	}
+
+	Color back_color;
+	Color color;
+	String font;
+	// fontstyle
+	uint8_t fontscale;
+	// halign
+};
+
+class CustomButton : public Button
+{
+public:
+	CustomButton(const PropertySet& props);
+
+	Color getColor(Element element) const override
+	{
+		switch(element) {
+		case Element::border:
+			return border;
+		case Element::text:
+			return color;
+		case Element::back:
+			return back_color;
+		default:
+			return Button::getColor(element);
+		}
+	}
+
+	Color border;
+	Color back_color;
+	Color color;
+	String font;
+	// fontstyle
+	uint8_t fontscale;
+};
+
+struct PropertySet {
 	void setProperty(const String& name, const String& value)
 	{
 		auto getColor = [&]() -> Color {
@@ -104,25 +156,10 @@ public:
 			return nullptr;
 		}
 		if(type == "Button") {
-			// border
-			// back_color
-			// color
-			// font
-			// fontstyle
-			// fontscale
-			Serial << "Button(" << rect().toString() << ", \"" << text << "\"" << endl;
-			auto btn = new Button(rect(), text);
-			btn->setBounds(rect());
-			return btn;
+			return new CustomButton(*this);
 		}
 		if(type == "Label") {
-			// back_color
-			// color
-			// font
-			// fontstyle
-			// fontscale
-			// halign
-			return new Label(rect(), text);
+			return new CustomLabel(*this);
 		}
 
 		return nullptr;
@@ -133,7 +170,6 @@ public:
 		return Rect(x, y, w, h);
 	}
 
-private:
 	int16_t x = 0;
 	int16_t y = 0;
 	uint16_t w = 0;
@@ -147,12 +183,24 @@ private:
 	String text;
 	// align: list[str] = dataclasses.field(default_factory=list)
 	// fontstyle: list[str] = dataclasses.field(default_factory=list)
-	uint16_t fontscale = 1;
+	uint8_t fontscale = 1;
 	String image;
 	int16_t xoff = 0;
 	int16_t yoff = 0;
 	// halign: str = ''
 };
+
+CustomLabel::CustomLabel(const PropertySet& props)
+	: Label(props.rect(), props.text), back_color(props.back_color), color(props.color), font(props.font),
+	  fontscale(props.fontscale)
+{
+}
+
+CustomButton::CustomButton(const PropertySet& props)
+	: Button(props.rect(), props.text), border(props.border), back_color(props.back_color), color(props.color),
+	  font(props.font), fontscale(props.fontscale)
+{
+}
 
 bool processClientData(TcpClient& client, char* data, int size)
 {
@@ -201,10 +249,12 @@ bool processClientData(TcpClient& client, char* data, int size)
 		} else if(!scene) {
 			Serial << "NO SCENE!";
 		} else {
+			// Serial << type << endl;
 			PropertySet props;
 			while(*lineptr) {
 				String tag = fetch('=');
 				String value = fetch(';');
+				// Serial << "  " << tag << " = " << value << endl;
 				props.setProperty(tag, value);
 			}
 			auto obj = props.createObject(*scene, type);
