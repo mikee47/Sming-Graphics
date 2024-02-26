@@ -230,37 +230,44 @@ bool processClientData(TcpClient& client, char* data, int size)
 			return String(p, psep - p);
 		};
 
-		String type = fetch(':');
-		Serial << type << endl;
-		if(type == "CMD") {
-			auto cmd = fetch(';');
-			Serial << cmd << endl;
-			if(cmd == "clear") {
+		String tag = fetch(':');
+		String value = fetch(';');
+		// Serial << tag << " (" << value << ")" << endl;
+		switch(tag[0]) {
+		case '@':
+			if(value == "clear") {
 				delete scene;
 				scene = new SceneObject(tft.getSize());
 				scene->clear();
-			} else if(cmd == "render") {
+			} else if(value == "render") {
 				renderQueue.render(scene, [](SceneObject* scene) {
 					Serial << "Render done" << endl;
 					delete scene;
 				});
 				scene = nullptr;
 			}
-		} else if(!scene) {
-			Serial << "NO SCENE!";
-		} else {
+			break;
+
+		case 'i': {
+			if(!scene) {
+				Serial << "NO SCENE!";
+				break;
+			}
+			String objectClass = value;
 			// Serial << type << endl;
 			PropertySet props;
 			while(*lineptr) {
-				String tag = fetch('=');
-				String value = fetch(';');
+				tag = fetch('=');
+				value = fetch(';');
 				// Serial << "  " << tag << " = " << value << endl;
 				props.setProperty(tag, value);
 			}
-			auto obj = props.createObject(*scene, type);
+			auto obj = props.createObject(*scene, objectClass);
 			if(obj) {
 				scene->addObject(obj);
 			}
+			break;
+		}
 		}
 
 		line.setLength(0);
