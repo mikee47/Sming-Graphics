@@ -7,14 +7,14 @@ class Client:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((ipaddr, port))
 
-    def send(self, data):
-        self.socket.send(data)
+    def send_line(self, data):
+        self.socket.send(data.encode() + b'\n')
 
 
 def serialise(layout: list) -> list[str]:
     data = []
     for item in layout:
-        line = item.typename + ':'
+        line = f'i:{item.typename};'
         for name, value in item.asdict().items():
             if name == 'id':
                 continue

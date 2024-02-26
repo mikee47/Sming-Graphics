@@ -1181,10 +1181,10 @@ def run():
     def fileSend():
         client = remote.Client('192.168.13.10', 23)
         data = remote.serialise(layout.display_list)
-        client.send('CMD:clear;\n'.encode())
+        client.send_line('@:clear;')
         for line in data:
-            client.send(line.encode() + b'\n')
-        client.send('CMD:render;\n'.encode())
+            client.send_line(line)
+        client.send_line('@:render;')
             # print(line)
         # for item in data.values():
         #     s = ','.join(f'{name}={value}' for name, value in item.items()) + '\r\n'
