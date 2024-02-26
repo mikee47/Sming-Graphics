@@ -37,12 +37,17 @@ public:
 		}
 	}
 
+	Align getTextAlign() const override
+	{
+		return halign;
+	}
+
 	Color back_color;
 	Color color;
 	String font;
 	// fontstyle
 	uint8_t fontscale;
-	// halign
+	Align halign;
 };
 
 class CustomButton : public Button
@@ -76,8 +81,8 @@ struct PropertySet {
 	void setProperty(const String& name, const String& value)
 	{
 		auto getColor = [&]() -> Color {
-			auto n = strtol(value.c_str(), nullptr, 16);
-			return makeColor(n);
+			auto n = strtoul(value.c_str(), nullptr, 16);
+			return Color(n);
 		};
 
 		if(name == "x") {
@@ -102,8 +107,6 @@ struct PropertySet {
 			font = value;
 		} else if(name == "text") {
 			text = uri_unescape(value);
-		} else if(name == "align") {
-			//
 		} else if(name == "fontstyle") {
 			//
 		} else if(name == "fontscale") {
@@ -115,7 +118,9 @@ struct PropertySet {
 		} else if(name == "yoff") {
 			yoff = value.toInt();
 		} else if(name == "halign") {
-			//
+			halign = Align(value.toInt());
+		} else if(name == "valign") {
+			valign = Align(value.toInt());
 		}
 	}
 
@@ -125,7 +130,6 @@ struct PropertySet {
 			return new RectObject(Pen(color, line_width), rect(), radius);
 		}
 		if(type == "FilledRect") {
-			// Serial << "FilledRectObject(" << color << ", " << rect().toString() << ", " << radius << ")" << endl;
 			return new FilledRectObject(color, rect(), radius);
 		}
 		if(type == "Ellipse") {
@@ -137,13 +141,12 @@ struct PropertySet {
 		if(type == "Text") {
 			// font
 			// fontstyle
-			// back_color
 			TextBuilder textBuilder(scene.assets, rect());
 			textBuilder.setFont(nullptr);
-			textBuilder.setColor(color, Color::Black);
+			textBuilder.setColor(color, back_color);
 			textBuilder.setScale(fontscale);
-			textBuilder.setTextAlign(Align::Centre);
-			textBuilder.setLineAlign(Align::Centre);
+			textBuilder.setTextAlign(halign);
+			textBuilder.setLineAlign(valign);
 			textBuilder.print(text);
 			textBuilder.commit(scene);
 			return textBuilder.release();
@@ -181,18 +184,18 @@ struct PropertySet {
 	uint16_t radius = 0;
 	String font;
 	String text;
-	// align: list[str] = dataclasses.field(default_factory=list)
 	// fontstyle: list[str] = dataclasses.field(default_factory=list)
 	uint8_t fontscale = 1;
 	String image;
 	int16_t xoff = 0;
 	int16_t yoff = 0;
-	// halign: str = ''
+	Align halign{};
+	Align valign{};
 };
 
 CustomLabel::CustomLabel(const PropertySet& props)
 	: Label(props.rect(), props.text), back_color(props.back_color), color(props.color), font(props.font),
-	  fontscale(props.fontscale)
+	  fontscale(props.fontscale), halign(props.halign)
 {
 }
 
@@ -254,7 +257,6 @@ bool processClientData(TcpClient& client, char* data, int size)
 				break;
 			}
 			String objectClass = value;
-			// Serial << type << endl;
 			PropertySet props;
 			while(*lineptr) {
 				tag = fetch('=');

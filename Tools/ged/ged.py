@@ -10,7 +10,7 @@ import json
 import tkinter as tk
 import tkinter.font
 from tkinter import ttk, filedialog, colorchooser
-from gtypes import colormap
+from gtypes import colormap, ColorFormat
 import resource
 from item import *
 from typing import TypeAlias
@@ -108,21 +108,27 @@ class Canvas:
     def __init__(self, layout, tags):
         self.layout = layout
         self.tags = tags
+        self.back_color = 0
         self.color = 'white'
         self.line_width = 1
         self.scale = 1
         self.font = None
         self.fontstyle = set()
+        self.halign = Align.Left
+        self.valign = Align.Top
 
     def draw_rect(self, rect):
         layout = self.layout
         x0, y0, x1, y1 = layout.tk_bounds(rect)
-        layout.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=self.color, width=self.line_width*layout.scale, tags=self.tags)
+        w = self.line_width * layout.scale
+        color = self.color.value_str(ColorFormat.tkinter)
+        layout.canvas.create_rectangle(x0, y0, x1-1, y1-1, outline=color, width=w, tags=self.tags)
 
     def fill_rect(self, rect):
         layout = self.layout
         x0, y0, x1, y1 = layout.tk_bounds(rect)
-        layout.canvas.create_rectangle(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
+        color = self.color.value_str(ColorFormat.tkinter)
+        layout.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline='', width=0, tags=self.tags)
 
     def draw_rounded_rect(self, rect, r):
         x0, y0, x1, y1 = rect.x, rect.y, rect.x + rect.w, rect.y + rect.h
@@ -150,36 +156,51 @@ class Canvas:
         x0, y0 = layout.tk_point(x0, y0)
         x1, y1 = layout.tk_point(x1, y1)
         w = self.line_width * layout.scale
-        layout.canvas.create_line(x0, y0, x1, y1, fill=self.color, width=w, tags=self.tags)
+        color = self.color.value_str(ColorFormat.tkinter)
+        layout.canvas.create_line(x0, y0, x1, y1, fill=color, width=w, tags=self.tags)
 
     def draw_corner(self, x, y, r, start_angle):
         layout = self.layout
         x0, y0 = layout.tk_point(x, y)
         x1, y1 = layout.tk_point(x+r*2, y+r*2)
         w = self.line_width * layout.scale
-        layout.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, outline=self.color, width=w, style='arc', tags=self.tags)
+        color = self.color.value_str(ColorFormat.tkinter)
+        layout.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, outline=color, width=w, style='arc', tags=self.tags)
 
     def fill_corner(self, x, y, r, start_angle):
         layout = self.layout
         x0, y0 = layout.tk_point(x, y)
         x1, y1 = layout.tk_point(x+r*2, y+r*2)
-        layout.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, fill=self.color, outline='', tags=self.tags)
+        color = self.color.value_str(ColorFormat.tkinter)
+        layout.canvas.create_arc(x0, y0, x1, y1, start=start_angle, extent=90, fill=color, outline='', tags=self.tags)
 
     def draw_ellipse(self, rect):
         layout = self.layout
         x0, y0, x1, y1 = layout.tk_bounds(rect)
         w = self.line_width * layout.scale
-        layout.canvas.create_oval(x0, y0, x1, y1, outline=self.color, width=w, tags=self.tags)
+        color = self.color.value_str(ColorFormat.tkinter)
+        layout.canvas.create_oval(x0, y0, x1, y1, outline=color, width=w, tags=self.tags)
 
     def fill_ellipse(self, rect):
         layout = self.layout
         x0, y0, x1, y1 = layout.tk_bounds(rect)
-        layout.canvas.create_oval(x0, y0, x1, y1, fill=self.color, outline='', width=0, tags=self.tags)
+        color = self.color.value_str(ColorFormat.tkinter)
+        layout.canvas.create_oval(x0, y0, x1, y1, fill=color, outline='', width=0, tags=self.tags)
 
     def draw_text(self, rect, text):
         layout = self.layout
         font = font_assets.get(self.font, font_assets.default)
-        tk_image = font.draw_tk_image(rect.w, rect.h, layout.scale, self.fontstyle, self.scale, self.align, self.color, text)
+        tk_image = font.draw_tk_image(
+            width=rect.w,
+            height=rect.h,
+            scale=layout.scale,
+            fontstyle=self.fontstyle,
+            fontscale=self.scale,
+            halign=self.halign,
+            valign=self.valign,
+            back_color=self.back_color,
+            color=self.color,
+            text=text)
         x, y = layout.tk_point(rect.x, rect.y)
         layout.canvas.create_image(x, y, image=tk_image, anchor=tk.NW, tags=self.tags)
         return tk_image
@@ -809,12 +830,6 @@ class PropertyEditor(Editor):
                         'strikeout': ('Single:Strikeout', 'Double:DoubleStrikeout'),
                         'extra': ('DotMatrix', 'HLine', 'VLine')
                     })
-            elif name == 'align':
-                widget = self.add_grouped_check_fields(name,
-                    {
-                        'horizontal': ('Left', 'Centre', 'Right'),
-                        'vertical': ('Top', 'Middle', 'Bottom')
-                    })
             elif name == 'halign':
                 widget = self.add_check_fields(name, False, ('Left', 'Centre', 'Right'))
             elif name == 'valign':
@@ -1069,7 +1084,7 @@ def run():
                 GText,
                 GButton,
             ])
-            item = itemtype(x=x, y=y, w=w, h=h, color = Color(randrange(0xffffff)))
+            item = itemtype(x=x, y=y, w=w, h=h, color = random.choice(list(colormap)))
             item.assign_unique_id(id_list)
             id_list.add(item.id)
             if hasattr(item, 'line_width'):

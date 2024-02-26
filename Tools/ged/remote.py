@@ -1,5 +1,6 @@
 import socket, struct
 from item import *
+from gtypes import ColorFormat
 import urllib.parse
 
 class Client:
@@ -18,10 +19,14 @@ def serialise(layout: list) -> list[str]:
         for name, value in item.asdict().items():
             if name == 'id':
                 continue
-            if type(value) in [int, float]:
+            if name == 'halign':
+                s = Align[value].value
+            elif name == 'valign':
+                s = Align[value].value
+            elif type(value) in [int, float]:
                 s = value
             elif type(value) is Color:
-                s = value.value_str()[1:]
+                s = value.value_str(ColorFormat.graphics)[1:]
             elif type(value) in [set, list]:
                 s = ",".join(value)
             else:
