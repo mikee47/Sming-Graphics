@@ -21,7 +21,10 @@
 # Convert any free-type supported fonts (OpenFont, TrueType, etc.)
 #
 
-import resource.font, freetype, os, array
+import os
+import array
+import freetype
+from .font import Glyph
 
 def pointsToPixels(points26):
     return round(points26 / 64)
@@ -50,7 +53,7 @@ def parse_typeface(typeface):
             flags |= freetype.FT_LOAD_MONOCHROME | freetype.FT_LOAD_TARGET_MONO
         face.load_glyph(index, flags)
         bitmap = face.glyph.bitmap
-        g = resource.font.Glyph(typeface)
+        g = Glyph(typeface)
         g.codePoint = c
         g.width = bitmap.width
         g.height = bitmap.rows
@@ -70,7 +73,7 @@ def parse_typeface(typeface):
                 rows[y] = r
             g.packBits(rows, bitmap.width)
         else:
-            g.flags = resource.font.Glyph.Flag.alpha
+            g.flags = Glyph.Flag.alpha
             g.bitmap = bytearray(g.width * g.height)
             i = off = 0
             for y in range(bitmap.rows):

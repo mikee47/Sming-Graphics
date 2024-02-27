@@ -2,10 +2,14 @@
 # Image resource parser
 #
 
-import PIL.Image, PIL.ImageOps, resource, os, io, requests
-from resource import status
+import PIL.Image
+import PIL.ImageOps
+import os
+import io
+import requests
+from .base import Resource, findFile, fstrSize, StructSize
 
-class Image(resource.Resource):
+class Image(Resource):
     def __init__(self):
         super().__init__()
         self.bitmap = None
@@ -18,7 +22,7 @@ class Image(resource.Resource):
         self.headerSize = 0
         super().writeComment(out)
         out.write("DEFINE_FSTR_LOCAL(%s_name, \"%s\")\n" % (self.name, self.name))
-        self.headerSize += resource.fstrSize(self.name)
+        self.headerSize += fstrSize(self.name)
         out.write("const ImageResource %s PROGMEM = {\n" % self.name)
         out.write("\t.name = &%s_name,\n" % self.name)
         out.write("\t.bmOffset = 0x%08x,\n" % bmOffset)
@@ -27,7 +31,7 @@ class Image(resource.Resource):
         out.write("\t.height = %u,\n" % self.height)
         out.write("\t.format = PixelFormat::%s,\n" % self.format)
         out.write("};\n\n")
-        self.headerSize += resource.StructSize.Image
+        self.headerSize += StructSize.Image
         return bmOffset + len(self.bitmap)
 
     def writeBitmap(self, out):
@@ -81,32 +85,32 @@ def crop_image(img, args):
         (w, h) = (img.width - x*2, img.height - y*2)
     else:
         (x, y, w, h) = (int(num, 0) for num in args)
-    status('Crop image to (%u, %u, %u, %u)' % (x, y, w, h))
+    # status('Crop image to (%u, %u, %u, %u)' % (x, y, w, h))
     return img.crop((x, y, x + w, y + h))
 
 # Resize image to "w, h"
 def resize_image(img, args):
     (w, h) = (int(num, 0) for num in args.split(','))
-    status('Resize image to (%u, %u)' % (w, h))
+    # status('Resize image to (%u, %u)' % (w, h))
     return img.resize((w, h))
 
 # Resize image to given width, maintaining aspect ratio
 def set_image_width(img, args):
     w = args
     h = round(w * img.height / img.width)
-    status("Resize image to (%u, %u)" % (w, h))
+    # status("Resize image to (%u, %u)" % (w, h))
     return img.resize((w, h))
 
 # Resize image to given height, maintaining aspect ratio
 def set_image_height(img, args):
     h = args
     w = round(h * img.width / img.height)
-    status("Resize image to (%u, %u)" % (w, h))
+    # status("Resize image to (%u, %u)" % (w, h))
     return img.resize((w, h))
 
 # Flip an image either "left-right" or "top-bottom"
 def flip_image(img, args):
-    status('Flip image %s' % args)
+    # status('Flip image %s' % args)
     if args == 'left-right':
         return img.transpose(PIL.Image.FLIP_LEFT_RIGHT)
     if args == 'top-bottom':
@@ -116,12 +120,12 @@ def flip_image(img, args):
 # Rotate an image, angle given in degrees
 def rotate_image(img, args):
     angle = args
-    status('Rotate image %u degrees' % angle)
+    # status('Rotate image %u degrees' % angle)
     return img.rotate(angle)
 
 
 def colorise_image(img, args):
-    status(f"args: {args}")
+    # status(f"args: {args}")
     args = list(args.items())
     if len(args) == 3:
         black = args[0][0]
@@ -161,12 +165,11 @@ def parse_item(item, name):
         img = PIL.Image.open(io.BytesIO(r.content))
         imgsize = len(r.content)
     else:
-        filename = resource.findFile(resname)
+        filename = findFile(resname)
         img = PIL.Image.open(filename)
         imgsize = os.path.getsize(filename)
 
-    status("Source image %s: '%s': %s %s, %u bytes"
-        % (name, resname, img.format, img.size, imgsize))
+    # status("Source image %s: '%s': %s %s, %u bytes" % (name, resname, img.format, img.size, imgsize))
 
     transform = item.get('transform')
     if transform is not None:
@@ -185,7 +188,6 @@ def parse_item(item, name):
         with open(filename, 'rb') as f:
             image.bitmap = f.read()
 
-    status("Image %s: %s %s, %u bytes"
-        % (name, image.format, img.size, len(image.bitmap)))
+    # status("Image %s: %s %s, %u bytes" % (name, image.format, img.size, len(image.bitmap)))
 
     return image

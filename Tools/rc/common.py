@@ -39,10 +39,6 @@ def critical(msg):
     sys.stderr.write('\n')
 
 
-def compact_string(s):
-    return ''.join(s.split())
-
-
 def json_loads(s):
     return json.loads(jsmin(s), object_pairs_hook=OrderedDict)
 

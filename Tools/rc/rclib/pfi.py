@@ -19,8 +19,10 @@
 # @author: July 2021 - mikee47 <mike@sillyhouse.net>
 #
 
-import resource.font, freetype, os, PIL, array
-from resource import InputError
+import os
+import PIL
+import array
+from .font import Glyph
 
 def parse_typeface(typeface):
     with open(typeface.source) as f:
@@ -28,7 +30,7 @@ def parse_typeface(typeface):
     pfi = pfi.split('\n')
 
     if pfi[0] != 'F1':
-        raise InputError('Require a text .PFI file')
+        raise ValueError('Require a text .PFI file')
     while pfi[1].startswith('#'):
         del pfi[1]
     # print("Name: %s" % pfi[1])
@@ -58,7 +60,7 @@ def parse_typeface(typeface):
         # if not c in typeface.font.codePoints:
         #     continue
 
-        g = resource.font.Glyph(typeface)
+        g = Glyph(typeface)
         g.codePoint = c
         if line[0] != '' and (width == 0 or len(line) == 3): # Proportional
             w = int(line[0])

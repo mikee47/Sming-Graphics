@@ -19,11 +19,12 @@
 # @author: July 2021 - mikee47 <mike@sillyhouse.net>
 #
 
-import resource, enum, os, sys
-from resource import InputError
+import enum
+import os
+import sys
+from .base import Resource, findFile, StructSize, fstrSize
 
-
-class Glyph(resource.Resource):
+class Glyph(Resource):
     class Flag(enum.IntEnum):
         alpha = 0x01,
 
@@ -46,7 +47,7 @@ class Glyph(resource.Resource):
             We identify defined area, exclude surround empty region, then pack bits
             and update glyph details.
         """
-        if self.flags & resource.font.Glyph.Flag.alpha:
+        if self.flags & Glyph.Flag.alpha:
             return
 
         height = len(rows)
@@ -125,7 +126,7 @@ class Glyph(resource.Resource):
         # print("packBits %u; width %u, height %u, leading %u, trailing %u" % (len(src), width, height, leading, trailing))
 
 
-class Typeface(resource.Resource):
+class Typeface(Resource):
     def __init__(self, font, style):
         super().__init__()
         self.font = font
@@ -149,7 +150,7 @@ class Typeface(resource.Resource):
             out.write("\t{ 0x%04x, %3u, %3u, %3d, %3d, %3u, 0x%02x }, // #0x%04x %s \n" %
                 (bmOffset, g.width, g.height, g.xOffset, g.yOffset, g.xAdvance, g.flags, g.codePoint, c))
             bmOffset += len(g.bitmap)
-            self.headerSize += resource.StructSize.GlyphResource
+            self.headerSize += StructSize.GlyphResource
         out.write("};\n\n")
         return bmOffset
 
@@ -161,7 +162,7 @@ class Typeface(resource.Resource):
 
         def writeBlock():
             out.write("\t{ 0x%04x, %u },\n" % (cp, length))
-            self.headerSize += resource.StructSize.GlyphBlock
+            self.headerSize += StructSize.GlyphBlock
 
         out.write("const GlyphBlock %s_blocks[] PROGMEM {\n" % self.name)
         for g in self.glyphs:
@@ -196,7 +197,7 @@ class Typeface(resource.Resource):
         out.write("\t.glyphs = %s_glyphs,\n" % self.name)
         out.write("\t.blocks = %s_blocks,\n" % self.name)
         out.write("};\n\n")
-        self.headerSize += resource.StructSize.Typeface
+        self.headerSize += StructSize.Typeface
         return bmOffset + bmSize
 
     def writeBitmap(self, out):
@@ -204,7 +205,7 @@ class Typeface(resource.Resource):
             out.write(g.bitmap)
 
 
-class Font(resource.Resource):
+class Font(Resource):
     def __init__(self):
         super().__init__()
         self.typefaces = []
@@ -219,7 +220,7 @@ class Font(resource.Resource):
             bmOffset = face.writeHeader(bmOffset, out)
             self.headerSize += face.headerSize
         out.write("DEFINE_FSTR_LOCAL(%s_name, \"%s\")\n" % (self.name, self.name))
-        self.headerSize += resource.fstrSize(self.name)
+        self.headerSize += fstrSize(self.name)
         out.write("FontResource %s {\n" % self.name)
         out.write("\t.name = &%s_name,\n" % self.name)
         out.write("\t.yAdvance = %u,\n" % self.yAdvance)
@@ -229,7 +230,7 @@ class Font(resource.Resource):
             out.write("\t\t&%s_typeface,\n" % face.name)
         out.write("\t},\n")
         out.write("};\n\n")
-        self.headerSize += resource.StructSize.Font
+        self.headerSize += StructSize.Font
         return bmOffset
 
     def writeBitmap(self, out):
@@ -258,7 +259,7 @@ def getParser(resname):
         if s.endswith(tag) or s.startswith(tag):
             return parser
 
-    raise InputError("Cannot determine type of font '%s'" % resname)
+    raise LookupError("Cannot determine type of font '%s'" % resname)
 
 
 def parse_item(item, name):
@@ -294,10 +295,10 @@ def parse_item(item, name):
         path = findFont(resname)
         parse = getParser(resname)
 
-        typeface = resource.font.Typeface(font, style)
+        typeface = Typeface(font, style)
         typeface.name = font.name + '_' + name
         typeface.source = path
-        resource.status("  typeface: '%s'..." % resname)
+        # status("  typeface: '%s'..." % resname)
 
         parse(typeface)
         font.descent = max(font.descent, typeface.descent)
@@ -330,4 +331,4 @@ def findFont(filename):
     else:
         raise SystemError("Unsupported platform: " % sys.platform)
 
-    return resource.findFile(filename, dirs)
+    return findFile(filename, dirs)

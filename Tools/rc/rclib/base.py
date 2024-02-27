@@ -19,8 +19,8 @@
 # @author: July 2021 - mikee47 <mike@sillyhouse.net>
 #
 
-import os, sys, enum
-from .common import *
+import os
+import enum
 
 # Used to calculate compiled size of resource header information
 class StructSize(enum.IntEnum):
@@ -29,6 +29,10 @@ class StructSize(enum.IntEnum):
     Typeface = 16,
     Font = 24,
     Image = 20,
+
+
+def compact_string(s):
+    return ''.join(s.split())
 
 
 def fstrSize(s):
@@ -58,11 +62,10 @@ resourcePaths = [
     '${GRAPHICS_LIB_ROOT}/resource',
 ]
 
-# Dictionary of registered resource type parsers
-#   'type': parse_item(item, name)
-parsers = {}
-
 def findFile(filename, dirs = []):
+    if os.path.exists(filename):
+        return filename
+
     alldirs = []
     for directory in [os.path.expandvars(path) for path in resourcePaths + dirs]:
         for walkroot, walkdir, walkfilenames in os.walk(directory):
@@ -71,20 +74,7 @@ def findFile(filename, dirs = []):
     for dir in alldirs:
         path = os.path.join(dir, filename)
         if os.path.exists(path):
-            status("Found '%s'" % path)
+            # status("Found '%s'" % path)
             return path
 
-    raise InputError("File not found '%s'" % filename)
-
-
-def parse(resources):
-    list = []
-    for type, entries in resources.items():
-        parse = parsers.get(type)
-        if not parse:
-            raise InputError("Unsupported resource type '%s'" % type)
-        for name, item in entries.items():
-            status("Parsing %s '%s'..." % (type, name))
-            obj = parse(item, name)
-            list.append(obj)
-    return list
+    raise FileNotFoundError(filename)

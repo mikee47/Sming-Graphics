@@ -22,8 +22,11 @@
 # See https://github.com/torvalds/linux/tree/master/lib/fonts
 #
 
-import re, resource.font, array, struct
-from resource import compact_string
+import re
+import array
+import struct
+from .font import Glyph
+from .base import compact_string
 
 def parse_typeface(typeface):
     with open(typeface.source) as f:
@@ -87,7 +90,7 @@ def parse_typeface(typeface):
     offset = 0
     for codePoint in range(charcount):
         if codePoint in typeface.font.codePoints:
-            g = resource.font.Glyph(typeface)
+            g = Glyph(typeface)
             g.codePoint = codePoint
             rows = getRows(offset)
             g.packBits(rows, width)

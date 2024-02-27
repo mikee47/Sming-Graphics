@@ -21,7 +21,8 @@
 # GFX fonts are distributed as header files
 #
 
-import re, resource.font
+import re
+from .font import Glyph
 
 def compact_string(s):
     return ''.join(s.split())
@@ -66,7 +67,7 @@ def parse_typeface(typeface):
     descent = 0
     for s in glyphGroups:
         if codePoint in typeface.font.codePoints:
-            g = resource.font.Glyph(typeface)
+            g = Glyph(typeface)
             e = [int(num, 0) for num in s.split(',')]
             g.codePoint = codePoint
             bmOffset = e[0]
