@@ -10,6 +10,10 @@ from gtypes import Rect, DataObject, Color, ColorFormat, FaceStyle, FontStyle, A
 from enum import Enum
 import textwrap
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../rc')))
+import rclib
+
+
 @dataclass
 class Resource(DataObject):
     name: str = ''
@@ -46,7 +50,7 @@ class ResourceList(list):
 class FaceInfo:
     flags: int
     style: str
-    path: str
+    filename: str
 
 class SystemFonts(dict):
     def __init__(self):
@@ -97,10 +101,10 @@ class SystemFonts(dict):
                 style = FaceStyle.boldItalic if ft_bold else FaceStyle.italic
             else:
                 style = FaceStyle.bold if ft_bold else FaceStyle.normal
-            info = FaceInfo(hex(face.style_flags), style, filename)
+            info = FaceInfo(hex(face.style_flags), style, os.path.basename(filename))
             self.setdefault(name, []).append(info)
-            family_name = face.family_name.decode()
-            style_name = face.style_name.decode()
+            # family_name = face.family_name.decode()
+            # style_name = face.style_name.decode()
             # print(f'{family_name} / {style_name} / {face.style_flags:x} / {style}')
             # try:
             #     varinfo = face.get_variation_info()
@@ -108,28 +112,6 @@ class SystemFonts(dict):
             #     print('  ', varinfo.instances)
             # except:
             #     pass
-
-    def load(self, family: str, fontstyle: FontStyle, size: int):
-        faces = self.get(family)
-        if not faces:
-            return PIL.ImageFont.load_default(size)
-
-        if FontStyle.Italic in fontstyle:
-            face_style = FaceStyle.boldItalic if FontStyle.Bold in fontstyle else FaceStyle.italic
-        else:
-            face_style = FaceStyle.bold if FontStyle.Bold in fontstyle else FaceStyle.normal
-        # print(face_style)
-        # for f in faces:
-        #     print('  ', f)
-        try:
-            face = next(f for f in faces if f.style == face_style)
-            # print(f'Found {face}')
-        except StopIteration:
-            try:
-                face = next(f for f in faces if f.style == FaceStyle.normal)
-            except StopIteration:
-                return PIL.ImageFont.load_default(size)
-        return PIL.ImageFont.truetype(face.path, size)
 
 
 system_fonts = SystemFonts()
@@ -140,7 +122,10 @@ class Font(Resource):
     family: str = ''
     size: int = 12
     mono: bool = False
-    facestyle: list[str] = dataclasses.field(default_factory=list)
+    normal: str = ''
+    bold: str = ''
+    italic: str = ''
+    boldItalic: str = ''
 
     def draw_tk_image(self, width: int, height: int, scale: int, fontstyle, fontscale: int, halign: Align, valign: Align, back_color, color, text):
         fontstyle = {FontStyle[s] for s in fontstyle}
@@ -150,7 +135,18 @@ class Font(Resource):
         img = PIL.Image.new('RGBA', (w_box, h_box))
         draw = PIL.ImageDraw.Draw(img)
         draw.fontmode = '1' if self.mono else 'L'
-        font = system_fonts.load(self.family, fontstyle, self.size)
+        filename = ''
+        if FontStyle.Italic in fontstyle:
+            if FontStyle.Bold in fontstyle:
+                filename = self.boldItalic
+            filename = filename or self.italic
+        elif FontStyle.Bold in fontstyle:
+            filename = self.bold
+        filename = filename or self.normal
+        if filename:
+            font = PIL.ImageFont.truetype(filename, self.size)
+        else:
+            font = PIL.ImageFont.load_default(self.size)
         draw.font = font
         ascent, descent = font.getmetrics()
         line_height = ascent + descent

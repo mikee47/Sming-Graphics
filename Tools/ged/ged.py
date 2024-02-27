@@ -891,7 +891,8 @@ class FontEditor(Editor):
         self.add_combo_field('family', font_assets.families())
         self.add_spinbox_field('size', 5, 100)
         self.add_check_field('mono')
-        self.add_check_fields('facestyle', True, [x.name for x in resource.FaceStyle])
+        for x in resource.FaceStyle:
+            self.add_combo_field(x.name)
         self.update()
 
     def value_changed(self, name: str, value: TkVarType):
@@ -906,7 +907,20 @@ class FontEditor(Editor):
         if font is None:
             font = resource.Font(name=font_name)
             font_assets.append(font)
+        curvalue = getattr(font, name)
+        if value == curvalue:
+            return
         setattr(font, name, value)
+        if name == 'family':
+            sysfont = resource.system_fonts[font.family]
+            choices = [x.filename for x in sysfont ]
+            for fs in resource.FaceStyle:
+                filename = ''
+                for x in sysfont:
+                    if fs == x.style:
+                        filename = x.filename
+                        break
+                self.fields[fs.name].set_value(filename)
         self.update()
         super().value_changed(name, value)
 
@@ -923,6 +937,10 @@ class FontEditor(Editor):
             font = font_assets.default
         elif isinstance(font, str):
             font = font_assets.get(font, font_assets.default)
+        sysfont = resource.system_fonts[font.family]
+        choices = [x.filename for x in sysfont ]
+        for x in resource.FaceStyle:
+            self.fields[x.name].set_choices(choices)
         self.load_values(font)
 
 
@@ -1137,11 +1155,15 @@ def run():
         # layout.canvas.postscript(file='test.ps', x=x-B, y=y-B, width=w+B*2, height=h+B*2)
 
     def fileGenerateResource():
+        from resource import rclib, FaceStyle
+
         images = {}
         for img in image_assets:
             d = dict(
                 source = img.source,
-                transform = dict(width=img.width, height=img.height),
+                transform = dict(
+                    resize=f'{img.width},{img.height}'
+                ),
             )
             if img.format:
                 d['format'] = img.format
@@ -1150,49 +1172,24 @@ def run():
         fonts = {}
         for font in font_assets:
             d = dict(
-                size = font.size
+                mono = font.mono,
+                size = font.size,
             )
-            if 'normal' in font.typeface:
-                d['normal'] = font.name
-            print(font.get_detail('bold'))
+            for fs in FaceStyle:
+                fontfile = getattr(font, fs.name)
+                if fontfile:
+                    d[fs.name] = fontfile
+            fonts[font.name] = d
 
+        resources = dict(
+            image = images,
+            font = fonts,
+        )
 
-        def findFontFiles():
-            import freetype
+        print(json_dumps(resources))
 
-            dirs = []
-            if sys.platform == "win32":
-                windir = os.environ.get("WINDIR")
-                if windir:
-                    dirs.append(os.path.join(windir, "fonts"))
-            elif sys.platform in ("linux", "linux2"):
-                lindirs = os.environ.get("XDG_DATA_DIRS", "")
-                if not lindirs:
-                    lindirs = "/usr/share"
-                dirs += [os.path.join(lindir, "fonts") for lindir in lindirs.split(":")]
-            elif sys.platform == "darwin":
-                dirs += [
-                    "/Library/Fonts",
-                    "/System/Library/Fonts",
-                    os.path.expanduser("~/Library/Fonts"),
-                ]
-            else:
-                raise SystemError("Unsupported platform: " % sys.platform)
-
-            fontfiles = []
-            for directory in [os.path.expandvars(path) for path in dirs]:
-                for walkroot, walkdir, walkfilenames in os.walk(directory):
-                    fontfiles += [os.path.join(walkroot, name) for name in walkfilenames]
-
-            for filename in fontfiles:
-                try:
-                    face = freetype.Face(filename)
-                except:
-                    continue
-                print(face.family_name.decode(), face.style_name.decode(), hex(face.style_flags))
-
-        findFontFiles()
-
+        data = rclib.parse(resources)
+        rclib.writeHeader(data, sys.stdout)
 
 
 
