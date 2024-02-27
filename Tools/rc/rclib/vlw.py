@@ -62,8 +62,8 @@
 # 						 // uint8_t bitmap[width * height]
 # };
 
-import resource.font, struct
-from resource import status
+import struct
+from .font import Glyph
 
 def parse_typeface(typeface):
     with open(typeface.source, "rb") as f:
@@ -78,7 +78,7 @@ def parse_typeface(typeface):
 
     bmOffset = offset + (numGlyphs * GLYPH_HEADER_SIZE)
     for i in range(numGlyphs):
-        g = resource.font.Glyph(typeface)
+        g = Glyph(typeface)
         g.codePoint, g.height, g.width, g.xAdvance, topExtent, g.xOffset, c_ptr = struct.unpack_from('>7i', data, offset)
         bmSize = g.height * g.width
         if g.codePoint in typeface.font.codePoints:
@@ -87,7 +87,7 @@ def parse_typeface(typeface):
                 descent = max(descent, g.height - topExtent)
                 ascent = max(ascent, topExtent)
             g.yOffset = -topExtent
-            g.flags = resource.font.Glyph.Flag.alpha
+            g.flags = Glyph.Flag.alpha
             g.bitmap = data[bmOffset:bmOffset+bmSize]
             typeface.glyphs.append(g)
         offset += GLYPH_HEADER_SIZE
@@ -109,9 +109,9 @@ def parse_typeface(typeface):
     psname = readName()
     smooth = data[offset]
 
-    status("name '%s', psname '%s', smooth %u, offset %u, len(data) %u" % (name, psname, smooth, offset, len(data)))
-    status("\tnumGlyphs %u, version %u, pointSize %u, ascent %d, descent %d"
-        % (numGlyphs, version, pointSize, ascent, descent))
+    # status("name '%s', psname '%s', smooth %u, offset %u, len(data) %u" % (name, psname, smooth, offset, len(data)))
+    # status("\tnumGlyphs %u, version %u, pointSize %u, ascent %d, descent %d"
+    #     % (numGlyphs, version, pointSize, ascent, descent))
 
 
 from .font import parsers

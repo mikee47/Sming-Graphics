@@ -19,10 +19,14 @@
 # @author: July 2021 - mikee47 <mike@sillyhouse.net>
 #
 
-import os, sys, json, argparse
-from resource import *
-import resource.font
-import resource.image
+import os
+import sys
+import argparse
+import rclib
+import rclib.font
+import rclib.image
+import common
+from common import json_load, status
 
 def main():
     parser = argparse.ArgumentParser(description='Sming Resource Compiler')
@@ -33,20 +37,20 @@ def main():
 
     args = parser.parse_args()
     common.quiet = args.quiet
-    resource.resourcePaths.append(os.path.dirname(os.path.abspath(args.input)))
+    rclib.base.resourcePaths.append(os.path.dirname(os.path.abspath(args.input)))
 
     script = json_load(args.input)
-    list = resource.parse(script['resources'])
+    data = rclib.parse(script['resources'])
 
     with openOutput(os.path.join(args.output, 'resource.h'), 'w') as out:
-        writeHeader(list, out)
+        rclib.writeHeader(data, out)
     with openOutput(os.path.join(args.output, 'resource.bin'), 'wb') as out:
-        writeBitmap(list, out)
+        rclib.writeBitmap(data, out)
         bitmapSize = out.tell()
 
-    structSize = sum(item.headerSize for item in list)
+    structSize = sum(item.headerSize for item in data)
     status("Resource compiled %u items, structures are %u bytes, bitmap is %u bytes"
-        % (len(list), structSize, bitmapSize))
+        % (len(data), structSize, bitmapSize))
 
 
 def openOutput(path, mode):
@@ -56,62 +60,10 @@ def openOutput(path, mode):
     return open(path, mode)
 
 
-def writeHeader(list, out):
-    out.write(
-        "/**\n"
-        " * Auto-generated file\n"
-        " */\n"
-        "\n"
-        "#include <Graphics/resource.h>\n"
-        "#include <FlashString/Vector.hpp>\n"
-        "\n"
-        "namespace Graphics {\n"
-        "namespace Resource {\n"
-        "\n"
-    )
-    bmOffset = 0
-    for item in list:
-        item.bmOffset = bmOffset
-        bmOffset = item.writeHeader(bmOffset, out)
-        item.bmSize = bmOffset - item.bmOffset
-
-    out.write("DEFINE_FSTR_VECTOR(fontTable, FontResource,\n")
-    for item in list:
-        if type(item) is resource.font.Font:
-            out.write("\t&%s,\n" % item.name)
-    out.write(");\n\n")
-
-    out.write("DEFINE_FSTR_VECTOR(imageTable, ImageResource,\n")
-    for item in list:
-        if type(item) is resource.image.Image:
-            out.write("\t&%s,\n" % item.name)
-    out.write(");\n\n")
-
-    out.write(
-        "} // namespace Resource\n"
-        "} // namespace Graphics\n"
-    )
-
-    out.write("\n/*\nSummary\n")
-    out.write("Bitmap Offset  Size    Header  Type      Name\n")
-    out.write("----------     ------  ------  --------  ---------\n")
-    headerSize = 0
-    for item in list:
-        out.write("0x%08x     %6u  %6u  %-8s  %s\n"
-            % (item.bmOffset, item.bmSize, item.headerSize, type(item).__name__, item.name))
-        headerSize += item.headerSize
-    out.write("----------     ------  ------  --------  ---------\n")
-    out.write("Total:         %6u  %6u\n*/\n\n" % (bmOffset, headerSize))
-
-
-def writeBitmap(list, out):
-    for item in list:
-        item.writeBitmap(out)
-
-
 if __name__ == '__main__':
     try:
         main()
-    except InputError as e:
+    except Exception as e:
+        raise
         print("** ERROR! %s" % e, file=sys.stderr)
         sys.exit(2)
