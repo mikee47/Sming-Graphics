@@ -913,14 +913,13 @@ class FontEditor(Editor):
         setattr(font, name, value)
         if name == 'family':
             sysfont = resource.system_fonts[font.family]
-            choices = [x.filename for x in sysfont ]
             for fs in resource.FaceStyle:
-                filename = ''
-                for x in sysfont:
-                    if fs == x.style:
-                        filename = x.filename
+                style = ''
+                for x in sysfont.values():
+                    if fs == x.facestyle:
+                        style = x.style
                         break
-                self.fields[fs.name].set_value(filename)
+                self.fields[fs.name].set_value(style)
         self.update()
         super().value_changed(name, value)
 
@@ -937,8 +936,8 @@ class FontEditor(Editor):
             font = font_assets.default
         elif isinstance(font, str):
             font = font_assets.get(font, font_assets.default)
-        sysfont = resource.system_fonts[font.family]
-        choices = [x.filename for x in sysfont ]
+        sysfont = resource.system_fonts.get(font.family, [])
+        choices = list(sysfont)
         for x in resource.FaceStyle:
             self.fields[x.name].set_choices(choices)
         self.load_values(font)
@@ -1175,10 +1174,11 @@ def run():
                 mono = font.mono,
                 size = font.size,
             )
+            sysfont = resource.system_fonts[font.family]
             for fs in FaceStyle:
-                fontfile = getattr(font, fs.name)
-                if fontfile:
-                    d[fs.name] = fontfile
+                style = getattr(font, fs.name)
+                if style:
+                    d[fs.name] = os.path.basename(sysfont[style].filename)
             fonts[font.name] = d
 
         resources = dict(

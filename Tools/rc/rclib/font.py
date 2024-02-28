@@ -311,24 +311,36 @@ def parse_item(item, name):
     return font
 
 
-def findFont(filename):
-    dirs = []
+def get_system_font_directories():
+    font_dirs = set()
+
     if sys.platform == "win32":
         windir = os.environ.get("WINDIR")
         if windir:
-            dirs.append(os.path.join(windir, "fonts"))
+            font_dirs.add(os.path.join(windir, "fonts"))
     elif sys.platform in ("linux", "linux2"):
         lindirs = os.environ.get("XDG_DATA_DIRS", "")
-        if not lindirs:
-            lindirs = "/usr/share"
-        dirs += [os.path.join(lindir, "fonts") for lindir in lindirs.split(":")]
+        if lindirs:
+            font_dirs |= {os.path.join(lindir, "fonts") for lindir in lindirs.split(":")}
+        font_dirs |= {
+            "/usr/share/fonts",
+            "/usr/share/x11/fonts",
+            "$HOME/.local/share/fonts",
+        }
     elif sys.platform == "darwin":
-        dirs += [
+        font_dirs |= {
             "/Library/Fonts",
             "/System/Library/Fonts",
             os.path.expanduser("~/Library/Fonts"),
-        ]
+        }
     else:
         raise SystemError("Unsupported platform: " % sys.platform)
 
-    return findFile(filename, dirs)
+    return sorted(list(font_dirs))
+
+
+def findFont(filename):
+    return findFile(filename, system_font_directories)
+
+
+system_font_directories = get_system_font_directories()

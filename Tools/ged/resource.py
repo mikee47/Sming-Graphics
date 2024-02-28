@@ -1,6 +1,5 @@
 import sys
 import os
-import subprocess
 import dataclasses
 from dataclasses import dataclass
 import freetype
@@ -50,7 +49,14 @@ class ResourceList(list):
 class FaceInfo:
     flags: int
     style: str
+    facestyle: FaceStyle
     filename: str
+
+
+# @dataclass
+# class SystemFont:
+#     faces: dict[FaceInfo] = dataclasses.field(default_factory=dict)
+
 
 class SystemFonts(dict):
     def __init__(self):
@@ -59,37 +65,15 @@ class SystemFonts(dict):
     def scan(self):
         self.clear()
 
-        fclist = subprocess.check_output(['fc-list']).decode().splitlines()
         fontfiles = set()
-        for f in fclist:
-            x = f.split(':')
-            if len(x) >= 2:
-                fontfiles.add(x[0])
-
-        dirs = []
-        if sys.platform == "win32":
-            windir = os.environ.get("WINDIR")
-            if windir:
-                dirs.append(os.path.join(windir, "fonts"))
-        elif sys.platform in ("linux", "linux2"):
-            lindirs = os.environ.get("XDG_DATA_DIRS", "")
-            if not lindirs:
-                lindirs = "/usr/share"
-            dirs += [os.path.join(lindir, "fonts") for lindir in lindirs.split(":")]
-        elif sys.platform == "darwin":
-            dirs += [
-                "/Library/Fonts",
-                "/System/Library/Fonts",
-                os.path.expanduser("~/Library/Fonts"),
-            ]
-        else:
-            raise SystemError("Unsupported platform: " % sys.platform)
-
-        for directory in [os.path.expandvars(path) for path in dirs]:
-            for walkroot, walkdir, walkfilenames in os.walk(directory):
+        for path in rclib.font.system_font_directories:
+            for walkroot, walkdirs, walkfilenames in os.walk(os.path.expandvars(path)):
                 fontfiles |= {os.path.join(walkroot, name) for name in walkfilenames}
 
         for filename in fontfiles:
+            _, ext = os.path.splitext(filename)
+            if ext not in rclib.font.parsers:
+                continue
             try:
                 face = freetype.Face(filename)
             except:
@@ -98,20 +82,13 @@ class SystemFonts(dict):
             ft_italic = face.style_flags & freetype.FT_STYLE_FLAGS['FT_STYLE_FLAG_ITALIC']
             ft_bold = face.style_flags & freetype.FT_STYLE_FLAGS['FT_STYLE_FLAG_BOLD']
             if ft_italic:
-                style = FaceStyle.boldItalic if ft_bold else FaceStyle.italic
+                facestyle = FaceStyle.boldItalic if ft_bold else FaceStyle.italic
             else:
-                style = FaceStyle.bold if ft_bold else FaceStyle.normal
-            info = FaceInfo(hex(face.style_flags), style, os.path.basename(filename))
-            self.setdefault(name, []).append(info)
-            # family_name = face.family_name.decode()
-            # style_name = face.style_name.decode()
-            # print(f'{family_name} / {style_name} / {face.style_flags:x} / {style}')
-            # try:
-            #     varinfo = face.get_variation_info()
-            #     print('  ', varinfo.axes)
-            #     print('  ', varinfo.instances)
-            # except:
-            #     pass
+                facestyle = FaceStyle.bold if ft_bold else FaceStyle.normal
+            style_name = face.style_name.decode()
+            faceinfo = FaceInfo(hex(face.style_flags), style_name, facestyle, filename)
+            font = self.setdefault(name, {})
+            font[style_name] = faceinfo
 
 
 system_fonts = SystemFonts()
@@ -135,17 +112,18 @@ class Font(Resource):
         img = PIL.Image.new('RGBA', (w_box, h_box))
         draw = PIL.ImageDraw.Draw(img)
         draw.fontmode = '1' if self.mono else 'L'
-        filename = ''
-        if FontStyle.Italic in fontstyle:
-            if FontStyle.Bold in fontstyle:
-                filename = self.boldItalic
-            filename = filename or self.italic
-        elif FontStyle.Bold in fontstyle:
-            filename = self.bold
-        filename = filename or self.normal
-        if filename:
-            font = PIL.ImageFont.truetype(filename, self.size)
-        else:
+        try:
+            sysfont = system_fonts[self.family]
+            face_name = ''
+            if FontStyle.Italic in fontstyle:
+                if FontStyle.Bold in fontstyle:
+                    face_name = self.boldItalic
+                face_name = face_name or self.italic
+            elif FontStyle.Bold in fontstyle:
+                face_name = self.bold
+            face_name = face_name or self.normal
+            font = PIL.ImageFont.truetype(sysfont[face_name].filename, self.size)
+        except:
             font = PIL.ImageFont.load_default(self.size)
         draw.font = font
         ascent, descent = font.getmetrics()
