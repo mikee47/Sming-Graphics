@@ -1,0 +1,12 @@
+{
+    "name": "Graphic Editor",
+    "base_config": "standard",
+    "partitions": {
+        "resource": {
+            "address": "0x00100000",
+            "size": "1M",
+            "type": "user",
+            "subtype": 1
+        }
+    }
+}

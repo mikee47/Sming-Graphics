@@ -9,7 +9,9 @@ class Client:
         self.socket.connect((ipaddr, port))
 
     def send_line(self, data):
-        self.socket.send(data.encode() + b'\n')
+        if isinstance(data, str):
+            data = data.encode()
+        self.socket.send(data + b'\n')
 
 
 def serialise(layout: list) -> list[str]:

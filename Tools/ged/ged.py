@@ -1,5 +1,7 @@
 import os
 import sys
+import io
+import base64
 import copy
 from enum import Enum, IntEnum, StrEnum
 import random
@@ -1191,7 +1193,18 @@ def run():
         data = rclib.parse(resources)
         rclib.writeHeader(data, sys.stdout)
 
+        buf = io.BytesIO()
+        rclib.writeBitmap(data, buf)
 
+
+        client = remote.Client('192.168.13.10', 23)
+        client.send_line('@:resource-begin;')
+        buf.seek(0)
+        while blk := buf.read(64):
+            blk = base64.b64encode(blk)
+            client.send_line(b'b:;' + blk)
+        client.send_line('@:resource-end;')
+    
 
     def fileSend():
         client = remote.Client('192.168.13.10', 23)
