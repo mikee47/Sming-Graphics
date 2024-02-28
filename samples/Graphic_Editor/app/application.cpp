@@ -1,5 +1,7 @@
 #include <SmingCore.h>
+#include <Storage/PartitionStream.h>
 #include <Data/WebHelpers/escape.h>
+#include <Data/WebHelpers/base64.h>
 #include <Network/TcpServer.h>
 #include <Graphics.h>
 #include <Graphics/Controls.h>
@@ -17,6 +19,11 @@ namespace
 {
 RenderQueue renderQueue(tft);
 TcpServer server;
+
+uint32_t hexValue(const String& s)
+{
+	return strtoul(s.c_str(), nullptr, 16);
+}
 
 class PropertySet;
 
@@ -80,10 +87,7 @@ public:
 struct PropertySet {
 	void setProperty(const String& name, const String& value)
 	{
-		auto getColor = [&]() -> Color {
-			auto n = strtoul(value.c_str(), nullptr, 16);
-			return Color(n);
-		};
+		auto getColor = [&]() -> Color { return Color(hexValue(value)); };
 
 		if(name == "x") {
 			x = value.toInt();
@@ -108,9 +112,8 @@ struct PropertySet {
 		} else if(name == "text") {
 			text = uri_unescape(value);
 		} else if(name == "fontstyle") {
-			auto n = strtoul(value.c_str(), nullptr, 0);
-			fontstyles = FontStyles(n);
-			Serial << "FontStyle " << fontstyles << ", " << value << ", " << n << endl;
+			fontstyles = FontStyles(hexValue(value));
+			// Serial << "FontStyle " << fontstyles << endl;
 		} else if(name == "fontscale") {
 			fontscale = value.toInt();
 		} else if(name == "image") {
@@ -215,8 +218,10 @@ bool processClientData(TcpClient& client, char* data, int size)
 {
 	static SceneObject* scene;
 	static String line;
+	static std::unique_ptr<ReadWriteStream> resourceStream;
 
 	while(size) {
+		line.setLength(0);
 		auto p = (const char*)memchr(data, '\n', size);
 		auto n = p ? (p - data) : size;
 		line.concat(data, n);
@@ -229,6 +234,24 @@ bool processClientData(TcpClient& client, char* data, int size)
 		// Serial << line << endl;
 
 		auto lineptr = line.c_str();
+		if(lineptr[1] != ':') {
+			continue;
+		}
+		char dataKind = lineptr[0];
+		lineptr += 2;
+
+		if(dataKind == 'b') {
+			if(!resourceStream) {
+				continue;
+			}
+			auto len = line.length();
+			auto buf = reinterpret_cast<uint8_t*>(line.begin());
+			auto bytecount = base64_decode(len - 2, lineptr, len, buf);
+			len = resourceStream->write(buf, bytecount);
+			// Serial << ">> res.write(" << bytecount << "): " << len << endl;
+			continue;
+		}
+
 		auto fetch = [&](char sep) -> String {
 			auto psep = strchr(lineptr, sep);
 			if(!psep) {
@@ -240,7 +263,6 @@ bool processClientData(TcpClient& client, char* data, int size)
 		};
 
 		PropertySet props;
-		char dataKind = fetch(':')[0];
 		String instr = fetch(';');
 		// Serial << dataKind << " : " << instr << endl;
 		String tag;
@@ -269,6 +291,13 @@ bool processClientData(TcpClient& client, char* data, int size)
 					delete scene;
 				});
 				scene = nullptr;
+			} else if(instr == "resource-begin") {
+				auto part = Storage::findPartition(F("resource"));
+				resourceStream.reset(new Storage::PartitionStream(part, true));
+				Serial << "** Writing resource" << endl;
+			} else if (instr == "resource-end") {
+				Serial << "** Resource written" << endl;
+				resourceStream.reset();
 			}
 			break;
 
@@ -284,8 +313,6 @@ bool processClientData(TcpClient& client, char* data, int size)
 			break;
 		}
 		}
-
-		line.setLength(0);
 	}
 
 	return true;
@@ -307,6 +334,10 @@ void init()
 
 	Serial << _F("Display start") << endl;
 	initDisplay();
+
+	auto part = Storage::findPartition(F("resource"));
+	Serial << part << endl;
+	Graphics::Resource::init(new Storage::PartitionStream(part));
 
 	WifiStation.enable(true);
 	WifiStation.config(WIFI_SSID, WIFI_PWD);
