@@ -66,10 +66,10 @@ def findFile(filename, dirs = []):
     if os.path.exists(filename):
         return filename
 
-    alldirs = []
-    for directory in [os.path.expandvars(path) for path in resourcePaths + dirs]:
-        for walkroot, walkdir, walkfilenames in os.walk(directory):
-            alldirs.append(walkroot)
+    alldirs = set()
+    for path in resourcePaths + dirs:
+        for walkroot, _, _ in os.walk(os.path.expandvars(path)):
+            alldirs.add(walkroot)
 
     for dir in alldirs:
         path = os.path.join(dir, filename)
