@@ -38,6 +38,8 @@ def serialise(layout: list) -> list[str]:
                 s = value.value_str(ColorFormat.graphics)[1:]
             elif type(value) in [set, list]:
                 s = ",".join(value)
+            else:
+                s = value
             line += f'{name}={s};'
         data.append(line)
     return data

@@ -6,6 +6,7 @@
 #include <Graphics.h>
 #include <Graphics/Controls.h>
 #include <Graphics/SampleConfig.h>
+#include <Graphics/resource.h>
 
 // If you want, you can define WiFi settings globally in Eclipse Environment Variables
 #ifndef WIFI_SSID
@@ -19,6 +20,9 @@ namespace
 {
 RenderQueue renderQueue(tft);
 TcpServer server;
+
+using ResourceData = String;
+HashMap<String, ResourceData> resourceMap;
 
 uint32_t hexValue(const String& s)
 {
@@ -131,21 +135,17 @@ struct PropertySet {
 		}
 	}
 
-	Object* createObject(SceneObject& scene, const String& type)
+	void draw(SceneObject& scene, const String& type)
 	{
 		if(type == "Rect") {
-			return new RectObject(Pen(color, line_width), rect(), radius);
-		}
-		if(type == "FilledRect") {
-			return new FilledRectObject(color, rect(), radius);
-		}
-		if(type == "Ellipse") {
-			return new EllipseObject(Pen(color, line_width), rect());
-		}
-		if(type == "FilledEllipse") {
-			return new FilledEllipseObject(color, rect());
-		}
-		if(type == "Text") {
+			scene.drawRect(Pen(color, line_width), rect(), radius);
+		} else if(type == "FilledRect") {
+			scene.fillRect(color, rect(), radius);
+		} else if(type == "Ellipse") {
+			scene.drawEllipse(Pen(color, line_width), rect());
+		} else if(type == "FilledEllipse") {
+			scene.fillEllipse(color, rect());
+		} else if(type == "Text") {
 			// font
 			TextBuilder textBuilder(scene.assets, rect());
 			textBuilder.setFont(nullptr);
@@ -156,23 +156,37 @@ struct PropertySet {
 			textBuilder.setLineAlign(valign);
 			textBuilder.print(text);
 			textBuilder.commit(scene);
-			return textBuilder.release();
-		}
-		if(type == "Image") {
-			// image
+			textBuilder.commit(scene);
+		} else if(type == "Image") {
 			// xoff
 			// yoff
-			// return new ImageObject(...);
-			return nullptr;
-		}
-		if(type == "Button") {
-			return new CustomButton(*this);
-		}
-		if(type == "Label") {
-			return new CustomLabel(*this);
-		}
+			auto& resdata = resourceMap[image];
+			if(!resdata) {
+				Serial << "Resource '" << image << "' not found" << endl;
+				return;
+			}
+			auto& imgres = *reinterpret_cast<const Resource::ImageResource*>(resdata.c_str());
 
-		return nullptr;
+			Serial << "bmOffset " << imgres.bmOffset << ", bmSize " << imgres.bmSize << ", width " << imgres.width
+				   << ", height " << imgres.height << ", format " << imgres.format << endl;
+
+			ImageObject* img;
+			if(imgres.format == PixelFormat::None) {
+				img = new BitmapObject(imgres);
+				if(!img->init()) {
+					debug_e("Bad bitmap");
+				}
+			} else {
+				img = new RawImageObject(imgres);
+			}
+			Serial << "Image size " << toString(img->getSize()) << endl;
+			scene.addAsset(img);
+			scene.drawImage(*img, {x, y});
+		} else if(type == "Button") {
+			scene.addObject(new CustomButton(*this));
+		} else if(type == "Label") {
+			scene.addObject(new CustomLabel(*this));
+		}
 	}
 
 	Rect rect() const
@@ -240,37 +254,57 @@ bool processClientData(TcpClient& client, char* data, int size)
 		char dataKind = lineptr[0];
 		lineptr += 2;
 
-		if(dataKind == 'b') {
-			if(!resourceStream) {
-				continue;
-			}
-			auto len = line.length();
-			auto buf = reinterpret_cast<uint8_t*>(line.begin());
-			auto bytecount = base64_decode(len - 2, lineptr, len, buf);
-			len = resourceStream->write(buf, bytecount);
-			// Serial << ">> res.write(" << bytecount << "): " << len << endl;
-			continue;
-		}
-
 		auto fetch = [&](char sep) -> String {
+			auto p = lineptr;
 			auto psep = strchr(lineptr, sep);
 			if(!psep) {
-				return nullptr;
+				lineptr += strlen(lineptr);
+				return String(p);
 			}
-			auto p = lineptr;
 			lineptr = psep + 1;
 			return String(p, psep - p);
 		};
 
+		auto decodeBinary = [&]() -> unsigned {
+			auto offset = lineptr - line.c_str();
+			auto charCount = line.length() - offset;
+			auto bufptr = line.begin();
+			auto bytecount = base64_decode(charCount, lineptr, charCount, reinterpret_cast<uint8_t*>(bufptr));
+			lineptr = bufptr;
+			return bytecount;
+		};
+
+		if(dataKind == 'b') {
+			if(!resourceStream) {
+				continue;
+			}
+			auto bytecount = decodeBinary();
+			auto len = resourceStream->write(lineptr, bytecount);
+			(void)len;
+			// Serial << ">> res.write(" << bytecount << "): " << len << endl;
+			continue;
+		}
+
+		if(dataKind == 'r') {
+			// Resource
+			String kind = fetch(';');
+			String name = fetch(';');
+			auto bytecount = decodeBinary();
+			resourceMap[name] = String(lineptr, bytecount);
+			Serial << kind << " resource '" << name << "', " << bytecount
+				   << " bytes: " << makeHexString(lineptr, bytecount) << endl;
+			continue;
+		}
+
 		PropertySet props;
 		String instr = fetch(';');
-		// Serial << dataKind << " : " << instr << endl;
+		Serial << dataKind << " : " << instr << endl;
 		String tag;
 		String value;
 		while(*lineptr) {
 			tag = fetch('=');
 			value = fetch(';');
-			// Serial << "  " << tag << " = " << value << endl;
+			Serial << "  " << tag << " = " << value << endl;
 			props.setProperty(tag, value);
 		}
 		switch(dataKind) {
@@ -295,7 +329,7 @@ bool processClientData(TcpClient& client, char* data, int size)
 				auto part = Storage::findPartition(F("resource"));
 				resourceStream.reset(new Storage::PartitionStream(part, true));
 				Serial << "** Writing resource" << endl;
-			} else if (instr == "resource-end") {
+			} else if(instr == "resource-end") {
 				Serial << "** Resource written" << endl;
 				resourceStream.reset();
 			}
@@ -306,10 +340,7 @@ bool processClientData(TcpClient& client, char* data, int size)
 				Serial << "NO SCENE!";
 				break;
 			}
-			auto obj = props.createObject(*scene, instr);
-			if(obj) {
-				scene->addObject(obj);
-			}
+			props.draw(*scene, instr);
 			break;
 		}
 		}

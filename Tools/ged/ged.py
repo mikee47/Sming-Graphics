@@ -1,7 +1,7 @@
 import os
 import sys
 import io
-import base64
+import binascii
 import copy
 from enum import Enum, IntEnum, StrEnum
 import random
@@ -951,7 +951,7 @@ class ImageEditor(Editor):
         self.add_combo_field('name')
         widget = self.add_combo_field('source')
         widget.bind('<Double-1>', self.choose_source)
-        self.add_combo_field('format')
+        self.add_combo_field('format', values=['BMP', 'RGB24', 'RGB565'])
         self.add_entry_field('width')
         self.add_entry_field('height')
         self.update()
@@ -1191,18 +1191,31 @@ def run():
         print(json_dumps(resources))
 
         data = rclib.parse(resources)
-        rclib.writeHeader(data, sys.stdout)
+
+        def base64(data):
+            return binascii.b2a_base64(data, newline=False)
+
+        client = remote.Client('192.168.13.10', 23)
+
+        bmOffset = 0
+        for item in data:
+            print(type(item))
+            if isinstance(item, rclib.image.Image):
+                # struct ImageResource
+                rec = item.pack(bmOffset)
+                print(rec.hex())
+                line = f'r:image;{item.name};'.encode() + base64(rec)
+                # item.headerSize = rclib.base.StructSize.Image
+                bmOffset += len(item.bitmap)
+                client.send_line(line)
 
         buf = io.BytesIO()
         rclib.writeBitmap(data, buf)
 
-
-        client = remote.Client('192.168.13.10', 23)
         client.send_line('@:resource-begin;')
         buf.seek(0)
         while blk := buf.read(64):
-            blk = base64.b64encode(blk)
-            client.send_line(b'b:;' + blk)
+            client.send_line(b'b:;' + base64(blk))
         client.send_line('@:resource-end;')
     
 
