@@ -6,8 +6,9 @@ import PIL.Image
 import PIL.ImageOps
 import os
 import io
+import struct
 import requests
-from .base import Resource, findFile, fstrSize, StructSize
+from .base import Resource, findFile, fstrSize, StructSize, PixelFormat
 
 class Image(Resource):
     def __init__(self):
@@ -17,6 +18,18 @@ class Image(Resource):
         self.height = None
         self.format = None
         self.headerSize = 0
+
+    def pack(self, bmOffset):
+        """struct ImageResource"""
+        fmt = PixelFormat[self.format.upper()].value
+        print(f'image {self.name} format {self.format} {fmt}')
+        return struct.pack('<IIIHHI',
+            0, # FSTR::String* name
+            bmOffset,
+            len(self.bitmap),
+            self.width,
+            self.height,
+            fmt)
 
     def writeHeader(self, bmOffset, out):
         self.headerSize = 0

@@ -22,6 +22,20 @@
 import os
 import enum
 
+ORDER_RGB = 0
+ORDER_BGR = 1
+
+@staticmethod
+def pixel_format(bytes, bpp, color_order):
+    return (bytes - 1) | ((bpp >> 1) << 2) | (color_order << 7)
+
+class PixelFormat(enum.Enum):
+    NONE = 0
+    RGB24 = pixel_format(3, 24, ORDER_RGB)
+    BGRA32 = pixel_format(4, 32, ORDER_RGB)
+    BGR24 = pixel_format(3, 24, ORDER_BGR)
+    RGB565 = pixel_format(2, 16, ORDER_RGB)
+
 # Used to calculate compiled size of resource header information
 class StructSize(enum.IntEnum):
     GlyphResource = 8
