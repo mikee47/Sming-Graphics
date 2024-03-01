@@ -5,12 +5,13 @@ from dataclasses import dataclass
 import freetype
 import PIL.Image, PIL.ImageOps, PIL.ImageDraw, PIL.ImageFont
 from PIL.ImageTk import PhotoImage as TkImage
-from gtypes import Rect, DataObject, Color, ColorFormat, FaceStyle, FontStyle, Align
+from gtypes import Rect, DataObject, Color, ColorFormat, FaceStyle, Align
 from enum import Enum
 import textwrap
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../rc')))
 import rclib
+from rclib.font import FontStyle
 
 
 @dataclass

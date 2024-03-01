@@ -19,7 +19,7 @@ class Image(Resource):
         self.format = None
         self.headerSize = 0
 
-    def pack(self, bmOffset):
+    def serialize(self, bmOffset):
         """struct ImageResource"""
         fmt = PixelFormat[self.format.upper()].value
         print(f'image {self.name} format {self.format} {fmt}')
@@ -30,6 +30,9 @@ class Image(Resource):
             self.width,
             self.height,
             fmt)
+
+    def get_bitmap_size(self):
+        return len(self.bitmap)
 
     def writeHeader(self, bmOffset, out):
         self.headerSize = 0
@@ -45,7 +48,7 @@ class Image(Resource):
         out.write("\t.format = PixelFormat::%s,\n" % self.format)
         out.write("};\n\n")
         self.headerSize += StructSize.Image
-        return bmOffset + len(self.bitmap)
+        return bmOffset + self.get_bitmap_size()
 
     def writeBitmap(self, out):
         out.write(self.bitmap)
