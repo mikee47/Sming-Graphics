@@ -22,7 +22,31 @@
 import enum
 import os
 import sys
+import struct
 from .base import Resource, findFile, StructSize, fstrSize
+
+class FontStyle(enum.Enum):
+    """Style is a set of these values, using strings here but bitfields in library"""
+    # typeface
+    Bold = 0
+    Italic = 1
+    Underscore = 2
+    Overscore = 3
+    Strikeout = 4
+    DoubleUnderscore = 5
+    DoubleOverscore = 6
+    DoubleStrikeout = 7
+    DotMatrix = 8
+    HLine = 9
+    VLine = 10
+
+    @staticmethod
+    def evaluate(value: list[str]):
+        n = 0
+        for x in value:
+            n |= 1 << FontStyle[x].value
+        return n
+
 
 class Glyph(Resource):
     class Flag(enum.IntEnum):
@@ -137,6 +161,72 @@ class Typeface(Resource):
         self.glyphs = []
         self.headerSize = 0
 
+    def serialize(self, bmOffset, res_offset):
+        glyph_data = self.serialize_glyphs()
+        block_data = self.serialize_glyph_blocks()
+
+        resdata = glyph_data + block_data
+
+        # `struct TypefaceResource'
+        print(
+            bmOffset,
+            self.style,
+            self.yAdvance,
+            self.descent,
+            len(block_data) // 4,
+            res_offset,
+            res_offset + len(glyph_data)
+        )
+        resdata += struct.pack('<IBBBBII',
+            bmOffset,
+            FontStyle.evaluate(self.style),
+            self.yAdvance,
+            self.descent,
+            len(block_data) // 4,
+            res_offset,
+            res_offset + len(glyph_data)
+        )
+        return resdata
+
+    def serialize_glyphs(self):
+        # Array of `struct GlyphResource`
+        resdata = b''
+        bmOffset = 0
+        for g in self.glyphs:
+            resdata += struct.pack('<HBBbbBB',
+                bmOffset,
+                g.width,
+                g.height,
+                g.xOffset,
+                g.yOffset,
+                g.xAdvance,
+                g.flags)
+            bmOffset += len(g.bitmap)
+        return resdata
+
+    def serialize_glyph_blocks(self):
+        # Array of `struct GlyphBlock`
+        resdata = b''
+        cp = -1
+        count = 0
+        length = 0
+
+        def writeBlock():
+            nonlocal resdata
+            resdata += struct.pack('<HH', cp, length)
+
+        for g in self.glyphs:
+            if cp >= 0 and g.codePoint == cp + length:
+                length += 1
+                continue
+            if cp >= 0:
+                writeBlock()
+                count += 1
+            cp = g.codePoint
+            length = 1
+        writeBlock()
+        return resdata
+
     def writeGlyphRecords(self, out):
         # Array of glyph definitions
         bmOffset = 0
@@ -179,6 +269,9 @@ class Typeface(Resource):
         count += 1
         return count
 
+    def get_bitmap_size(self):
+        return sum(len(g.bitmap) for g in self.glyphs)
+
     def writeHeader(self, bmOffset, out):
         self.headerSize = 0
         bmSize = self.writeGlyphRecords(out)
@@ -187,7 +280,7 @@ class Typeface(Resource):
         super().writeComment(out)
         out.write("const TypefaceResource %s_typeface PROGMEM {\n" % self.name)
         out.write("\t.bmOffset = 0x%08x,\n" % bmOffset)
-        bmSize = sum(len(g.bitmap) for g in self.glyphs)
+        bmSize = self.get_bitmap_size()
         out.write("//\t.bmSize = %u,\n" % bmSize)
         if self.style != []:
             out.write("\t.style = uint8_t(FontStyles(%s).value()),\n" % ' | '.join('FontStyle::' + style for style in self.style))
@@ -212,6 +305,34 @@ class Font(Resource):
         self.yAdvance = 0
         self.descent = 0
         self.headerSize = 0
+
+    def serialize(self, bmOffset):
+        print(list(x.name for x in self.typefaces))
+
+        resdata = b''
+        face_offsets = []
+        offset = 48 # sizeof(FontResource)
+        for typeface in self.typefaces:
+            # print(typeface.name)
+            face_offsets.append(offset + len(resdata))
+            face_res = typeface.serialize(bmOffset, offset + len(resdata))
+            resdata += face_res
+            bmOffset += typeface.get_bitmap_size()
+        while len(face_offsets) < 4:
+            face_offsets.append(0)
+
+        # `struct FontResource`
+        font_res = struct.pack('<IBB2B4I',
+            0,
+            self.yAdvance,
+            self.descent,
+            0, 0,
+            *face_offsets)
+        
+        return font_res + resdata
+
+    def get_bitmap_size(self):
+        return sum(face.get_bitmap_size() for face in self.typefaces)
 
     def writeHeader(self, bmOffset, out):
         self.headerSize = 0

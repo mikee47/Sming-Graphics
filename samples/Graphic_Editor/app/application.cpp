@@ -329,6 +329,9 @@ bool processClientData(TcpClient& client, char* data, int size)
 				auto part = Storage::findPartition(F("resource"));
 				resourceStream.reset(new Storage::PartitionStream(part, true));
 				Serial << "** Writing resource" << endl;
+			} else if(instr == "font-begin") {
+				resourceStream.reset(new MemoryDataStream);
+				Serial << "** Writing font" << endl;
 			} else if(instr == "resource-end") {
 				Serial << "** Resource written" << endl;
 				resourceStream.reset();

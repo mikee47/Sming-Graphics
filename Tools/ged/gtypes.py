@@ -12,22 +12,6 @@ class FaceStyle(Enum):
     boldItalic = 3
 
 
-class FontStyle(Enum):
-    """Style is a set of these values, using strings here but bitfields in library"""
-    # typeface
-    Bold = 0
-    Italic = 1
-    Underscore = 2
-    Overscore = 3
-    Strikeout = 4
-    DoubleUnderscore = 5
-    DoubleOverscore = 6
-    DoubleStrikeout = 7
-    DotMatrix = 8
-    HLine = 9
-    VLine = 10
-
-
 class Align(Enum):
     Left = 0
     Centre = 1

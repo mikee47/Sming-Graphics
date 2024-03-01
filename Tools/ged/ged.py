@@ -1202,12 +1202,26 @@ def run():
             print(type(item))
             if isinstance(item, rclib.image.Image):
                 # struct ImageResource
-                rec = item.pack(bmOffset)
+                rec = item.serialize(bmOffset)
                 print(rec.hex())
                 line = f'r:image;{item.name};'.encode() + base64(rec)
                 # item.headerSize = rclib.base.StructSize.Image
-                bmOffset += len(item.bitmap)
+                bmOffset += item.get_bitmap_size()
                 client.send_line(line)
+                continue
+            if isinstance(item, rclib.font.Font):
+                rec = item.serialize(bmOffset)
+                bmOffset += item.get_bitmap_size()
+                print(rec)
+
+                # line = f'r:font;{item.name};' + base64(font_resource)
+
+                # client.send_line('@:font-begin;')
+                # buf.seek(0)
+                # while blk := buf.read(64):
+                #     client.send_line(b'b:;' + base64(blk))
+                # client.send_line('@:resource-end;')
+
 
         buf = io.BytesIO()
         rclib.writeBitmap(data, buf)
@@ -1227,10 +1241,7 @@ def run():
         for line in data:
             client.send_line(line)
         client.send_line('@:render;')
-            # print(line)
-        # for item in data.values():
-        #     s = ','.join(f'{name}={value}' for name, value in item.items()) + '\r\n'
-        #     client.send(s.encode())
+
 
     root = tk.Tk(className='GED')
     root.geometry('1000x600')
