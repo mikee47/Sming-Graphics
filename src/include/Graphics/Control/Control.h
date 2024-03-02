@@ -119,7 +119,7 @@ public:
 		flags += Flag::dirty;
 	}
 
-	virtual Font* getFont() const
+	virtual const Font* getFont() const
 	{
 		return nullptr;
 	}

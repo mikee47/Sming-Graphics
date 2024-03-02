@@ -150,7 +150,7 @@ using CustomObject = ObjectTemplate<Object::Kind::Custom>;
 class ReferenceObject : public ObjectTemplate<Object::Kind::Reference>
 {
 public:
-	ReferenceObject(Object& object, const Rect& pos, const Blend* blend = nullptr)
+	ReferenceObject(const Object& object, const Rect& pos, const Blend* blend = nullptr)
 		: object(object), pos(pos), blend{blend}
 	{
 	}
@@ -163,7 +163,7 @@ public:
 
 	Renderer* createRenderer(const Location& location) const override;
 
-	Object& object;
+	const Object& object;
 	Rect pos;
 	const Blend* blend;
 };

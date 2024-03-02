@@ -12,6 +12,7 @@ void Button::draw(SceneObject& scene) const
 	r.inflate(-2, -2);
 	scene.fillRect(backColor, r, 6);
 	TextBuilder text(scene.assets, bounds);
+	text.setFont(getFont());
 	text.setColor(getColor(Element::text));
 	text.setBackColor(backColor);
 	text.setTextAlign(Align::Centre);
