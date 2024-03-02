@@ -179,12 +179,12 @@ public:
 		return addObject(new FilledArcObject(params...));
 	}
 
-	template <typename... ParamTypes> ReferenceObject* drawImage(ImageObject& image, Point pos, ParamTypes... params)
+	template <typename... ParamTypes> ReferenceObject* drawImage(const ImageObject& image, Point pos, ParamTypes... params)
 	{
 		return drawObject(image, Rect{pos, image.getSize()}, params...);
 	}
 
-	template <typename... ParamTypes> ReferenceObject* drawObject(Object& object, ParamTypes... params)
+	template <typename... ParamTypes> ReferenceObject* drawObject(const Object& object, ParamTypes... params)
 	{
 		return addObject(new ReferenceObject(object, params...));
 	}
