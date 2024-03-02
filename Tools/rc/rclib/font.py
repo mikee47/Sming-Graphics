@@ -165,35 +165,26 @@ class Typeface(Resource):
         glyph_data = self.serialize_glyphs()
         block_data = self.serialize_glyph_blocks()
 
-        resdata = glyph_data + block_data
-
         # `struct TypefaceResource'
-        print(
-            bmOffset,
-            self.style,
-            self.yAdvance,
-            self.descent,
-            len(block_data) // 4,
-            res_offset,
-            res_offset + len(glyph_data)
-        )
-        resdata += struct.pack('<IBBBBII',
+        face_res = struct.pack('<IBBBBII',
             bmOffset,
             FontStyle.evaluate(self.style),
             self.yAdvance,
             self.descent,
-            len(block_data) // 4,
-            res_offset,
-            res_offset + len(glyph_data)
+            len(block_data) // StructSize.GlyphBlock,
+            res_offset + StructSize.Typeface,
+            res_offset + StructSize.Typeface + len(glyph_data)
         )
-        return resdata
+        assert(len(face_res) == StructSize.Typeface)
+
+        return face_res + glyph_data + block_data
 
     def serialize_glyphs(self):
         # Array of `struct GlyphResource`
         resdata = b''
         bmOffset = 0
         for g in self.glyphs:
-            resdata += struct.pack('<HBBbbBB',
+            glyph_res = struct.pack('<HBBbbBB',
                 bmOffset,
                 g.width,
                 g.height,
@@ -201,6 +192,8 @@ class Typeface(Resource):
                 g.yOffset,
                 g.xAdvance,
                 g.flags)
+            assert(len(glyph_res) == StructSize.GlyphResource)
+            resdata += glyph_res
             bmOffset += len(g.bitmap)
         return resdata
 
@@ -307,16 +300,13 @@ class Font(Resource):
         self.headerSize = 0
 
     def serialize(self, bmOffset):
-        print(list(x.name for x in self.typefaces))
-
         resdata = b''
         face_offsets = []
-        offset = 48 # sizeof(FontResource)
         for typeface in self.typefaces:
             # print(typeface.name)
-            face_offsets.append(offset + len(resdata))
-            face_res = typeface.serialize(bmOffset, offset + len(resdata))
-            resdata += face_res
+            offset = StructSize.Font + len(resdata)
+            face_offsets.append(offset)
+            resdata += typeface.serialize(bmOffset, offset)
             bmOffset += typeface.get_bitmap_size()
         while len(face_offsets) < 4:
             face_offsets.append(0)
@@ -328,7 +318,9 @@ class Font(Resource):
             self.descent,
             0, 0,
             *face_offsets)
-        
+
+        assert(len(font_res) == StructSize.Font)
+
         return font_res + resdata
 
     def get_bitmap_size(self):
