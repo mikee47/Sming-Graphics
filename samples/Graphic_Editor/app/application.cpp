@@ -1,4 +1,5 @@
 #include <SmingCore.h>
+#include <Data/ObjectMap.h>
 #include <Storage/PartitionStream.h>
 #include <Data/WebHelpers/escape.h>
 #include <Data/WebHelpers/base64.h>
@@ -21,8 +22,64 @@ namespace
 RenderQueue renderQueue(tft);
 TcpServer server;
 
-using ResourceData = String;
-HashMap<String, ResourceData> resourceMap;
+struct ResourceInfo {
+	ResourceInfo()
+	{
+	}
+
+	ResourceInfo(const LinkedObject* object, void* data)
+	{
+		this->object.reset(object);
+		this->data = data;
+	}
+
+	~ResourceInfo()
+	{
+		free(data);
+	}
+
+	ResourceInfo* operator=(ResourceInfo&& other)
+	{
+		if(this != &other) {
+			object = std::move(other.object);
+			free(data);
+			data = nullptr;
+			std::swap(data, other.data);
+		}
+		return this;
+	}
+
+	std::unique_ptr<const LinkedObject> object;
+	void* data;
+};
+
+class ResourceMap : public ObjectMap<String, const ResourceInfo>
+{
+public:
+	const Font* getFont(const String& name)
+	{
+		return static_cast<const Font*>(findObject(name));
+	}
+
+	const ImageObject* getImage(const String& name)
+	{
+		return static_cast<const ImageObject*>(findObject(name));
+	}
+
+private:
+	const LinkedObject* findObject(const String& name)
+	{
+		auto info = get(name).getValue();
+		if(!info) {
+			Serial << "Resource '" << name << "' not found" << endl;
+			return nullptr;
+		}
+		// Serial << "Found '" << name << "'" << endl;
+		return info->object.get();
+	}
+};
+
+ResourceMap resourceMap;
 
 uint32_t hexValue(const String& s)
 {
@@ -35,6 +92,11 @@ class CustomLabel : public Label
 {
 public:
 	CustomLabel(const PropertySet& props);
+
+	const Font* getFont() const override
+	{
+		return font;
+	}
 
 	Color getColor(Element element) const override
 	{
@@ -55,7 +117,7 @@ public:
 
 	Color back_color;
 	Color color;
-	String font;
+	const Font* font{};
 	// fontstyle
 	uint8_t fontscale;
 	Align halign;
@@ -65,6 +127,11 @@ class CustomButton : public Button
 {
 public:
 	CustomButton(const PropertySet& props);
+
+	const Font* getFont() const override
+	{
+		return font;
+	}
 
 	Color getColor(Element element) const override
 	{
@@ -83,7 +150,7 @@ public:
 	Color border;
 	Color back_color;
 	Color color;
-	String font;
+	const Font* font{};
 	// fontstyle
 	uint8_t fontscale;
 };
@@ -147,8 +214,9 @@ struct PropertySet {
 			scene.fillEllipse(color, rect());
 		} else if(type == "Text") {
 			// font
+			auto font = resourceMap.getFont(this->font);
 			TextBuilder textBuilder(scene.assets, rect());
-			textBuilder.setFont(nullptr);
+			textBuilder.setFont(font);
 			textBuilder.setStyle(fontstyles);
 			textBuilder.setColor(color, back_color);
 			textBuilder.setScale(fontscale);
@@ -160,28 +228,10 @@ struct PropertySet {
 		} else if(type == "Image") {
 			// xoff
 			// yoff
-			auto& resdata = resourceMap[image];
-			if(!resdata) {
-				Serial << "Resource '" << image << "' not found" << endl;
-				return;
+			auto img = resourceMap.getImage(image);
+			if(img) {
+				scene.drawImage(*img, {x, y});
 			}
-			auto& imgres = *reinterpret_cast<const Resource::ImageResource*>(resdata.c_str());
-
-			Serial << "bmOffset " << imgres.bmOffset << ", bmSize " << imgres.bmSize << ", width " << imgres.width
-				   << ", height " << imgres.height << ", format " << imgres.format << endl;
-
-			ImageObject* img;
-			if(imgres.format == PixelFormat::None) {
-				img = new BitmapObject(imgres);
-				if(!img->init()) {
-					debug_e("Bad bitmap");
-				}
-			} else {
-				img = new RawImageObject(imgres);
-			}
-			Serial << "Image size " << toString(img->getSize()) << endl;
-			scene.addAsset(img);
-			scene.drawImage(*img, {x, y});
 		} else if(type == "Button") {
 			scene.addObject(new CustomButton(*this));
 		} else if(type == "Label") {
@@ -217,25 +267,249 @@ struct PropertySet {
 };
 
 CustomLabel::CustomLabel(const PropertySet& props)
-	: Label(props.rect(), props.text), back_color(props.back_color), color(props.color), font(props.font),
-	  fontscale(props.fontscale), halign(props.halign)
+	: Label(props.rect(), props.text), back_color(props.back_color), color(props.color), fontscale(props.fontscale),
+	  halign(props.halign)
 {
+	font = resourceMap.getFont(props.font);
 }
 
 CustomButton::CustomButton(const PropertySet& props)
 	: Button(props.rect(), props.text), border(props.border), back_color(props.back_color), color(props.color),
-	  font(props.font), fontscale(props.fontscale)
+	  fontscale(props.fontscale)
 {
+	font = resourceMap.getFont(props.font);
+}
+
+template <typename T> void fixup(const T*& ptr, const Resource::FontResource* font)
+{
+	auto baseptr = reinterpret_cast<const uint8_t*>(font);
+	auto newptr = const_cast<uint8_t*>(baseptr + uint32_t(ptr));
+	debug_i("ptr %p -> %p", ptr, newptr);
+	ptr = reinterpret_cast<T*>(newptr);
+}
+
+void fixupFace(const Resource::TypefaceResource* face, const Resource::FontResource* font)
+{
+	debug_i("FACE @%p: %p, %u, %u, %u, %u, %p, %p", face, face->bmOffset, face->style, face->yAdvance, face->descent,
+			face->numBlocks, face->glyphs, face->blocks);
+
+	auto f = const_cast<Resource::TypefaceResource*>(face);
+	fixup(f->glyphs, font);
+	fixup(f->blocks, font);
+
+	debug_i(">> FACE @%p: %p, %u, %u, %u, %u, %p, %p", face, face->bmOffset, face->style, face->yAdvance, face->descent,
+			face->numBlocks, face->glyphs, face->blocks);
+}
+
+void fixupFont(Resource::FontResource* font)
+{
+	debug_i("FONT @%p: %u, %u, %u, %u, %p, %p, %p, %p", font, font->yAdvance, font->descent, font->padding[0],
+			font->padding[1], font->faces[0], font->faces[1], font->faces[2], font->faces[3]);
+
+	for(auto& face : font->faces) {
+		if(!face) {
+			continue;
+		}
+		fixup(face, font);
+		fixupFace(face, font);
+	}
+
+	debug_i(">> FONT @%p: %u, %u, %u, %u, %p, %p, %p, %p", font, font->yAdvance, font->descent, font->padding[0],
+			font->padding[1], font->faces[0], font->faces[1], font->faces[2], font->faces[3]);
+}
+
+void processLine(String& line)
+{
+	enum class ResourceKind {
+		bitmap,
+		font,
+	};
+
+	struct ResourceReader {
+		std::unique_ptr<ReadWriteStream> stream;
+		uint32_t len;
+		ResourceKind kind;
+		String name;
+
+		void reset()
+		{
+			stream.reset();
+		}
+
+		void reset(ResourceKind kind, ReadWriteStream* stream)
+		{
+			len = 0;
+			name = nullptr;
+			this->kind = kind;
+			this->stream.reset(stream);
+		}
+
+		explicit operator bool() const
+		{
+			return bool(stream);
+		}
+
+		size_t write(const void* data, size_t size)
+		{
+			if(!stream) {
+				return 0;
+			}
+			auto written = stream->write(static_cast<const uint8_t*>(data), size);
+			len += written;
+			// Serial << ">> res.write(" << size << "): " << written << endl;
+			return written;
+		}
+	};
+
+	static SceneObject* scene;
+	static ResourceReader resource;
+
+	// Serial << line << endl;
+
+	auto lineptr = line.c_str();
+	if(lineptr[1] != ':') {
+		return;
+	}
+	char dataKind = lineptr[0];
+	lineptr += 2;
+
+	auto fetch = [&](char sep) -> String {
+		auto p = lineptr;
+		auto psep = strchr(lineptr, sep);
+		if(!psep) {
+			lineptr += strlen(lineptr);
+			return String(p);
+		}
+		lineptr = psep + 1;
+		return String(p, psep - p);
+	};
+
+	auto decodeBinary = [&]() -> unsigned {
+		auto offset = lineptr - line.c_str();
+		auto charCount = line.length() - offset;
+		auto bufptr = line.begin();
+		auto bytecount = base64_decode(charCount, lineptr, charCount, reinterpret_cast<uint8_t*>(bufptr));
+		lineptr = bufptr;
+		return bytecount;
+	};
+
+	if(dataKind == 'b') {
+		if(!resource) {
+			return;
+		}
+		auto bytecount = decodeBinary();
+		resource.write(lineptr, bytecount);
+		return;
+	}
+
+	if(dataKind == 'r') {
+		// Resource
+		String kind = fetch(';');
+		String name = fetch(';');
+		Serial << "Resource " << dataKind << ": " << name << endl;
+
+		if(kind == "image") {
+			auto bytecount = decodeBinary();
+			auto resdata = malloc(bytecount);
+			if(!resdata) {
+				debug_e("NO MEMORY");
+				return;
+			}
+			memcpy(resdata, lineptr, bytecount);
+			auto& imgres = *reinterpret_cast<const Resource::ImageResource*>(resdata);
+			// Serial << "bmOffset " << imgres.bmOffset << ", bmSize " << imgres.bmSize << ", width " << imgres.width
+			// 	   << ", height " << imgres.height << ", format " << imgres.format << endl;
+			ImageObject* img;
+			if(imgres.format == PixelFormat::None) {
+				img = new BitmapObject(imgres);
+				if(!img->init()) {
+					debug_e("Bad bitmap");
+					delete img;
+					return;
+				}
+			} else {
+				img = new RawImageObject(imgres);
+			}
+			// Serial << "Image size " << toString(img->getSize()) << endl;
+			resourceMap.set(name, new ResourceInfo{img, resdata});
+			Serial << kind << " resource '" << name << "', " << bytecount << endl;
+			return;
+		}
+
+		if(kind == "font") {
+			resource.reset(ResourceKind::font, new MemoryDataStream);
+			resource.name = name;
+			Serial << "** Writing font" << endl;
+			return;
+		}
+	}
+
+	PropertySet props;
+	String instr = fetch(';');
+	// Serial << dataKind << " : " << instr << endl;
+	String tag;
+	String value;
+	while(*lineptr) {
+		tag = fetch('=');
+		value = fetch(';');
+		// Serial << "  " << tag << " = " << value << endl;
+		props.setProperty(tag, value);
+	}
+	switch(dataKind) {
+	case '@':
+		if(instr == "size") {
+#ifdef ENABLE_VIRTUAL_SCREEN
+			tft.setDisplaySize(props.w, props.h, props.orientation);
+#else
+			tft.setOrientation(props.orientation);
+#endif
+		} else if(instr == "clear") {
+			delete scene;
+			scene = new SceneObject(tft.getSize());
+			scene->clear();
+		} else if(instr == "render") {
+			renderQueue.render(scene, [](SceneObject* scene) {
+				Serial << "Render done" << endl;
+				delete scene;
+			});
+			scene = nullptr;
+		} else if(instr == "resource") {
+			auto part = Storage::findPartition(F("resource"));
+			resource.reset(ResourceKind::bitmap, new Storage::PartitionStream(part, true));
+			Serial << "** Writing resource" << endl;
+		} else if(instr == "end") {
+			Serial << "** Resource written, " << resource.len << " bytes" << endl;
+			if(resource.kind == ResourceKind::font) {
+				String data;
+				resource.stream->moveString(data);
+				auto buf = data.getBuffer();
+				auto fontres = reinterpret_cast<Resource::FontResource*>(buf.data);
+				fixupFont(fontres);
+				Serial << "font " << resource.name << " OK" << endl;
+				auto font = new ResourceFont(*fontres);
+				// m_printHex("FONT", data.c_str(), data.length());
+				resourceMap.set(resource.name, new ResourceInfo{font, buf.data});
+			}
+			resource.reset();
+		}
+		break;
+
+	case 'i': {
+		if(!scene) {
+			Serial << "NO SCENE!";
+			break;
+		}
+		props.draw(*scene, instr);
+		break;
+	}
+	}
 }
 
 bool processClientData(TcpClient& client, char* data, int size)
 {
-	static SceneObject* scene;
 	static String line;
-	static std::unique_ptr<ReadWriteStream> resourceStream;
 
 	while(size) {
-		line.setLength(0);
 		auto p = (const char*)memchr(data, '\n', size);
 		auto n = p ? (p - data) : size;
 		line.concat(data, n);
@@ -245,108 +519,9 @@ bool processClientData(TcpClient& client, char* data, int size)
 		++n;
 		data += n;
 		size -= n;
-		// Serial << line << endl;
 
-		auto lineptr = line.c_str();
-		if(lineptr[1] != ':') {
-			continue;
-		}
-		char dataKind = lineptr[0];
-		lineptr += 2;
-
-		auto fetch = [&](char sep) -> String {
-			auto p = lineptr;
-			auto psep = strchr(lineptr, sep);
-			if(!psep) {
-				lineptr += strlen(lineptr);
-				return String(p);
-			}
-			lineptr = psep + 1;
-			return String(p, psep - p);
-		};
-
-		auto decodeBinary = [&]() -> unsigned {
-			auto offset = lineptr - line.c_str();
-			auto charCount = line.length() - offset;
-			auto bufptr = line.begin();
-			auto bytecount = base64_decode(charCount, lineptr, charCount, reinterpret_cast<uint8_t*>(bufptr));
-			lineptr = bufptr;
-			return bytecount;
-		};
-
-		if(dataKind == 'b') {
-			if(!resourceStream) {
-				continue;
-			}
-			auto bytecount = decodeBinary();
-			auto len = resourceStream->write(lineptr, bytecount);
-			(void)len;
-			// Serial << ">> res.write(" << bytecount << "): " << len << endl;
-			continue;
-		}
-
-		if(dataKind == 'r') {
-			// Resource
-			String kind = fetch(';');
-			String name = fetch(';');
-			auto bytecount = decodeBinary();
-			resourceMap[name] = String(lineptr, bytecount);
-			Serial << kind << " resource '" << name << "', " << bytecount
-				   << " bytes: " << makeHexString(lineptr, bytecount) << endl;
-			continue;
-		}
-
-		PropertySet props;
-		String instr = fetch(';');
-		Serial << dataKind << " : " << instr << endl;
-		String tag;
-		String value;
-		while(*lineptr) {
-			tag = fetch('=');
-			value = fetch(';');
-			Serial << "  " << tag << " = " << value << endl;
-			props.setProperty(tag, value);
-		}
-		switch(dataKind) {
-		case '@':
-			if(instr == "size") {
-#ifdef ENABLE_VIRTUAL_SCREEN
-				tft.setDisplaySize(props.w, props.h, props.orientation);
-#else
-				tft.setOrientation(props.orientation);
-#endif
-			} else if(instr == "clear") {
-				delete scene;
-				scene = new SceneObject(tft.getSize());
-				scene->clear();
-			} else if(instr == "render") {
-				renderQueue.render(scene, [](SceneObject* scene) {
-					Serial << "Render done" << endl;
-					delete scene;
-				});
-				scene = nullptr;
-			} else if(instr == "resource-begin") {
-				auto part = Storage::findPartition(F("resource"));
-				resourceStream.reset(new Storage::PartitionStream(part, true));
-				Serial << "** Writing resource" << endl;
-			} else if(instr == "font-begin") {
-				resourceStream.reset(new MemoryDataStream);
-				Serial << "** Writing font" << endl;
-			} else if(instr == "resource-end") {
-				Serial << "** Resource written" << endl;
-				resourceStream.reset();
-			}
-			break;
-
-		case 'i': {
-			if(!scene) {
-				Serial << "NO SCENE!";
-				break;
-			}
-			props.draw(*scene, instr);
-			break;
-		}
-		}
+		processLine(line);
+		line.setLength(0);
 	}
 
 	return true;

@@ -1190,16 +1190,18 @@ def run():
 
         print(json_dumps(resources))
 
+        print('Building resource data ...')
         data = rclib.parse(resources)
 
         def base64(data):
             return binascii.b2a_base64(data, newline=False)
 
+        print("Connecting ...")
         client = remote.Client('192.168.13.10', 23)
 
+        print('Sending resource descriptions ...')
         bmOffset = 0
         for item in data:
-            print(type(item))
             if isinstance(item, rclib.image.Image):
                 # struct ImageResource
                 rec = item.serialize(bmOffset)
@@ -1208,29 +1210,34 @@ def run():
                 # item.headerSize = rclib.base.StructSize.Image
                 bmOffset += item.get_bitmap_size()
                 client.send_line(line)
-                continue
-            if isinstance(item, rclib.font.Font):
-                rec = item.serialize(bmOffset)
-                bmOffset += item.get_bitmap_size()
-                print(rec)
+            elif isinstance(item, rclib.font.Font):
+                if len(item.typefaces) == 0:
+                    print(f'Font {item.name} has no typefaces! Skipping.')
+                else:
+                    rec = item.serialize(bmOffset)
+                    bmOffset += item.get_bitmap_size()
+                    # print(rec)
 
-                # line = f'r:font;{item.name};' + base64(font_resource)
+                    line = f'r:font;{item.name};'
+                    client.send_line(line)
+                    buf = io.BytesIO(rec)
+                    buf.seek(0)
+                    while blk := buf.read(64):
+                        client.send_line(b'b:;' + base64(blk))
+                    client.send_line('@:end;')
+            else:
+                print(f'Unknown resource {item}')
 
-                # client.send_line('@:font-begin;')
-                # buf.seek(0)
-                # while blk := buf.read(64):
-                #     client.send_line(b'b:;' + base64(blk))
-                # client.send_line('@:resource-end;')
-
-
+        print('Sending resource bitmap ...')
         buf = io.BytesIO()
         rclib.writeBitmap(data, buf)
-
-        client.send_line('@:resource-begin;')
+        client.send_line('@:resource;')
         buf.seek(0)
         while blk := buf.read(64):
             client.send_line(b'b:;' + base64(blk))
-        client.send_line('@:resource-end;')
+        client.send_line('@:end;')
+
+        print('Resources uploaded.')
     
 
     def fileSend():
