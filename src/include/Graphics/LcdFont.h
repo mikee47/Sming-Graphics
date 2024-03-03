@@ -70,7 +70,7 @@ public:
 		return LcdGlyph::metrics;
 	}
 
-	GlyphObject* getGlyph(char ch, const GlyphObject::Options& options) const override;
+	std::unique_ptr<GlyphObject> getGlyph(char ch, const GlyphObject::Options& options) const override;
 };
 
 class LcdFont : public Font

@@ -453,11 +453,11 @@ GlyphMetrics ResourceTypeface::getMetrics(char ch) const
 	return metrics;
 }
 
-GlyphObject* ResourceTypeface::getGlyph(char ch, const GlyphOptions& options) const
+std::unique_ptr<GlyphObject> ResourceTypeface::getGlyph(char ch, const GlyphOptions& options) const
 {
 	Resource::GlyphResource glyph;
 	if(findGlyph(ch, glyph)) {
-		return new ResourceGlyph(font, typeface, glyph, options);
+		return std::make_unique<ResourceGlyph>(font, typeface, glyph, options);
 	}
 
 	return nullptr;

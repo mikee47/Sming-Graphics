@@ -2074,9 +2074,9 @@ void TextRenderer::AlphaBuffer::fill()
 			}
 
 			auto glyph = font->typeface.getGlyph(ch, {});
-			if(glyph != nullptr) {
+			if(glyph) {
 				glyph->readAlpha(data.get(), Point(x, 0), size.w);
-				delete glyph;
+				glyph.reset();
 
 				auto line = [&](int8_t line) {
 					// Typeface may not  have room for this

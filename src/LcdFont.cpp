@@ -159,7 +159,7 @@ void LcdGlyph::readAlpha(void* buffer, Point origin, size_t stride) const
 	}
 }
 
-GlyphObject* LcdTypeFace::getGlyph(char ch, const GlyphObject::Options& options) const
+std::unique_ptr<GlyphObject> LcdTypeFace::getGlyph(char ch, const GlyphObject::Options& options) const
 {
 	auto w(LcdGlyph::rawSize.w);
 
@@ -168,7 +168,7 @@ GlyphObject* LcdTypeFace::getGlyph(char ch, const GlyphObject::Options& options)
 		return nullptr;
 	}
 
-	return new LcdGlyph(offset, options);
+	return std::make_unique<LcdGlyph>(offset, options);
 }
 
 } // namespace Graphics
