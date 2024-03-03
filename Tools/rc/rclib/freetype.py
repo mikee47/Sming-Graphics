@@ -41,8 +41,8 @@ def parse_typeface(typeface):
         face.set_char_size(round(typeface.font.pointSize * 64))
 
     typeface.comment = "%s %s" % (face.family_name.decode(), face.style_name.decode())
-    typeface.yAdvance = pointsToPixels(face.size.height)
-    typeface.descent = -pointsToPixels(face.size.descender)
+    typeface.yAdvance = pointsToPixels(face.size.ascender + abs(face.size.descender))
+    typeface.descent = abs(pointsToPixels(face.size.descender))
 
     for c in typeface.font.codePoints:
         index = face.get_char_index(c)
