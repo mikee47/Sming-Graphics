@@ -533,7 +533,7 @@ public:
 	 * 
 	 * Caller is responsible for destroying the glyph when no longer required.
 	 */
-	virtual GlyphObject* getGlyph(char ch, const GlyphOptions& options) const = 0;
+	virtual std::unique_ptr<GlyphObject> getGlyph(char ch, const GlyphOptions& options) const = 0;
 
 	/**
 	 * @brief Get baseline relative to top of mbox
@@ -613,7 +613,7 @@ public:
 
 	GlyphMetrics getMetrics(char ch) const override;
 
-	GlyphObject* getGlyph(char ch, const GlyphOptions& options) const override;
+	std::unique_ptr<GlyphObject> getGlyph(char ch, const GlyphOptions& options) const override;
 
 private:
 	bool findGlyph(uint16_t codePoint, Resource::GlyphResource& res) const;
