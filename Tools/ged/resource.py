@@ -128,7 +128,7 @@ class Font(Resource):
             font = PIL.ImageFont.load_default(self.size)
         draw.font = font
         ascent, descent = font.getmetrics()
-        line_height = ascent + descent
+        yAdvance = ascent + abs(descent)
         # Break text up into words for wrapping
         paragraphs = [textwrap.wrap(para, 1, break_long_words = False,
                 replace_whitespace = False, drop_whitespace=False)
@@ -156,7 +156,7 @@ class Font(Resource):
                     text += word
             if x > 0 or not para:
                 lines.append((x, text))
-        h = line_height * len(lines)
+        h = yAdvance * len(lines)
         if valign == Align.Middle:
             y = (h_box - h) // 2
         elif valign == Align.Bottom:
@@ -172,7 +172,7 @@ class Font(Resource):
                 else:
                     x = 0
                 draw.text((x, y), text, fill=color)
-                # draw.rectangle((x,y,x+w,y+line_height), outline='white')
+                # draw.rectangle((x,y,x+w,y+yAdvance), outline='white')
                 def hline(y):
                     draw.line((x, y, x + w, y), fill=color)
                 if FontStyle.Underscore in fontstyle or FontStyle.DoubleUnderscore in fontstyle:
@@ -183,13 +183,13 @@ class Font(Resource):
                     hline(y + 3)
                 if FontStyle.DoubleOverscore in fontstyle:
                     hline(y)
-                yc = y + line_height // 2
+                yc = y + yAdvance // 2
                 if FontStyle.Strikeout in fontstyle:
                     hline(yc)
                 if FontStyle.DoubleStrikeout in fontstyle:
                     hline(yc - 1)
                     hline(yc + 1)
-            y += ascent + descent
+            y += yAdvance
 
         img = img.resize((round(width * scale), round(height * scale)),
             resample=PIL.Image.Resampling.NEAREST)
