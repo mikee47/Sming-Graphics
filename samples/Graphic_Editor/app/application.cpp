@@ -280,89 +280,139 @@ CustomButton::CustomButton(const PropertySet& props)
 	font = resourceMap.getFont(props.font);
 }
 
-template <typename T> void fixup(const T*& ptr, const Resource::FontResource* font)
-{
-	auto baseptr = reinterpret_cast<const uint8_t*>(font);
-	auto newptr = const_cast<uint8_t*>(baseptr + uint32_t(ptr));
-	debug_i("ptr %p -> %p", ptr, newptr);
-	ptr = reinterpret_cast<T*>(newptr);
-}
-
-void fixupFace(const Resource::TypefaceResource* face, const Resource::FontResource* font)
-{
-	debug_i("FACE @%p: %p, %u, %u, %u, %u, %p, %p", face, face->bmOffset, face->style, face->yAdvance, face->descent,
-			face->numBlocks, face->glyphs, face->blocks);
-
-	auto f = const_cast<Resource::TypefaceResource*>(face);
-	fixup(f->glyphs, font);
-	fixup(f->blocks, font);
-
-	debug_i(">> FACE @%p: %p, %u, %u, %u, %u, %p, %p", face, face->bmOffset, face->style, face->yAdvance, face->descent,
-			face->numBlocks, face->glyphs, face->blocks);
-}
-
-void fixupFont(Resource::FontResource* font)
-{
-	debug_i("FONT @%p: %u, %u, %u, %u, %p, %p, %p, %p", font, font->yAdvance, font->descent, font->padding[0],
-			font->padding[1], font->faces[0], font->faces[1], font->faces[2], font->faces[3]);
-
-	for(auto& face : font->faces) {
-		if(!face) {
-			continue;
-		}
-		fixup(face, font);
-		fixupFace(face, font);
+struct ResourceWriter {
+	ResourceWriter()
+	{
+		stream.reset(new MemoryDataStream);
 	}
 
-	debug_i(">> FONT @%p: %u, %u, %u, %u, %p, %p, %p, %p", font, font->yAdvance, font->descent, font->padding[0],
-			font->padding[1], font->faces[0], font->faces[1], font->faces[2], font->faces[3]);
-}
+	virtual ~ResourceWriter()
+	{
+	}
+
+	virtual void complete() = 0;
+
+	size_t write(const void* data, size_t size)
+	{
+		if(!stream) {
+			return 0;
+		}
+		auto written = stream->write(static_cast<const uint8_t*>(data), size);
+		len += written;
+		// Serial << ">> res.write(" << size << "): " << written << endl;
+		return written;
+	}
+
+	std::unique_ptr<ReadWriteStream> stream;
+	uint32_t len{0};
+	String name;
+};
+
+struct BitmapResourceWriter : public ResourceWriter {
+	using ResourceWriter::ResourceWriter;
+
+	BitmapResourceWriter()
+	{
+		auto part = Storage::findPartition(F("resource"));
+		stream.reset(new Storage::PartitionStream(part, true));
+		Serial << "BITMAP" << endl;
+	}
+
+	void complete() override
+	{
+		// Nothing to do
+	}
+};
+
+struct ImageResourceWriter : public ResourceWriter {
+	using ResourceWriter::ResourceWriter;
+
+	void complete() override
+	{
+		String data;
+		stream->moveString(data);
+		auto buf = data.getBuffer();
+		buf.data = (char*)realloc(buf.data, buf.length);
+
+		auto& imgres = *reinterpret_cast<const Resource::ImageResource*>(buf.data);
+		// Serial << "bmOffset " << imgres.bmOffset << ", bmSize " << imgres.bmSize << ", width " << imgres.width
+		// 	   << ", height " << imgres.height << ", format " << imgres.format << endl;
+		ImageObject* img;
+		if(imgres.format == PixelFormat::None) {
+			img = new BitmapObject(imgres);
+			if(!img->init()) {
+				debug_e("Bad bitmap");
+				delete img;
+				free(buf.data);
+				return;
+			}
+		} else {
+			img = new RawImageObject(imgres);
+		}
+		// Serial << "Image size " << toString(img->getSize()) << endl;
+		resourceMap.set(name, new ResourceInfo{img, buf.data});
+	}
+};
+
+struct FontResourceWriter : public ResourceWriter {
+	using ResourceWriter::ResourceWriter;
+
+	void complete() override
+	{
+		String data;
+		stream->moveString(data);
+		auto buf = data.getBuffer();
+		buf.data = (char*)realloc(buf.data, buf.length);
+
+		auto fontres = reinterpret_cast<Resource::FontResource*>(buf.data);
+		fixupFont(fontres);
+		auto font = new ResourceFont(*fontres);
+		resourceMap.set(name, new ResourceInfo{font, buf.data});
+	}
+
+	template <typename T> static void fixup(const T*& ptr, const Resource::FontResource* font)
+	{
+		auto baseptr = reinterpret_cast<const uint8_t*>(font);
+		auto newptr = const_cast<uint8_t*>(baseptr + uint32_t(ptr));
+		debug_i("ptr %p -> %p", ptr, newptr);
+		ptr = reinterpret_cast<T*>(newptr);
+	}
+
+	static void fixupFace(const Resource::TypefaceResource* face, const Resource::FontResource* font)
+	{
+		// debug_i("FACE @%p: %p, %u, %u, %u, %u, %p, %p", face, face->bmOffset, face->style, face->yAdvance,
+		// 		face->descent, face->numBlocks, face->glyphs, face->blocks);
+
+		auto f = const_cast<Resource::TypefaceResource*>(face);
+		fixup(f->glyphs, font);
+		fixup(f->blocks, font);
+
+		// debug_i(">> FACE @%p: %p, %u, %u, %u, %u, %p, %p", face, face->bmOffset, face->style, face->yAdvance,
+		// 		face->descent, face->numBlocks, face->glyphs, face->blocks);
+	}
+
+	static void fixupFont(Resource::FontResource* font)
+	{
+		// debug_i("FONT @%p: %u, %u, %u, %u, %p, %p, %p, %p", font, font->yAdvance, font->descent, font->padding[0],
+		// 		font->padding[1], font->faces[0], font->faces[1], font->faces[2], font->faces[3]);
+
+		for(auto& face : font->faces) {
+			if(!face) {
+				continue;
+			}
+			fixup(face, font);
+			fixupFace(face, font);
+		}
+
+		// debug_i(">> FONT @%p: %u, %u, %u, %u, %p, %p, %p, %p", font, font->yAdvance, font->descent, font->padding[0],
+		// 		font->padding[1], font->faces[0], font->faces[1], font->faces[2], font->faces[3]);
+	}
+};
 
 void processLine(String& line)
 {
-	enum class ResourceKind {
-		bitmap,
-		font,
-	};
-
-	struct ResourceReader {
-		std::unique_ptr<ReadWriteStream> stream;
-		uint32_t len;
-		ResourceKind kind;
-		String name;
-
-		void reset()
-		{
-			stream.reset();
-		}
-
-		void reset(ResourceKind kind, ReadWriteStream* stream)
-		{
-			len = 0;
-			name = nullptr;
-			this->kind = kind;
-			this->stream.reset(stream);
-		}
-
-		explicit operator bool() const
-		{
-			return bool(stream);
-		}
-
-		size_t write(const void* data, size_t size)
-		{
-			if(!stream) {
-				return 0;
-			}
-			auto written = stream->write(static_cast<const uint8_t*>(data), size);
-			len += written;
-			// Serial << ">> res.write(" << size << "): " << written << endl;
-			return written;
-		}
-	};
-
 	static SceneObject* scene;
-	static ResourceReader resource;
+	static std::unique_ptr<ResourceWriter> resource;
 
 	// Serial << line << endl;
 
@@ -384,21 +434,21 @@ void processLine(String& line)
 		return String(p, psep - p);
 	};
 
-	auto decodeBinary = [&]() -> unsigned {
+	// Decode base64 data at lineptr in-situ, replacing line contents (will always be smaller)
+	auto decodeBinary = [&]() {
 		auto offset = lineptr - line.c_str();
 		auto charCount = line.length() - offset;
 		auto bufptr = line.begin();
 		auto bytecount = base64_decode(charCount, lineptr, charCount, reinterpret_cast<uint8_t*>(bufptr));
-		lineptr = bufptr;
-		return bytecount;
+		line.setLength(bytecount);
 	};
 
 	if(dataKind == 'b') {
 		if(!resource) {
 			return;
 		}
-		auto bytecount = decodeBinary();
-		resource.write(lineptr, bytecount);
+		decodeBinary();
+		resource->write(line.c_str(), line.length());
 		return;
 	}
 
@@ -409,37 +459,22 @@ void processLine(String& line)
 		Serial << "Resource " << dataKind << ": " << name << endl;
 
 		if(kind == "image") {
-			auto bytecount = decodeBinary();
-			auto resdata = malloc(bytecount);
-			if(!resdata) {
-				debug_e("NO MEMORY");
-				return;
-			}
-			memcpy(resdata, lineptr, bytecount);
-			auto& imgres = *reinterpret_cast<const Resource::ImageResource*>(resdata);
-			// Serial << "bmOffset " << imgres.bmOffset << ", bmSize " << imgres.bmSize << ", width " << imgres.width
-			// 	   << ", height " << imgres.height << ", format " << imgres.format << endl;
-			ImageObject* img;
-			if(imgres.format == PixelFormat::None) {
-				img = new BitmapObject(imgres);
-				if(!img->init()) {
-					debug_e("Bad bitmap");
-					delete img;
-					return;
-				}
-			} else {
-				img = new RawImageObject(imgres);
-			}
-			// Serial << "Image size " << toString(img->getSize()) << endl;
-			resourceMap.set(name, new ResourceInfo{img, resdata});
-			Serial << kind << " resource '" << name << "', " << bytecount << endl;
+			resource.reset(new ImageResourceWriter);
+			resource->name = name;
+			Serial << "** Writing image" << endl;
 			return;
 		}
 
 		if(kind == "font") {
-			resource.reset(ResourceKind::font, new MemoryDataStream);
-			resource.name = name;
+			resource.reset(new FontResourceWriter);
+			resource->name = name;
 			Serial << "** Writing font" << endl;
+			return;
+		}
+
+		if(kind == "bitmap") {
+			resource.reset(new BitmapResourceWriter);
+			Serial << "** Writing resource bitmap" << endl;
 			return;
 		}
 	}
@@ -473,24 +508,12 @@ void processLine(String& line)
 				delete scene;
 			});
 			scene = nullptr;
-		} else if(instr == "resource") {
-			auto part = Storage::findPartition(F("resource"));
-			resource.reset(ResourceKind::bitmap, new Storage::PartitionStream(part, true));
-			Serial << "** Writing resource" << endl;
 		} else if(instr == "end") {
-			Serial << "** Resource written, " << resource.len << " bytes" << endl;
-			if(resource.kind == ResourceKind::font) {
-				String data;
-				resource.stream->moveString(data);
-				auto buf = data.getBuffer();
-				auto fontres = reinterpret_cast<Resource::FontResource*>(buf.data);
-				fixupFont(fontres);
-				Serial << "font " << resource.name << " OK" << endl;
-				auto font = new ResourceFont(*fontres);
-				// m_printHex("FONT", data.c_str(), data.length());
-				resourceMap.set(resource.name, new ResourceInfo{font, buf.data});
+			if(resource) {
+				resource->complete();
+				Serial << "** Resource '" << resource->name + "' written, " << resource->len << " bytes" << endl;
+				resource.reset();
 			}
-			resource.reset();
 		}
 		break;
 
