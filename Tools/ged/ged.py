@@ -1155,7 +1155,7 @@ def run():
         # B = 8
         # layout.canvas.postscript(file='test.ps', x=x-B, y=y-B, width=w+B*2, height=h+B*2)
 
-    def fileGenerateResource():
+    def fileSendResources():
         from resource import rclib, FaceStyle
 
         images = {}
@@ -1199,48 +1199,42 @@ def run():
         print("Connecting ...")
         client = remote.Client('192.168.13.10', 23)
 
+        def send_resource(kind, name, data):
+            client.send_line(f'r:{kind};{name};')
+            buf = io.BytesIO(data) if isinstance(data, bytes) else data
+            buf.seek(0)
+            while blk := buf.read(64):
+                client.send_line(b'b:;' + base64(blk))
+            client.send_line('@:end;')
+
         print('Sending resource descriptions ...')
         bmOffset = 0
         for item in data:
             if isinstance(item, rclib.image.Image):
                 # struct ImageResource
                 rec = item.serialize(bmOffset)
-                print(rec.hex())
-                line = f'r:image;{item.name};'.encode() + base64(rec)
-                # item.headerSize = rclib.base.StructSize.Image
                 bmOffset += item.get_bitmap_size()
-                client.send_line(line)
+                send_resource('image', item.name, rec)
+
             elif isinstance(item, rclib.font.Font):
                 if len(item.typefaces) == 0:
                     print(f'Font {item.name} has no typefaces! Skipping.')
                 else:
                     rec = item.serialize(bmOffset)
                     bmOffset += item.get_bitmap_size()
-                    # print(rec)
-
-                    line = f'r:font;{item.name};'
-                    client.send_line(line)
-                    buf = io.BytesIO(rec)
-                    buf.seek(0)
-                    while blk := buf.read(64):
-                        client.send_line(b'b:;' + base64(blk))
-                    client.send_line('@:end;')
+                    send_resource('font', item.name, rec)
             else:
                 print(f'Unknown resource {item}')
 
         print('Sending resource bitmap ...')
         buf = io.BytesIO()
         rclib.writeBitmap(data, buf)
-        client.send_line('@:resource;')
-        buf.seek(0)
-        while blk := buf.read(64):
-            client.send_line(b'b:;' + base64(blk))
-        client.send_line('@:end;')
+        send_resource('bitmap', '', buf)
 
         print('Resources uploaded.')
     
 
-    def fileSend():
+    def fileSendLayout():
         client = remote.Client('192.168.13.10', 23)
         data = remote.serialise(layout.display_list)
         client.send_line(f'@:size;w={layout.width};h={layout.height};orient={layout.orientation};')
@@ -1280,8 +1274,8 @@ def run():
     sep = ttk.Separator(toolbar, orient=tk.VERTICAL)
     sep.pack(side=tk.LEFT)
     addButton('List', fileList)
-    addButton('Gen .rc', fileGenerateResource)
-    addButton('Send', fileSend)
+    addButton('Send resources', fileSendResources)
+    addButton('Send layout', fileSendLayout)
 
     # Status bar
     status = tk.StringVar()
