@@ -19,7 +19,7 @@ class Image(Resource):
         self.format = None
         self.headerSize = 0
 
-    def serialize(self, bmOffset):
+    def serialize(self, bmOffset, res_offset):
         """struct ImageResource"""
         fmt = PixelFormat[self.format.upper()].value
         print(f'image {self.name} format {self.format} {fmt}')

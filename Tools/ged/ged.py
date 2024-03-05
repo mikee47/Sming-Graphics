@@ -3,6 +3,7 @@ import sys
 import io
 import binascii
 import copy
+import struct
 from enum import Enum, IntEnum, StrEnum
 import random
 from random import randrange, randint
@@ -1190,46 +1191,93 @@ def run():
 
         print(json_dumps(resources))
 
+        def build_resource_index(data, res_offset):
+            """
+            Resource map is FSTR_VECTOR so we can refer to resources by name
+            Alternative is using indices, but names are easier for debugging
+            Can place name strings after everything else
+
+                uint32_t length (element count)
+                FlashString* name1
+                void* resource
+                ....
+
+            Size of this map is fixed at 4 + (length * 8) bytes.
+
+            name1, etc. stored similarly:
+
+                uint32_t length (characters)
+                char text[]
+
+            Remember to align to nearest uint32_t
+
+            """
+            def align_up(data):
+                aligned_length = 4 * ((len(data) + 3) // 4)
+                return data.ljust(aligned_length, b'\0')
+
+            PAIR_SIZE = 8
+            map_struct_size = 4 + len(data) * PAIR_SIZE
+            res_offset += map_struct_size
+            res_offsets = []
+            resdata = b''
+            bmOffset = 0
+            for item in data:
+                res_offsets.append(res_offset)
+                itemdata = align_up(item.serialize(bmOffset, res_offset))
+                res_offset += len(itemdata)
+                resdata += itemdata
+                bmOffset += item.get_bitmap_size()
+                # print(f'Font {item.name} has no typefaces! Skipping.')
+            resmap = struct.pack('<I', len(data) * PAIR_SIZE)
+            resnames = b''
+            for i, item in enumerate(data):
+                resmap += struct.pack('<II', res_offset, res_offsets[i])
+                name = item.name.encode()
+                namedata = struct.pack('<I', len(name)) + align_up(name)
+                res_offset += len(namedata)
+                resdata += namedata
+            return resmap + resdata
+
         print('Building resource data ...')
         data = rclib.parse(resources)
-
-        def base64(data):
-            return binascii.b2a_base64(data, newline=False)
+        index = build_resource_index(data, 0)
 
         print("Connecting ...")
         client = remote.Client('192.168.13.10', 23)
 
-        def send_resource(kind, name, data):
-            client.send_line(f'r:{kind};{name};')
+        client.send_line(f'@:resaddr;size={len(index)};')
+        rsp = client.recv_line()
+        print("RESADDR:", rsp)
+
+        if not rsp.startswith('@:'):
+            print("BAD RESPONSE")
+        else:
+            while rsp:
+                tag, _, rsp = rsp[2:].partition('=')
+                value, _, rsp = rsp.partition(';')
+                if tag == 'addr':
+                    res_offset = int(value, 0)
+                    index = build_resource_index(data, res_offset)
+                    break
+
+
+        def send_resource(kind, data):
+            client.send_line(f'@:{kind}')
             buf = io.BytesIO(data) if isinstance(data, bytes) else data
             buf.seek(0)
             while blk := buf.read(64):
-                client.send_line(b'b:;' + base64(blk))
+                client.send_line(b'b:;' + binascii.b2a_base64(blk, newline=False))
             client.send_line('@:end;')
+            print('RESPONSE:', client.recv_line())
 
-        print('Sending resource descriptions ...')
-        bmOffset = 0
-        for item in data:
-            if isinstance(item, rclib.image.Image):
-                # struct ImageResource
-                rec = item.serialize(bmOffset)
-                bmOffset += item.get_bitmap_size()
-                send_resource('image', item.name, rec)
-
-            elif isinstance(item, rclib.font.Font):
-                if len(item.typefaces) == 0:
-                    print(f'Font {item.name} has no typefaces! Skipping.')
-                else:
-                    rec = item.serialize(bmOffset)
-                    bmOffset += item.get_bitmap_size()
-                    send_resource('font', item.name, rec)
-            else:
-                print(f'Unknown resource {item}')
+        print('Sending resource index ...')
+        send_resource('index', index)
 
         print('Sending resource bitmap ...')
         buf = io.BytesIO()
         rclib.writeBitmap(data, buf)
-        send_resource('bitmap', '', buf)
+        send_resource('bitmap', buf)
 
         print('Resources uploaded.')
     
