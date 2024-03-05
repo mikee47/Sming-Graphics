@@ -299,12 +299,12 @@ class Font(Resource):
         self.descent = 0
         self.headerSize = 0
 
-    def serialize(self, bmOffset):
+    def serialize(self, bmOffset, res_offset):
         resdata = b''
         face_offsets = []
         for typeface in self.typefaces:
             # print(typeface.name)
-            offset = StructSize.Font + len(resdata)
+            offset = res_offset + StructSize.Font + len(resdata)
             face_offsets.append(offset)
             resdata += typeface.serialize(bmOffset, offset)
             bmOffset += typeface.get_bitmap_size()

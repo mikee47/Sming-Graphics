@@ -7,12 +7,22 @@ import urllib.parse
 class Client:
     def __init__(self, ipaddr, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(5)
         self.socket.connect((ipaddr, port))
 
     def send_line(self, data):
         if isinstance(data, str):
             data = data.encode()
         self.socket.send(data + b'\n')
+
+    def recv_line(self):
+        rsp = b''
+        while True:
+            c = self.socket.recv(1, socket.MSG_WAITALL)
+            if c == b'\n':
+                break
+            rsp += c
+        return rsp.decode()
 
 
 def serialise(layout: list) -> list[str]:
