@@ -24,9 +24,8 @@ public:
 		rendering,
 	};
 
-	Frame()
+	Frame() : surface(tft.createSurface(bufferSize))
 	{
-		surface.reset(tft.createSurface(bufferSize));
 	}
 
 	std::unique_ptr<Surface> surface;
@@ -175,7 +174,6 @@ void prepareFrame()
 		GlyphOptions options{Color::White, Color::Black, textScale, FontStyle::HLine};
 		auto glyph = lcdFont.getFace(options.style)->getGlyph(statusText[line][col], options);
 		surface.render(*glyph, {pos, charSize});
-		delete glyph;
 	}
 
 	stat.maxUsedSurfaceBytes = std::max(stat.maxUsedSurfaceBytes, surface.stat().used);

@@ -155,7 +155,7 @@ void updateScreen(Point newpos)
 	frameTimer.start();
 
 	auto screenSize = tft.getSize();
-	scene.reset(new SceneObject(screenSize));
+	scene = std::make_unique<SceneObject>(screenSize);
 
 	// auto sz = rawImage.getSize();
 	Size sz{20, 20};
@@ -235,7 +235,7 @@ void init()
 	touch.setOrientation(Orientation::deg90);
 	touch.setCallback(touchChanged);
 
-	calibrator.reset(new TouchCalibrator(tft));
+	calibrator = std::make_unique<TouchCalibrator>(tft);
 	calibrator->begin();
 
 	// statusTimer.initializeMs<1000>([&]() { debug_i("Max tasks: %u", System.getMaxTaskCount()); }).start();

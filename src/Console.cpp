@@ -64,7 +64,7 @@ void Console::update()
 		return;
 	}
 
-	scene.reset(new SceneObject(display));
+	scene = std::make_unique<SceneObject>(display);
 	Scale scale{1, 2};
 	constexpr FontStyles style{};
 	auto face = lcdFont.getFace(style);

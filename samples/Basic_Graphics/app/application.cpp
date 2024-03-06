@@ -821,22 +821,22 @@ void timeRender(Object::Kind kind, TextBuilder& text)
 	Pen pen(Color::Blue, 3);
 	switch(kind) {
 	case Object::Kind::Circle:
-		renderer.reset(new CircleRenderer(loc, CircleObject(pen, centre, r)));
+		renderer = std::make_unique<CircleRenderer>(loc, CircleObject(pen, centre, r));
 		break;
 	case Object::Kind::FilledCircle:
-		renderer.reset(new FilledCircleRenderer(loc, FilledCircleObject(pen, centre, r)));
+		renderer = std::make_unique<FilledCircleRenderer>(loc, FilledCircleObject(pen, centre, r));
 		break;
 	case Object::Kind::Ellipse:
-		renderer.reset(new EllipseRenderer(loc, EllipseObject(pen, rect)));
+		renderer = std::make_unique<EllipseRenderer>(loc, EllipseObject(pen, rect));
 		break;
 	case Object::Kind::FilledEllipse:
-		renderer.reset(new FilledEllipseRenderer(loc, FilledEllipseObject(pen, rect)));
+		renderer = std::make_unique<FilledEllipseRenderer>(loc, FilledEllipseObject(pen, rect));
 		break;
 	case Object::Kind::Rect:
-		renderer.reset(new RoundedRectRenderer(loc, RectObject(pen, rect, 10)));
+		renderer = std::make_unique<RoundedRectRenderer>(loc, RectObject(pen, rect, 10));
 		break;
 	case Object::Kind::FilledRect:
-		renderer.reset(new FilledRoundedRectRenderer(loc, FilledRectObject(pen, rect, 10)));
+		renderer = std::make_unique<FilledRoundedRectRenderer>(loc, FilledRectObject(pen, rect, 10));
 		break;
 	default:;
 	}

@@ -40,9 +40,6 @@ public:
 	void readAlpha(void* buffer, Point origin, size_t stride) const override;
 
 private:
-	PackedColor clFore;
-	PackedColor clBack;
-	uint8_t scale;
 	std::bitset<rawSize.w> rowBits[rawSize.h];
 };
 

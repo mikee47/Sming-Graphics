@@ -139,7 +139,7 @@ Object* Reader::readObject()
 			state.reset();
 			break;
 		case Command::push:
-			sub->state.reset(new DrawState{state});
+			sub->state = std::make_unique<DrawState>(state);
 			break;
 		case Command::pop:
 			if(sub->state) {

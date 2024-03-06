@@ -33,9 +33,9 @@ namespace Display
 class NullSurface : public Surface
 {
 public:
-	NullSurface(NullDevice& device, uint16_t bufferSize) : device(device), bufferSize(bufferSize)
+	NullSurface(NullDevice& device, uint16_t bufferSize)
+		: device(device), buffer(new uint8_t[bufferSize]), bufferSize(bufferSize)
 	{
-		buffer.reset(new uint8_t[bufferSize]);
 	}
 
 	Type getType() const

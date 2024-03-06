@@ -232,9 +232,9 @@ public:
 	 * @param addrWindow Reference to current device address window, synced between lists
 	 * @param bufferSize
 	 */
-	DisplayList(AddressWindow& addrWindow, size_t bufferSize) : addrWindow(addrWindow), capacity(bufferSize)
+	DisplayList(AddressWindow& addrWindow, size_t bufferSize)
+		: buffer(new uint8_t[bufferSize]{}), addrWindow(addrWindow), capacity(bufferSize)
 	{
-		buffer.reset(new uint8_t[bufferSize]{});
 	}
 
 	/**

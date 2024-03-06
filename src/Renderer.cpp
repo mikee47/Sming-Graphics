@@ -565,22 +565,24 @@ bool RoundedRectRenderer::execute(Surface& surface)
 		auto t = radius * 2;
 		switch(state) {
 		case 0:
-			renderer.reset(new ArcRenderer(location, pen, Rect(rect.left(), rect.top(), t, t), 90, 180));
+			renderer = std::make_unique<ArcRenderer>(location, pen, Rect(rect.left(), rect.top(), t, t), 90, 180);
 			break;
 		case 1:
-			renderer.reset(new ArcRenderer(location, pen, Rect(rect.right() - t, rect.top(), t, t), 0, 90));
+			renderer = std::make_unique<ArcRenderer>(location, pen, Rect(rect.right() - t, rect.top(), t, t), 0, 90);
 			break;
 		case 2:
-			renderer.reset(new ArcRenderer(location, pen, Rect(rect.right() - t, rect.bottom() - t, t, t), 270, 360));
+			renderer =
+				std::make_unique<ArcRenderer>(location, pen, Rect(rect.right() - t, rect.bottom() - t, t, t), 270, 360);
 			break;
 		case 3:
-			renderer.reset(new ArcRenderer(location, pen, Rect(rect.left(), rect.bottom() - t, t, t), 180, 270));
+			renderer =
+				std::make_unique<ArcRenderer>(location, pen, Rect(rect.left(), rect.bottom() - t, t, t), 180, 270);
 			break;
 		case 4:
 			return true;
 		}
 
-		// renderer.reset(new CircleRenderer(location, pen, corners[state], radius, 0, 0x01 << state));
+		// renderer = std::make_unique<CircleRenderer>(location, pen, corners[state], radius, 0, 0x01 << state);
 		++state;
 	}
 
@@ -605,8 +607,8 @@ bool FilledRoundedRectRenderer::execute(Surface& surface)
 		case 1: {
 			auto& rect = this->object.rect;
 			auto r = object.radius;
-			renderer.reset(new FilledCircleRenderer(location, object.brush, corners[state], r, rect.w - 2 * (r + 1),
-													0x01 << state));
+			renderer = std::make_unique<FilledCircleRenderer>(location, object.brush, corners[state], r,
+															  rect.w - 2 * (r + 1), 0x01 << state);
 			break;
 		}
 		case 2: {
@@ -1905,7 +1907,7 @@ bool BlendRenderer::execute(Surface& surface)
 		switch(nextState) {
 		case State::init:
 			pixelFormat = surface.getPixelFormat();
-			image.reset(new MemoryImageObject(pixelFormat, location.dest.size()));
+			image = std::make_unique<MemoryImageObject>(pixelFormat, location.dest.size());
 			if(!image->isValid()) {
 				image.reset();
 				// Insufficient RAM, fallback to standard render
@@ -1916,8 +1918,8 @@ bool BlendRenderer::execute(Surface& surface)
 				break;
 			}
 			imageSurface.reset(image->createSurface());
-			renderer.reset(new SurfaceRenderer(Location{image->getSize(), location.source}, *imageSurface,
-											   image->getSize(), location.dest.topLeft()));
+			renderer = std::make_unique<SurfaceRenderer>(Location{image->getSize(), location.source}, *imageSurface,
+														 image->getSize(), location.dest.topLeft());
 			nextState = State::draw;
 			break;
 
@@ -1925,7 +1927,7 @@ bool BlendRenderer::execute(Surface& surface)
 			auto blendSurface = image->createSurface(blend);
 			blendSurface->render(object, image->getSize());
 			delete blendSurface;
-			renderer.reset(new ImageRenderer(location, *image));
+			renderer = std::make_unique<ImageRenderer>(location, *image);
 			nextState = State::done;
 			break;
 		}
