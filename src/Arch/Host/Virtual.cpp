@@ -174,7 +174,7 @@ public:
 	void wait()
 	{
 		while(!callback && state != CommandList::State::idle) {
-			sched_yield();
+			// sched_yield();
 		}
 	}
 
@@ -554,7 +554,7 @@ bool Virtual::begin(const String& ipaddr, uint16_t port, uint16_t width, uint16_
 		thread.reset();
 	}
 
-	thread.reset(new NetworkThread(*this, ipaddr, port));
+	thread = std::make_unique<NetworkThread>(*this, ipaddr, port);
 
 	nativeSize = Size{width, height};
 	return sizeChanged();

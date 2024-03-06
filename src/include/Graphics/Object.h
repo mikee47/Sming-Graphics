@@ -299,9 +299,8 @@ public:
 class PolylineObject : public ObjectTemplate<Object::Kind::Polyline>
 {
 public:
-	PolylineObject(Pen pen, size_t count) : pen(pen), numPoints(count)
+	PolylineObject(Pen pen, size_t count) : pen(pen), points(std::make_unique<Point[]>(count)), numPoints(count)
 	{
-		this->points.reset(new Point[numPoints]);
 	}
 
 	template <typename... ParamTypes>
@@ -619,9 +618,8 @@ protected:
 class StreamImageObject : public ImageObject
 {
 public:
-	StreamImageObject(IDataSourceStream* source, Size size) : ImageObject(size)
+	StreamImageObject(IDataSourceStream* source, Size size) : ImageObject(size), stream(source)
 	{
-		stream.reset(source);
 	}
 
 	StreamImageObject(const FSTR::String& image) : StreamImageObject(new FSTR::Stream(image), {})
@@ -1182,18 +1180,16 @@ class DrawingObject : public ObjectTemplate<Object::Kind::Drawing>
 public:
 	using Callback = Delegate<void(DrawingObject* drawing)>;
 
-	DrawingObject(IDataSourceStream* content)
+	DrawingObject(IDataSourceStream* content) : stream(content)
 	{
-		stream.reset(content);
 	}
 
 	DrawingObject(const FSTR::ObjectBase& source) : DrawingObject(new FSTR::Stream(source))
 	{
 	}
 
-	DrawingObject(String&& content)
+	DrawingObject(String&& content) : stream(new MemoryDataStream(std::move(content)))
 	{
-		stream.reset(new MemoryDataStream(std::move(content)));
 	}
 
 	void write(MetaWriter& meta) const override;

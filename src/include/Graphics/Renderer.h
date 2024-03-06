@@ -408,13 +408,12 @@ class RoundedRectRenderer : public Renderer
 {
 public:
 	RoundedRectRenderer(const Location& location, const RectObject& object)
-		: Renderer(location), polyline(object), pen(object.pen), rect(object.rect),
-		  radius(object.radius), corners{Point(rect.left() + radius, rect.top() + radius),
-										 Point(rect.right() - radius, rect.top() + radius),
-										 Point(rect.right() - radius, rect.bottom() - radius),
-										 Point(rect.left() + radius, rect.bottom() - radius)}
+		: Renderer(location), renderer(new PolylineRenderer(location, polyline)), polyline(object), pen(object.pen),
+		  rect(object.rect), radius(object.radius), corners{Point(rect.left() + radius, rect.top() + radius),
+															Point(rect.right() - radius, rect.top() + radius),
+															Point(rect.right() - radius, rect.bottom() - radius),
+															Point(rect.left() + radius, rect.bottom() - radius)}
 	{
-		renderer.reset(new PolylineRenderer(location, polyline));
 	}
 
 	bool execute(Surface& surface) override;

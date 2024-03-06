@@ -28,7 +28,7 @@ Font* TextParser::defaultFont;
 void TextParser::parse(const TextAsset& asset, uint32_t start, size_t size)
 {
 	if(!object) {
-		object.reset(new TextObject(getBounds()));
+		object = std::make_unique<TextObject>(getBounds());
 	}
 
 	getTypeFace();

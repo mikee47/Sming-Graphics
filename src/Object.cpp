@@ -374,7 +374,7 @@ MemoryImageObject::MemoryImageObject(PixelFormat format, Size size)
 	}
 
 	imageData = new uint8_t[imageBytes];
-	stream.reset(new LimitedMemoryStream(imageData, imageBytes, imageBytes, true));
+	stream = std::make_unique<LimitedMemoryStream>(imageData, imageBytes, imageBytes, true);
 	memset(imageData, 0, imageBytes);
 	debug_i("[IMG] %p, %s created, heap %u -> %u", imageData, size.toString().c_str(), heapFree,
 			system_get_free_heap_size());
