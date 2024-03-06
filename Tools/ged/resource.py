@@ -129,6 +129,15 @@ class Font(Resource):
         draw.font = font
         ascent, descent = font.getmetrics()
         yAdvance = ascent + abs(descent)
+
+        def split_word(word, width):
+            for i in range(len(word) - 1, 1, -1):
+                w = draw.textlength(word[:i])
+                if w <= width:
+                    return word[:i], word[i:], w
+            # Too narrow, emit 1 character
+            return word[0], word[1:], draw.textlength(word[0])
+
         # Break text up into words for wrapping
         paragraphs = [textwrap.wrap(para, 1, break_long_words = False,
                 replace_whitespace = False, drop_whitespace=False)
@@ -143,17 +152,22 @@ class Font(Resource):
                 w = draw.textlength(word)
                 if word.isspace():
                     space = (w, word)
+                    continue
+                if x == 0 and w > w_box:
+                    while w > w_box:
+                        s, word, w = split_word(word, w_box)
+                        lines.append((w, s))
+                        w = draw.textlength(word)
+                    x = w
+                    text = word
+                if x > 0 and (x + space[0] + w) > w_box:
+                    lines.append((x, text))
+                    x = 0
+                    text = ''
                 else:
-                    if x > 0 and (x + space[0] + w) > w_box:
-                        lines.append((x, text))
-                        text = ''
-                        x = 0
-                    else:
-                        x += space[0]
-                        text += space[1]
-                    space = (0, '')
-                    x += w
-                    text += word
+                    x += space[0] + w
+                    text += space[1] + word
+                space = (0, '')
             if x > 0 or not para:
                 lines.append((x, text))
         h = yAdvance * len(lines)
