@@ -24,10 +24,8 @@ RenderQueue renderQueue(tft);
 TcpServer server;
 
 struct ResourceInfo {
-	ResourceInfo(const LinkedObject* object, const void* data)
+	ResourceInfo(const LinkedObject* object, const void* data) : object(object), data(data)
 	{
-		this->object.reset(object);
-		this->data = data;
 	}
 
 	std::unique_ptr<const LinkedObject> object;
@@ -43,7 +41,7 @@ public:
 		free(map);
 		auto buf = malloc(size);
 		map = static_cast<decltype(map)>(buf);
-		mapSize = size;
+		mapSize = buf ? size : 0;
 		return buf;
 	}
 
@@ -59,7 +57,7 @@ public:
 			return static_cast<const Font*>(obj);
 		}
 
-		auto data = lookup(name);
+		auto data = findResource(name);
 		if(!data) {
 			return nullptr;
 		}
@@ -82,7 +80,7 @@ public:
 			return static_cast<const ImageObject*>(obj);
 		}
 
-		auto data = lookup(name);
+		auto data = findResource(name);
 		if(!data) {
 			return nullptr;
 		}
@@ -118,7 +116,7 @@ private:
 		return info->object.get();
 	}
 
-	const void* lookup(const String& name)
+	const void* findResource(const String& name)
 	{
 		if(!map) {
 			Serial << "Resource map not initialised" << endl;
@@ -131,7 +129,7 @@ private:
 			return nullptr;
 		}
 
-		// Serial << "Found '" << name << "' @" << endl;
+		// Serial << "Found " << name << endl;
 		return data.content_;
 	}
 
@@ -351,8 +349,14 @@ CustomButton::CustomButton(const PropertySet& props)
 void processLine(TcpClient& client, String& line)
 {
 	static SceneObject* scene;
+	static unsigned resourceLockCount;
 	static std::unique_ptr<ReadWriteStream> resourceStream;
 	static size_t resourceSize;
+
+	if(resourceLockCount) {
+		Serial << "RENDER BUSY" << endl;
+		return;
+	}
 
 	// Serial << line << endl;
 
@@ -410,39 +414,61 @@ void processLine(TcpClient& client, String& line)
 #else
 			tft.setOrientation(props.orientation);
 #endif
-		} else if(instr == "clear") {
+			break;
+		}
+		if(instr == "clear") {
 			delete scene;
 			scene = new SceneObject(tft.getSize());
 			scene->clear();
-		} else if(instr == "render") {
-			renderQueue.render(scene, [](SceneObject* scene) {
+			break;
+		}
+		if(instr == "render") {
+			renderQueue.render(scene, [&](SceneObject* scene) {
 				Serial << "Render done" << endl;
 				delete scene;
+				--resourceLockCount;
 			});
 			scene = nullptr;
-		} else if(instr == "resaddr") {
+			++resourceLockCount;
+			break;
+		}
+		if(instr == "resaddr") {
+			delete scene;
+			scene = nullptr;
 			auto buffer = resourceMap.reset(props.size);
 			String line;
 			line += "@:addr=0x";
 			line += String(uint32_t(buffer), HEX);
 			line += ";\n";
 			client.sendString(line);
-		} else if(instr == "index") {
+			break;
+		}
+		if(instr == "index") {
 			resourceStream.reset(resourceMap.createStream());
 			resourceSize = 0;
 			Serial << "** Writing index" << endl;
-		} else if(instr == "bitmap") {
+			break;
+		}
+		if(instr == "bitmap") {
 			auto part = Storage::findPartition(F("resource"));
-			resourceStream.reset(new Storage::PartitionStream(part, true));
+			if(!part) {
+				Serial << "Resource partition not found" << endl;
+				resourceStream.reset();
+				break;
+			}
+			resourceStream = std::make_unique<Storage::PartitionStream>(part, true);
 			resourceSize = 0;
 			Serial << "** Writing resource bitmap" << endl;
-		} else if(instr == "end") {
+			break;
+		}
+		if(instr == "end") {
 			if(resourceStream) {
 				Serial << "** Resource written, " << resourceSize << " bytes" << endl;
 				resourceStream.reset();
 				resourceSize = 0;
 				client.sendString("@:OK\n");
 			}
+			break;
 		}
 		break;
 
