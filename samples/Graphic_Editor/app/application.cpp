@@ -17,14 +17,22 @@
 #define WIFI_PWD "PleaseEnterPass"
 #endif
 
-#define RESOURCE_INDEX_SIZE 0x20000
-
 using namespace Graphics;
 
 namespace
 {
 RenderQueue renderQueue(tft);
 TcpServer server;
+
+// #define RESOURCE_MAP_IN_FLASH
+
+#ifdef RESOURCE_MAP_IN_FLASH
+#define RESOURCE_INDEX_SIZE 0x20000
+#define RESOURCE_CONST const
+const uint8_t resource_index[RESOURCE_INDEX_SIZE] PROGMEM{};
+#else
+#define RESOURCE_CONST
+#endif
 
 struct ResourceInfo {
 	ResourceInfo(const LinkedObject* object, const void* data) : object(object), data(data)
@@ -38,6 +46,7 @@ struct ResourceInfo {
 class ResourceMap : public ObjectMap<String, const ResourceInfo>
 {
 public:
+#ifdef RESOURCE_MAP_IN_FLASH
 	ResourceMap()
 	{
 		auto resPtr = resource_index;
@@ -47,10 +56,13 @@ public:
 		}
 		map = reinterpret_cast<decltype(map)>(resPtr);
 	}
+#endif
 
 	const void* reset(size_t size)
 	{
 		clear();
+
+#ifdef RESOURCE_MAP_IN_FLASH
 		auto blockOffset = uint32_t(resource_index) % SPI_FLASH_SEC_SIZE;
 
 		if(blockOffset + size > RESOURCE_INDEX_SIZE) {
@@ -59,15 +71,20 @@ public:
 			return nullptr;
 		}
 
-		mapSize = std::max(size, RESOURCE_INDEX_SIZE - blockOffset);
+		mapSize = std::max(size, size_t(RESOURCE_INDEX_SIZE - blockOffset));
+#else
+		free(map);
+		auto buf = malloc(size);
+		map = static_cast<decltype(map)>(buf);
+		mapSize = buf ? size : 0;
+#endif
+
 		return static_cast<const void*>(map);
 	}
 
 	std::unique_ptr<ReadWriteStream> createStream()
 	{
-#ifdef ARCH_HOST
-		return std::make_unique<LimitedMemoryStream>(map, mapSize, 0, false);
-#else
+#if defined(RESOURCE_MAP_IN_FLASH)
 		auto addr = flashmem_get_address(map);
 		auto part = *Storage::findPartition(Storage::Partition::Type::app);
 		Serial << part << endl;
@@ -77,8 +94,10 @@ public:
 			return nullptr;
 		}
 		auto offset = addr - part.address();
-		debug_i("Resource index @ %p, offset %p", map, offset);
+		debug_i("Resource index @ %p, addr %p, offset %p", map, addr, offset);
 		return std::make_unique<Storage::PartitionStream>(part, offset, mapSize, true);
+#else
+		return std::make_unique<LimitedMemoryStream>(map, mapSize, 0, false);
 #endif
 	}
 
@@ -169,19 +188,9 @@ private:
 		uint8_t data;
 	};
 
-	const FSTR::Map<FSTR::String, Data>* map;
+	RESOURCE_CONST FSTR::Map<FSTR::String, Data>* map{};
 	size_t mapSize{0};
-
-#ifdef ARCH_HOST
-#define RESOURCE_CONST
-#else
-#define RESOURCE_CONST const
-#endif
-	// alignas(SPI_FLASH_SEC_SIZE) crashes esp8266 - only works if alignment <= 16
-	static RESOURCE_CONST uint8_t resource_index[];
 };
-
-RESOURCE_CONST uint8_t ResourceMap::resource_index[RESOURCE_INDEX_SIZE] PROGMEM{};
 
 ResourceMap resourceMap;
 
