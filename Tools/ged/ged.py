@@ -1258,6 +1258,8 @@ def run():
                 value, _, rsp = rsp.partition(';')
                 if tag == 'addr':
                     res_offset = int(value, 0)
+                    if res_offset == 0:
+                        raise ValueError('Resource index too big!')
                     index = build_resource_index(data, res_offset)
                     break
 
