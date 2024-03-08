@@ -1,5 +1,6 @@
 #include <SmingCore.h>
 #include <Data/ObjectMap.h>
+#include <esp_spi_flash.h>
 #include <FlashString/Map.hpp>
 #include <Storage/PartitionStream.h>
 #include <Data/WebHelpers/escape.h>
@@ -15,6 +16,8 @@
 #define WIFI_SSID "PleaseEnterSSID" // Put your SSID and password here
 #define WIFI_PWD "PleaseEnterPass"
 #endif
+
+#define RESOURCE_INDEX_SIZE 0x20000
 
 using namespace Graphics;
 
@@ -35,19 +38,48 @@ struct ResourceInfo {
 class ResourceMap : public ObjectMap<String, const ResourceInfo>
 {
 public:
-	void* reset(size_t size)
+	ResourceMap()
 	{
-		clear();
-		free(map);
-		auto buf = malloc(size);
-		map = static_cast<decltype(map)>(buf);
-		mapSize = buf ? size : 0;
-		return buf;
+		auto resPtr = resource_index;
+		auto blockOffset = uint32_t(resource_index) % SPI_FLASH_SEC_SIZE;
+		if(blockOffset != 0) {
+			resPtr += SPI_FLASH_SEC_SIZE - blockOffset;
+		}
+		map = reinterpret_cast<decltype(map)>(resPtr);
 	}
 
-	ReadWriteStream* createStream()
+	const void* reset(size_t size)
 	{
-		return new LimitedMemoryStream(map, mapSize, 0, false);
+		clear();
+		auto blockOffset = uint32_t(resource_index) % SPI_FLASH_SEC_SIZE;
+
+		if(blockOffset + size > RESOURCE_INDEX_SIZE) {
+			debug_e("Resource too big");
+			mapSize = 0;
+			return nullptr;
+		}
+
+		mapSize = std::max(size, RESOURCE_INDEX_SIZE - blockOffset);
+		return static_cast<const void*>(map);
+	}
+
+	std::unique_ptr<ReadWriteStream> createStream()
+	{
+#ifdef ARCH_HOST
+		return std::make_unique<LimitedMemoryStream>(map, mapSize, 0, false);
+#else
+		auto addr = flashmem_get_address(map);
+		auto part = *Storage::findPartition(Storage::Partition::Type::app);
+		Serial << part << endl;
+		if(!part.contains(addr)) {
+			debug_e("Bad resource index address %p, part %p, map %p", addr, part.address(), map);
+			assert(false);
+			return nullptr;
+		}
+		auto offset = addr - part.address();
+		debug_i("Resource index @ %p, offset %p", map, offset);
+		return std::make_unique<Storage::PartitionStream>(part, offset, mapSize, true);
+#endif
 	}
 
 	const Font* getFont(const String& name)
@@ -89,7 +121,7 @@ public:
 		// Serial << "bmOffset " << imgres.bmOffset << ", bmSize " << imgres.bmSize << ", width " << imgres.width
 		// 	   << ", height " << imgres.height << ", format " << imgres.format << endl;
 		ImageObject* img;
-		if(imgres.format == PixelFormat::None) {
+		if(imgres.getFormat() == PixelFormat::None) {
 			img = new BitmapObject(imgres);
 			if(!img->init()) {
 				debug_e("Bad bitmap");
@@ -137,9 +169,19 @@ private:
 		uint8_t data;
 	};
 
-	FSTR::Map<FSTR::String, Data>* map;
+	const FSTR::Map<FSTR::String, Data>* map;
 	size_t mapSize{0};
+
+#ifdef ARCH_HOST
+#define RESOURCE_CONST
+#else
+#define RESOURCE_CONST const
+#endif
+	// alignas(SPI_FLASH_SEC_SIZE) crashes esp8266 - only works if alignment <= 16
+	static RESOURCE_CONST uint8_t resource_index[];
 };
+
+RESOURCE_CONST uint8_t ResourceMap::resource_index[RESOURCE_INDEX_SIZE] PROGMEM{};
 
 ResourceMap resourceMap;
 
@@ -444,7 +486,7 @@ void processLine(TcpClient& client, String& line)
 			break;
 		}
 		if(instr == "index") {
-			resourceStream.reset(resourceMap.createStream());
+			resourceStream = resourceMap.createStream();
 			resourceSize = 0;
 			Serial << "** Writing index" << endl;
 			break;

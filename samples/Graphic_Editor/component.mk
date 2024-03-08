@@ -1,2 +1,2 @@
-COMPONENT_DEPENDS := Graphics
+COMPONENT_DEPENDS := Graphics Ota
 HWCONFIG := graphic-editor
