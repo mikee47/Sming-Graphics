@@ -1728,15 +1728,15 @@ void init()
 	initDisplay();
 
 #ifndef ENABLE_VIRTUAL_SCREEN
-	Serial.printf(_F("Speed: %u\r\n"), tft.getSpeed());
-	Serial.printf(_F("DisplayID: 0x%06x\r\n"), tft.readDisplayId());
-	Serial.printf(_F("Status: 0x%08x\r\n"), tft.readDisplayStatus());
-	Serial.printf(_F("MADCTL: 0x%02x\r\n"), tft.readMADCTL());
-	Serial.printf(_F("PixelFormat: 0x%02x\r\n"), tft.readPixelFormat());
-	Serial.printf(_F("ImageFormat: 0x%02x\r\n"), tft.readImageFormat());
-	Serial.printf(_F("SignalMode: 0x%02x\r\n"), tft.readSignalMode());
-	Serial.printf(_F("SelfDiag: 0x%02x\r\n"), tft.readSelfDiag());
-	Serial.printf(_F("NVMemStatus: 0x%04x\r\n"), tft.readNvMemStatus());
+	Serial << _F("Speed: ") << tft.getSpeed() << endl;
+	Serial << _F("DisplayID: ") << String(tft.readDisplayId(), HEX) << endl;
+	Serial << _F("Status: ") << String(tft.readDisplayStatus(), HEX) << endl;
+	Serial << _F("MADCTL: ") << String(tft.readMADCTL(), HEX) << endl;
+	Serial << _F("PixelFormat: ") << String(tft.readPixelFormat(), HEX) << endl;
+	Serial << _F("ImageFormat: ") << String(tft.readImageFormat(), HEX) << endl;
+	Serial << _F("SignalMode: ") << String(tft.readSignalMode(), HEX) << endl;
+	Serial << _F("SelfDiag: ") << String(tft.readSelfDiag(), HEX) << endl;
+	Serial << _F("NVMemStatus: ") << String(tft.readNvMemStatus(), HEX) << endl;
 #endif
 
 	tftPixelFormat = tft.getPixelFormat();
