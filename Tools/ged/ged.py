@@ -255,6 +255,7 @@ class LayoutEditor(ttk.Frame):
         super().__init__(master)
         self.width = width
         self.height = height
+        self.client = '192.168.13.10'
         self.orientation = 0 # Not used internally
         self.scale = scale
         self.grid_alignment: int = grid_alignment
@@ -806,6 +807,7 @@ class ProjectEditor(Editor):
     def __init__(self, root):
         super().__init__(root, 'Project')
         self.filename = None
+        self.add_entry_field('client', str)
         self.add_entry_field('width')
         self.add_entry_field('height')
         self.add_check_fields('orientation', False, ['0:0°', '1:90°','2:180°', '3:270°'])
@@ -1244,7 +1246,7 @@ def run():
         index = build_resource_index(data, 0)
 
         print("Connecting ...")
-        client = remote.Client('192.168.13.10', 23)
+        client = remote.Client(layout.client)
 
         client.send_line(f'@:resaddr;size={len(index)};')
         rsp = client.recv_line()
@@ -1285,7 +1287,7 @@ def run():
     
 
     def fileSendLayout():
-        client = remote.Client('192.168.13.10', 23)
+        client = remote.Client(layout.client)
         data = remote.serialise(layout.display_list)
         client.send_line(f'@:size;w={layout.width};h={layout.height};orient={layout.orientation};')
         client.send_line(f'@:clear')
