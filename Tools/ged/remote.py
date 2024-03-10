@@ -5,9 +5,13 @@ from resource import FontStyle
 import urllib.parse
 
 class Client:
-    def __init__(self, ipaddr, port):
+    def __init__(self, address: str):
+        ipaddr, _, port = address.partition(':')
+        if not port:
+            port = 23
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(5)
+        print(f'Connecting to {ipaddr}:{port} ...')
         self.socket.connect((ipaddr, port))
 
     def send_line(self, data):
