@@ -152,7 +152,7 @@ bool MipiDisplay::setOrientation(Orientation orientation)
 bool IRAM_ATTR MipiDisplay::transferBeginEnd(HSPI::Request& request)
 {
 	if(request.busy) {
-		auto device = reinterpret_cast<MipiDisplay*>(request.device);
+		auto device = static_cast<MipiDisplay*>(request.device);
 		auto newState = (request.cmdLen == 0);
 		if(device->dcState != newState) {
 			digitalWrite(device->dcPin, newState);
@@ -280,7 +280,7 @@ bool MipiSurface::render(const Object& object, const Rect& location, std::unique
 	switch(object.kind()) {
 	case Object::Kind::FilledRect: {
 		// Handle small transparent fills using display list
-		auto obj = reinterpret_cast<const FilledRectObject&>(object);
+		auto obj = static_cast<const FilledRectObject&>(object);
 		if(obj.blender || obj.radius != 0 || !obj.brush.isTransparent() || !isSmall(obj.rect)) {
 			break;
 		}

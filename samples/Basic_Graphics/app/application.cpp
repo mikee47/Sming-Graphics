@@ -402,7 +402,7 @@ Rect scrollRect;
 
 void doScroll(SceneObject* scene)
 {
-	auto scroll = reinterpret_cast<ScrollObject*>(scene->objects.head());
+	auto scroll = static_cast<ScrollObject*>(scene->objects.head());
 	switch(scrollCount) {
 	case 24:
 		scroll->shift.y = -scroll->shift.y;

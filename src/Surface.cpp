@@ -36,7 +36,7 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 	// Handled any immediate (simple) drawing
 	switch(object.kind()) {
 	case Object::Kind::Point: {
-		auto obj = reinterpret_cast<const PointObject&>(object);
+		auto obj = static_cast<const PointObject&>(object);
 		if(obj.brush.isTransparent()) {
 			break;
 		}
@@ -55,7 +55,7 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 
 	case Object::Kind::FilledRect: {
 		// Draw solid filled non-rounded rectangles
-		auto obj = reinterpret_cast<const FilledRectObject&>(object);
+		auto obj = static_cast<const FilledRectObject&>(object);
 		if(obj.blender || obj.radius != 0 || obj.brush.isTransparent()) {
 			break;
 		}
@@ -67,7 +67,7 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 
 	case Object::Kind::Line: {
 		// Draw horizontal or vertical lines
-		auto obj = reinterpret_cast<const LineObject&>(object);
+		auto obj = static_cast<const LineObject&>(object);
 		if(obj.pen.isTransparent()) {
 			break;
 		}

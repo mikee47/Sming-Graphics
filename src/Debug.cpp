@@ -27,7 +27,7 @@ void highlightText(SceneObject& scene)
 {
 	for(auto& obj : scene.objects) {
 		if(obj.kind() == Object::Kind::Text) {
-			highlightText(reinterpret_cast<TextObject&>(obj));
+			highlightText(static_cast<TextObject&>(obj));
 		}
 	}
 }
@@ -39,13 +39,13 @@ void highlightText(TextObject& object)
 	uint16_t textHeight{0};
 	for(auto& el : object.elements) {
 		if(el.kind == TextObject::Element::Kind::Font) {
-			auto& font = reinterpret_cast<const TextObject::FontElement&>(el);
+			auto& font = static_cast<const TextObject::FontElement&>(el);
 			textHeight = font.height();
 		}
 		if(el.kind != TextObject::Element::Kind::Run) {
 			continue;
 		}
-		auto& seg = reinterpret_cast<const TextObject::RunElement&>(el);
+		auto& seg = static_cast<const TextObject::RunElement&>(el);
 		Rect r{object.bounds.topLeft() + seg.pos, seg.width, textHeight};
 		object.insertAfter(new FilledRectObject(makeColor(Color::White, 60 + (light ? 0 : 40)), r));
 		light = !light;

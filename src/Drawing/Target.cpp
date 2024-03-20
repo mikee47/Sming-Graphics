@@ -30,7 +30,7 @@ bool Target::render(const Object& object, const Rect& location)
 {
 	switch(object.kind()) {
 	case Object::Kind::Reference: {
-		auto obj = reinterpret_cast<const ReferenceObject&>(object);
+		auto obj = static_cast<const ReferenceObject&>(object);
 		Rect loc = location;
 		loc += obj.pos;
 		loc.w -= obj.pos.x;
@@ -38,28 +38,28 @@ bool Target::render(const Object& object, const Rect& location)
 		return render(obj.object, loc);
 	}
 	case Object::Kind::Rect: {
-		auto& rect = reinterpret_cast<const RectObject&>(object);
+		auto& rect = static_cast<const RectObject&>(object);
 		writer.setPen(rect.pen);
 		writer.moveto(rect.rect.topLeft());
 		writer.drawRect(rect.rect.bottomRight(), rect.radius);
 		break;
 	}
 	case Object::Kind::FilledRect: {
-		auto& rect = reinterpret_cast<const FilledRectObject&>(object);
+		auto& rect = static_cast<const FilledRectObject&>(object);
 		writer.setBrush(rect.brush);
 		writer.moveto(rect.rect.topLeft());
 		writer.fillRect(rect.rect.bottomRight(), rect.radius);
 		break;
 	}
 	case Object::Kind::Line: {
-		auto& line = reinterpret_cast<const LineObject&>(object);
+		auto& line = static_cast<const LineObject&>(object);
 		writer.setPen(line.pen);
 		writer.moveto(line.pt1);
 		writer.lineto(line.pt2);
 		break;
 	}
 	case Object::Kind::Polyline: {
-		auto& line = reinterpret_cast<const PolylineObject&>(object);
+		auto& line = static_cast<const PolylineObject&>(object);
 		writer.setPen(line.pen);
 		if(line.connected) {
 			writer.moveto(line[0]);
@@ -75,47 +75,47 @@ bool Target::render(const Object& object, const Rect& location)
 		break;
 	}
 	case Object::Kind::Circle: {
-		auto& circle = reinterpret_cast<const CircleObject&>(object);
+		auto& circle = static_cast<const CircleObject&>(object);
 		writer.setPen(circle.pen);
 		writer.drawCircle(circle.centre, circle.radius);
 		break;
 	}
 	case Object::Kind::FilledCircle: {
-		auto& circle = reinterpret_cast<const FilledCircleObject&>(object);
+		auto& circle = static_cast<const FilledCircleObject&>(object);
 		writer.setBrush(circle.brush);
 		writer.fillCircle(circle.centre, circle.radius);
 		break;
 	}
 	case Object::Kind::Ellipse: {
-		auto& ellipse = reinterpret_cast<const EllipseObject&>(object);
+		auto& ellipse = static_cast<const EllipseObject&>(object);
 		writer.setPen(ellipse.pen);
 		writer.moveto(ellipse.rect.topLeft());
 		writer.drawEllipse(ellipse.rect.bottomRight());
 		break;
 	}
 	case Object::Kind::FilledEllipse: {
-		auto& ellipse = reinterpret_cast<const FilledEllipseObject&>(object);
+		auto& ellipse = static_cast<const FilledEllipseObject&>(object);
 		writer.setBrush(ellipse.brush);
 		writer.moveto(ellipse.rect.topLeft());
 		writer.fillEllipse(ellipse.rect.bottomRight());
 		break;
 	}
 	case Object::Kind::Arc: {
-		auto& arc = reinterpret_cast<const ArcObject&>(object);
+		auto& arc = static_cast<const ArcObject&>(object);
 		writer.setPen(arc.pen);
 		writer.moveto(arc.rect.topLeft());
 		writer.drawArc(arc.rect.bottomRight(), arc.startAngle, arc.endAngle);
 		break;
 	}
 	case Object::Kind::FilledArc: {
-		auto& arc = reinterpret_cast<const FilledArcObject&>(object);
+		auto& arc = static_cast<const FilledArcObject&>(object);
 		writer.setBrush(arc.brush);
 		writer.moveto(arc.rect.topLeft());
 		writer.fillArc(arc.rect.bottomRight(), arc.startAngle, arc.endAngle);
 		break;
 	}
 	case Object::Kind::Scene: {
-		auto& scene = reinterpret_cast<const SceneObject&>(object);
+		auto& scene = static_cast<const SceneObject&>(object);
 		for(auto& obj : scene.objects) {
 			if(!render(obj, location)) {
 				return false;
