@@ -140,13 +140,13 @@ void Console::update()
 
 		// Adjust element positions
 		for(auto& el : text->elements) {
-			auto seg = reinterpret_cast<TextObject::RunElement*>(&el);
+			auto seg = static_cast<TextObject::RunElement*>(&el);
 			seg->pos.y -= overflow;
 		}
 
 		// Remove any elements which have scrolled off top of screen
 		TextObject::RunElement* seg;
-		while((seg = reinterpret_cast<TextObject::RunElement*>(text->elements.head()))) {
+		while((seg = static_cast<TextObject::RunElement*>(text->elements.head()))) {
 			if(seg->pos.y >= 0) {
 				break;
 			}

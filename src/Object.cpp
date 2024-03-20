@@ -62,7 +62,7 @@ Renderer* ReferenceObject::createRenderer(const Location& location) const
 	}
 
 	if(object.kind() == Object::Kind::Image) {
-		auto& image = reinterpret_cast<const ImageObject&>(object);
+		auto& image = static_cast<const ImageObject&>(object);
 		return new ImageCopyRenderer(loc, image, blend);
 	}
 
@@ -389,8 +389,7 @@ Surface* MemoryImageObject::createSurface(const Blend* blend, size_t bufferSize)
 
 Surface* FileImageObject::createSurface(size_t bufferSize)
 {
-	return new FileImageSurface(*this, pixelFormat, bufferSize ?: 512U,
-								*reinterpret_cast<IFS::FileStream*>(stream.get()));
+	return new FileImageSurface(*this, pixelFormat, bufferSize ?: 512U, *static_cast<IFS::FileStream*>(stream.get()));
 }
 
 /* GlyphObject */

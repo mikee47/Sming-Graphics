@@ -771,12 +771,12 @@ public:
 
 	template <typename T> T* find(AssetID id)
 	{
-		return reinterpret_cast<T*>(find(T::assetType, id));
+		return static_cast<T*>(find(T::assetType, id));
 	}
 
 	template <typename T> const T* find(AssetID id) const
 	{
-		return reinterpret_cast<const T*>(find(T::assetType, id));
+		return static_cast<const T*>(find(T::assetType, id));
 	}
 
 	void store(Asset* asset);
