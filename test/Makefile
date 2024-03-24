@@ -13,7 +13,9 @@ ifeq ($(OS)-$(CI),Windows_NT-true)
 	@echo "Skipping test for CI"
 else
 	$(call TestNotify,Basic_Graphics,start)
+	$(Q) $(MAKE) HardwareSPI-clean # May have been build with verbose=3
 	$(Q) $(MAKE) $(MAKE_ARGS) \
+		DEBUG_VERBOSE_LEVEL=2 \
 		ENABLE_VIRTUAL_SCREEN=0 \
 		MAX_LOOP_COUNT=1 \
 		GUITIMER_INTERVAL=100 \
