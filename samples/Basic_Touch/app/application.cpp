@@ -108,7 +108,8 @@ public:
 		return false;
 	}
 
-	operator const Touch::Calibration&() const {
+	operator const Touch::Calibration&() const
+	{
 		return calib;
 	}
 
@@ -208,7 +209,8 @@ void touchChanged()
 	if(calibrator && calibrator->update(state.pos)) {
 		touch.setCalibration(*calibrator);
 		Touch::Calibration calib = *calibrator;
-		Serial << "CALIB " << toString(calib.origin) << ", " << toString(calib.num) << ", " << toString(calib.den) << endl;
+		Serial << "CALIB " << toString(calib.origin) << ", " << toString(calib.num) << ", " << toString(calib.den)
+			   << endl;
 		calibrator.reset();
 	}
 	updateScreen(touch.translate(state.pos));
