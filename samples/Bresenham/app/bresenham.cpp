@@ -726,7 +726,7 @@ void plotEllipseRectAA(int x0, int y0, int x1, int y1)
 		setPixelAA(x1, y0, i);
 		setPixelAA(x1, y1, i);
 
-		if(f = 2 * err + dy >= 0) { /* x step, remember condition */
+		if((f = 2 * err + dy >= 0)) { /* x step, remember condition */
 			if(x0 >= x1)
 				break;
 			i = ed * (err + dx);
@@ -882,7 +882,7 @@ void plotQuadRationalBezierSegAA(int x0, int y0, int x1, int y1, int x2, int y2,
 			x1 = 255 * fabs(err - dx - dy + xy) / ed;			   /* get blend value by pixel error */
 			if(x1 < 256)
 				setPixelAA(x0, y0, x1); /* plot curve */
-			if(f = 2 * err + dy < 0) {  /* y step */
+			if((f = 2 * err + dy < 0)) { /* y step */
 				if(y0 == y2)
 					return; /* last pixel -> curve finished */
 				if(dx - err < ed)
