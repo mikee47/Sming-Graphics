@@ -76,17 +76,24 @@ public:
 		return write(&c, 1);
 	}
 
-	bool setScrollMargins(uint16_t top, uint16_t bottom);
+	void setScrollMargins(uint16_t top, uint16_t bottom)
+	{
+		auto item = addCommand(Command::setScrollMargins);
+		item->top = top;
+		item->bottom = bottom;
+		update();
+	}
 
 	void setCursor(Point pt)
 	{
-		debug_i("setCursor(%s)", pt.toString().c_str());
-		cursor = pt;
+		addCommand(Command::setCursor)->pos = pt;
+		update();
 	}
 
-	void moveTo(Section section)
+	void setSection(Section section)
 	{
-		setCursor(getSectionBounds(section).topLeft());
+		addCommand(Command::setSection)->section = section;
+		update();
 	}
 
 	Point getCursor() const
@@ -94,23 +101,72 @@ public:
 		return cursor;
 	}
 
-	void clear();
+	void clear()
+	{
+		addCommand(Command::clear);
+		update();
+	}
 
 	Rect getSectionBounds(Section section);
 	Section getSection(uint16_t line);
 
 private:
+	// Internally need to queue instructions
+	enum class Command {
+		writeText,
+		setCursor,
+		setScrollMargins,
+		setSection,
+		clear,
+		pause, ///< Stop here until resumed
+	};
+
+	class CommandItem : public LinkedObjectTemplate<CommandItem>
+	{
+	public:
+		CommandItem(Command command) : command(command)
+		{
+		}
+
+		Command command;
+		// writeText
+		String text;
+		union {
+			// setCursor
+			Point pos;
+			// setSection
+			Section section;
+			// setScrollMargins
+			struct {
+				uint16_t top;
+				uint16_t bottom;
+			};
+		};
+	};
+
+	using CommandQueue = OwnedLinkedObjectListTemplate<CommandItem>;
+
+	CommandItem* addCommand(Command command)
+	{
+		auto item = new CommandItem(command);
+		queue.add(item);
+		lastItem = item;
+		return item;
+	}
+
 	void update();
+	void clearSection(Section section);
+	void writeText(String&& buffer);
 
 	AbstractDisplay& display;
 	RenderQueue& renderQueue;
-	String buffer;
-	String pauseBuffer;
+	CommandQueue queue;
+	CommandItem* lastItem{nullptr};
 	std::unique_ptr<SceneObject> scene;
 	Point cursor{};
-	bool paused{false};
 	uint16_t topMargin{0};
 	uint16_t bottomMargin{0};
+	bool paused{false};
 };
 
 } // namespace Graphics

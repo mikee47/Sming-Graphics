@@ -35,17 +35,6 @@ constexpr Font& font{lcdFont};
 Scale fontScale{1, 2};
 } // namespace
 
-bool Console::setScrollMargins(uint16_t top, uint16_t bottom)
-{
-	if(!display.setScrollMargins(top, bottom)) {
-		return false;
-	}
-	topMargin = top;
-	bottomMargin = bottom;
-	cursor.y = topMargin;
-	return true;
-}
-
 Console::Section Console::getSection(uint16_t line)
 {
 	Size sz{display.getSize()};
@@ -73,40 +62,35 @@ Rect Console::getSectionBounds(Section section)
 	}
 }
 
-void Console::clear()
-{
-	auto scene = new SceneObject(display);
-	auto section = getSection(cursor.y);
-	scene->fillRect(backColor, getSectionBounds(section));
-	renderQueue.render(scene, [](SceneObject* scene) { delete scene; });
-}
-
 size_t Console::write(const uint8_t* data, size_t size)
 {
 	auto str = reinterpret_cast<const char*>(data);
-	if(paused) {
-		pauseBuffer.concat(str, size);
-	} else {
-		buffer.concat(str, size);
+	if(lastItem == nullptr || lastItem->command != Command::writeText) {
+		addCommand(Command::writeText);
 	}
+	lastItem->text.concat(str, size);
 	update();
 	return size;
 }
 
 void Console::pause(bool state)
 {
-	paused = state;
-	if(paused) {
+	if(paused == state) {
 		return;
 	}
-	if(pauseBuffer) {
-		if(buffer.length() == 0) {
-			buffer = std::move(pauseBuffer);
-		} else {
-			buffer.concat(pauseBuffer);
-		}
-		pauseBuffer = nullptr;
+	paused = state;
+	if(paused) {
+		addCommand(Command::pause);
+		return;
 	}
+
+	for(auto item : queue) {
+		if(item.command == Command::pause) {
+			queue.remove(&item);
+			break;
+		}
+	}
+
 	update();
 }
 
@@ -117,11 +101,68 @@ void Console::update()
 		return;
 	}
 
-	if(buffer.length() == 0) {
+	if(queue.isEmpty()) {
+		return;
+	}
+
+	if(paused && queue.head()->command == Command::pause) {
 		return;
 	}
 
 	scene = std::make_unique<SceneObject>(display);
+	do {
+		auto item = queue.head();
+		switch(item->command) {
+		case Command::writeText:
+			debug_i("writeText(%s)", item->text.c_str());
+			writeText(std::move(item->text));
+			break;
+		case Command::setCursor:
+			cursor = item->pos;
+			debug_i("setCursor(%s)", cursor.toString().c_str());
+			break;
+		case Command::setScrollMargins:
+			// Executed immediately so process before starting a new scene
+			if(!scene->objects.isEmpty()) {
+				item = nullptr;
+				break;
+			}
+			if(display.setScrollMargins(item->top, item->bottom)) {
+				topMargin = item->top;
+				bottomMargin = item->bottom;
+			}
+			break;
+		case Command::setSection:
+			cursor = getSectionBounds(item->section).topLeft();
+			debug_i("setCursor(%s)", cursor.toString().c_str());
+			break;
+		case Command::clear:
+			scene->fillRect(backColor, getSectionBounds(item->section));
+			break;
+		case Command::pause:
+			if(paused) {
+				item = nullptr;
+			}
+			break;
+		}
+		if(item == nullptr) {
+			break;
+		}
+		delete queue.pop();
+	} while(!queue.isEmpty());
+
+	if(queue.isEmpty()) {
+		lastItem = nullptr;
+	}
+
+	renderQueue.render(scene.get(), [this](SceneObject*) {
+		scene.reset();
+		update();
+	});
+}
+
+void Console::writeText(String&& buffer)
+{
 	auto face = font.getFace(fontStyle);
 	auto lineHeight = fontScale.scaleY(face->height());
 	auto section = getSection(cursor.y);
@@ -225,11 +266,6 @@ void Console::update()
 	scene->addObject(text);
 
 	// MetaWriter(Serial).write(*scene);
-
-	renderQueue.render(scene.get(), [this](SceneObject*) {
-		scene.reset();
-		update();
-	});
 }
 
 void Console::systemDebugOutput(bool enable)
