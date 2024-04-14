@@ -60,6 +60,15 @@ union Command {
 		Rect r;
 		PackedColor color;
 	};
+	struct SetScrollMargins {
+		static constexpr uint8_t command{4};
+		uint16_t top;
+		uint16_t bottom;
+	};
+	struct SetScrollOffset {
+		static constexpr uint8_t command{5};
+		uint16_t offset;
+	};
 };
 
 struct ReadPixelInfo {
@@ -582,23 +591,22 @@ bool Virtual::setScrollMargins(uint16_t top, uint16_t bottom)
 		return false;
 	}
 
-	scrollMargins.top = top;
-	scrollMargins.bottom = bottom;
-
 	debug_d("[VS] setScrollMargins(%u, %u)", top, bottom);
+
+	CommandList list(addrWindow, 32);
+	list.writeCommand(Command::SetScrollMargins{top, bottom});
+	list.prepare();
+	thread->transfer(list);
+
 	return true;
 }
 
-bool Virtual::scroll(int16_t y)
+void Virtual::setScrollOffset(uint16_t line)
 {
 	CommandList list(addrWindow, 32);
-	Rect area(0, scrollMargins.top, nativeSize.w, nativeSize.h - scrollMargins.top - scrollMargins.bottom);
-	Point shift(0, -y);
-	debug_d("[VS] Scroll(%s, %s)", area.toString().c_str(), shift.toString().c_str());
-	list.writeCommand(Command::Scroll{area, shift, false, true});
+	list.writeCommand(Command::SetScrollOffset{line});
 	list.prepare();
 	thread->transfer(list);
-	return true;
 }
 
 Surface* Virtual::createSurface(size_t bufferSize)

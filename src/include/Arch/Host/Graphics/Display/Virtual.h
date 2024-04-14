@@ -75,6 +75,8 @@ public:
 		return nativeSize;
 	}
 	bool setOrientation(Orientation orientation) override;
+	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
+	void setScrollOffset(uint16_t line) override;
 
 	/* RenderTarget */
 
@@ -88,9 +90,6 @@ public:
 		return PixelFormat::BGR24;
 	}
 
-	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
-	bool scroll(int16_t y) override;
-
 	Surface* createSurface(size_t bufferSize = 0) override;
 
 	void onTouch(TouchCallback callback)
@@ -102,11 +101,6 @@ private:
 	class NetworkThread;
 	friend NetworkThread;
 	friend VirtualSurface;
-
-	struct ScrollMargins {
-		uint16_t top;
-		uint16_t bottom;
-	};
 
 	bool sizeChanged();
 
@@ -120,8 +114,6 @@ private:
 	std::unique_ptr<NetworkThread> thread;
 	Size nativeSize{};
 	AddressWindow addrWindow{};
-	ScrollMargins scrollMargins;
-	TouchCallback touchCallback;
 	Mode mode;
 };
 

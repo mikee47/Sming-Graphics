@@ -59,6 +59,7 @@ class Screen:
         self.window = None
         self.destRect = None
         self.srcRect = None
+        self.topMargin = self.bottomMargin = self.scrollOffset = 0
         self.packetQueue = Queue(2)
         SDL_Init(SDL_INIT_VIDEO)
         self.window = SDL_CreateWindow(self.title.encode(),
@@ -135,7 +136,23 @@ class Screen:
         r.w = self.destRect.w + w + w
         r.h = self.destRect.h + w + w
         SDL_RenderFillRect(self.renderer, r.sdl_rect())
-        SDL_RenderCopy(self.renderer, self.texture, self.srcRect.sdl_rect(), self.destRect.sdl_rect())
+        if self.scrollOffset == self.topMargin:
+            SDL_RenderCopy(self.renderer, self.texture, self.srcRect.sdl_rect(), self.destRect.sdl_rect())
+        else:
+            def copy(srcy, dsty, height):
+                sy = self.destRect.h / self.srcRect.h
+                src = Rect(self.srcRect.x, srcy, self.srcRect.w, height)
+                dst = Rect(self.destRect.x, self.destRect.y + round(sy * dsty), self.destRect.w, round(sy * height))
+                SDL_RenderCopy(self.renderer, self.texture, src.sdl_rect(), dst.sdl_rect())
+            if self.topMargin != 0:
+                copy(0, 0, self.topMargin)
+            if self.bottomMargin != 0:
+                y = self.height - self.bottomMargin
+                copy(y, y, self.bottomMargin)
+            h = self.height - self.bottomMargin - self.scrollOffset
+            copy(self.scrollOffset, self.topMargin, h)
+            copy(self.topMargin, self.topMargin + h, self.scrollOffset - self.topMargin)
+
         SDL_RenderPresent(self.renderer)
 
     def setTitle(self, title):
@@ -269,6 +286,11 @@ class Screen:
                     r.x, r.y, r.w, r.h, color = struct.unpack("4HI", data)
                     # debug("Fill (%s), 0x%08x" % (r, color))
                     self.pixels.fill(r, color)
+                elif cmd == Command.setScrollMargins:
+                    self.topMargin, self.bottomMargin = struct.unpack("2H", data)
+                    self.scrollOffset = self.topMargin
+                elif cmd == Command.setScrollOffset:
+                    self.scrollOffset, = struct.unpack("H", data)
                 else:
                     debug("BAD COMMAND: %s" % cmd)
             elif cmd == Code.read or cmd == Code.readStart:
