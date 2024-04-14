@@ -97,7 +97,7 @@ uint32_t MipiDisplay::readRegister(uint8_t cmd, uint8_t byteCount)
 	return req.in.data32;
 }
 
-bool MipiDisplay::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin, uint32_t clockSpeed)
+bool MipiDisplay::begin(HSPI::PinSet pinSet, uint8_t chipSelect, uint8_t dcPin, uint8_t resetPin, uint32_t clockSpeed, ExecuteDone callback)
 {
 	if(!SpiDisplay::begin(pinSet, chipSelect, resetPin, clockSpeed)) {
 		return false;

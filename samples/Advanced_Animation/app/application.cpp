@@ -246,9 +246,5 @@ void init()
 #endif
 
 	Serial.println("Display start");
-	initDisplay();
-
-	auto timer = new AutoDeleteTimer;
-	timer->initializeMs<500>(setup);
-	timer->startOnce();
+	initDisplay(setup);
 }
