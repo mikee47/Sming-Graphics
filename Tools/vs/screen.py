@@ -100,7 +100,7 @@ class Screen:
         m = (BORDER_SPACE + BORDER_THICKNESS) * 2
         dstWidth, dstHeight = c_w.value, c_h.value
         sw, sh = (dstWidth - m) / self.width, (dstHeight - m) / self.height
-        scale = max(sw, sh)
+        scale = min(sw, sh)
 
         if scale < 1:
             w, h = min(self.width, dstWidth), min(self.height, dstHeight)
