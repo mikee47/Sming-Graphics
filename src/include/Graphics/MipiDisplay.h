@@ -102,6 +102,7 @@ public:
 	}
 
 	bool setScrollMargins(uint16_t top, uint16_t bottom) override;
+	void setScrollOffset(uint16_t line);
 	bool scroll(int16_t y) override;
 
 	/* Device */
@@ -191,6 +192,8 @@ private:
 
 	uint8_t dcPin{PIN_NONE};
 	bool dcState{};
+	uint16_t topMargin{0};
+	uint16_t bottomMargin{0};
 	uint16_t scrollOffset{0};
 };
 

@@ -164,33 +164,44 @@ bool IRAM_ATTR MipiDisplay::transferBeginEnd(HSPI::Request& request)
 
 bool MipiDisplay::setScrollMargins(uint16_t top, uint16_t bottom)
 {
-	// TFA + VSA + BFA == 320
-	if(top + bottom > resolution.h) {
+	if(top + bottom >= nativeSize.h) {
 		return false;
 	}
+	bottom += resolution.h - nativeSize.h;
+	auto scrollHeight = resolution.h - (top + bottom);
 	uint16_t data[]{
 		swapBytes(top),
-		swapBytes(resolution.h - (top + bottom)),
+		swapBytes(scrollHeight),
 		swapBytes(bottom),
 	};
 	SpiDisplayList list(commands, addrWindow, 16);
 	list.writeCommand(Mipi::DCS_SET_SCROLL_AREA, data, sizeof(data));
 	execute(list);
+	topMargin = top;
+	bottomMargin = bottom;
+	setScrollOffset(0);
 	return true;
 }
 
 bool MipiDisplay::scroll(int16_t y)
 {
 	y = scrollOffset - y;
+	auto scrollHeight = resolution.h - (topMargin + bottomMargin);
 	while(y < 0) {
-		y += resolution.h;
+		y += scrollHeight;
 	}
-	y %= resolution.h;
-	SpiDisplayList list(commands, addrWindow, 16);
-	list.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(y), 2);
-	execute(list);
-	scrollOffset = y;
+	setScrollOffset(y);
 	return true;
+}
+
+void MipiDisplay::setScrollOffset(uint16_t line)
+{
+	auto scrollHeight = resolution.h - (topMargin + bottomMargin);
+	line %= scrollHeight;
+	SpiDisplayList list(commands, addrWindow, 16);
+	list.writeCommand(Mipi::DCS_SET_SCROLL_START, swapBytes(topMargin + line), 2);
+	execute(list);
+	scrollOffset = line;
 }
 
 /*

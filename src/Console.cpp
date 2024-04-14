@@ -22,6 +22,8 @@
 #include "include/Graphics/Console.h"
 #include "include/Graphics/LcdFont.h"
 
+#include <HardwareSerial.h>
+
 namespace Graphics
 {
 size_t Console::write(const uint8_t* data, size_t size)
@@ -69,7 +71,19 @@ void Console::update()
 	constexpr FontStyles style{};
 	auto face = lcdFont.getFace(style);
 	auto lineHeight = scale.scaleY(face->height());
-	auto text = new TextObject(display.getSize());
+	Rect bounds(display.getSize());
+	if(cursor.y >= bounds.h - bottomMargin) {
+		bounds.y = bounds.h - bottomMargin;
+		bounds.h = bottomMargin;
+	} else if(cursor.y >= topMargin) {
+		bounds.y = topMargin;
+		bounds.h -= topMargin + bottomMargin;
+	} else {
+		bounds.y = 0;
+		bounds.h = topMargin;
+	}
+	debug_i("cursor (%s), bounds (%s)", cursor.toString().c_str(), bounds.toString().c_str());
+	auto text = new TextObject(bounds);
 	constexpr Color fore(Color::White);
 	constexpr Color back(Color::Black);
 
@@ -90,7 +104,7 @@ void Console::update()
 	// Add a run of text
 	auto addLine = [&]() {
 		if(offset > start) {
-			text->addRun(cursor, pt.x - cursor.x, start, offset - start);
+			text->addRun(cursor - bounds.topLeft(), pt.x - cursor.x, start, offset - start);
 			start = offset;
 		}
 		cursor = pt;
@@ -131,8 +145,9 @@ void Console::update()
 		addLine();
 	}
 
-	// If cursor has extended below bottom of screen then scroll display
-	int overflow = cursor.y + lineHeight - text->bounds.h;
+	// If cursor has moved outside valid area then scroll
+	int overflow = cursor.y + lineHeight - (bounds.y + bounds.h);
+	debug_i("overflow %d", overflow);
 	if(overflow > 0) {
 		cursor.y -= overflow;
 		// scroll display up
@@ -147,7 +162,7 @@ void Console::update()
 		// Remove any elements which have scrolled off top of screen
 		TextObject::RunElement* seg;
 		while((seg = static_cast<TextObject::RunElement*>(text->elements.head()))) {
-			if(seg->pos.y >= 0) {
+			if(seg->pos.y + lineHeight > 0) {
 				break;
 			}
 			text->elements.remove(seg);
@@ -166,6 +181,8 @@ void Console::update()
 	text->elements.insert(new TextObject::TextElement(*textAsset));
 
 	scene->addObject(text);
+
+	MetaWriter(Serial).write(*scene);
 
 	renderQueue.render(scene.get(), [this](SceneObject*) {
 		scene.reset();
