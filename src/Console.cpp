@@ -109,7 +109,7 @@ void Console::update()
 		return;
 	}
 
-	scene = std::make_unique<SceneObject>(display);
+	scene = std::make_unique<SceneObject>(getSectionBounds(getSection(cursor.y)).size()));
 	do {
 		auto item = queue.head();
 		switch(item->command) {
@@ -122,15 +122,10 @@ void Console::update()
 			debug_i("setCursor(%s)", cursor.toString().c_str());
 			break;
 		case Command::setScrollMargins:
-			// Executed immediately so process before starting a new scene
-			if(!scene->objects.isEmpty()) {
-				item = nullptr;
-				break;
-			}
-			if(display.setScrollMargins(item->top, item->bottom)) {
-				topMargin = item->top;
-				bottomMargin = item->bottom;
-			}
+			scene->addObject(new ScrollMarginsObject(item->top, item->bottom));
+			topMargin = item->top;
+			bottomMargin = item->bottom;
+			scrollOffset = item->top;
 			break;
 		case Command::setSection:
 			cursor = getSectionBounds(item->section).topLeft();
@@ -143,9 +138,6 @@ void Console::update()
 			if(paused) {
 				item = nullptr;
 			}
-			break;
-		}
-		if(item == nullptr) {
 			break;
 		}
 		delete queue.pop();
@@ -179,15 +171,31 @@ void Console::writeText(String&& buffer)
 	// Clear unused space at end of line
 	auto clreol = [&](Point pos) {
 		Rect r(pos, text->bounds.w - pos.x, lineHeight);
-		if(r.w != 0) {
-			scene->fillRect(backColor, r);
+		if(r.w == 0) {
+			return;
 		}
+		// Compensate for scroll offset
+		if(section == Section::middle) {
+			r.y -= scrollOffset - bounds.y;
+			if(r.y < 0) {
+				r.y += bounds.h;
+			}
+		}
+		scene->fillRect(backColor, r);
 	};
 
 	// Add a run of text
 	auto addLine = [&]() {
 		if(offset > start) {
-			text->addRun(cursor - bounds.topLeft(), pt.x - cursor.x, start, offset - start);
+			Point cur = cursor - bounds.topLeft();
+			// Compensate for scroll offset
+			// if(section == Section::middle) {
+			// 	cur.y -= scrollOffset - bounds.y;
+			// 	if(cur.y < 0) {
+			// 		cur.y += bounds.h;
+			// 	}
+			// }
+			text->addRun(cur, pt.x - cursor.x, start, offset - start);
 			start = offset;
 		}
 		cursor = pt;
@@ -228,32 +236,46 @@ void Console::writeText(String&& buffer)
 		addLine();
 	}
 
-	// If cursor has moved outside valid area then scroll
-	int overflow = cursor.y + lineHeight - (bounds.y + bounds.h);
-	debug_i("overflow %d", overflow);
-	if(overflow > 0) {
-		cursor.y -= overflow;
-		// scroll display up
-		display.scroll(overflow);
+	if(section == Section::middle) {
+		// If cursor has moved outside valid area then scroll
+		int overflow = cursor.y + lineHeight - (bounds.y + bounds.h);
+		if(overflow > 0) {
+			cursor.y -= overflow;
 
-		// Adjust element positions
-		for(auto& el : text->elements) {
-			auto seg = static_cast<TextObject::RunElement*>(&el);
-			seg->pos.y -= overflow;
-		}
-
-		// Remove any elements which have scrolled off top of screen
-		TextObject::RunElement* seg;
-		while((seg = static_cast<TextObject::RunElement*>(text->elements.head()))) {
-			if(seg->pos.y + lineHeight > 0) {
-				break;
+			// scroll display up
+			scrollOffset += overflow;
+			if(scrollOffset > bounds.bottom()) {
+				scrollOffset -= bounds.h;
 			}
-			text->elements.remove(seg);
+			scene->addObject(new ScrollOffsetObject(scrollOffset));
+
+			// Adjust element positions
+			for(auto& el : text->elements) {
+				auto& seg = el.as<TextObject::RunElement>();
+				auto y = seg.pos.y;
+				// seg->pos.y += overflow;
+				// if(seg->pos.y >= bounds.h) {
+				// 	seg->pos.y -= bounds.h;
+				// }
+
+				debug_i("seg() %u -> %u", y, seg.pos.y);
+			}
+
+			// Remove any elements which have scrolled off top of screen
+			TextObject::RunElement* seg;
+			while((seg = &text->elements.head()->as<TextObject::RunElement>()) != nullptr) {
+				if(seg->pos.y + lineHeight > 0) {
+					break;
+				}
+				text->elements.remove(seg);
+			}
 		}
 
-		// Ensure final line is properly erased
-		clreol(cursor);
+		debug_i("cursor.y %u, scrollOffset %u, overflow %d, csr+off %u", cursor.y, scrollOffset, overflow,
+				cursor.y + scrollOffset);
 	}
+	// Ensure final line is properly erased
+	// clreol(cursor);
 
 	// Move buffer into an asset and add to scene
 	auto textAsset = new TextAsset(std::move(buffer));

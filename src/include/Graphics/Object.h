@@ -915,9 +915,9 @@ public:
 		for(auto& obj : elements) {
 			meta.write(obj);
 			if(obj.kind == Element::Kind::Text) {
-				text = static_cast<const TextElement*>(&obj);
+				text = &obj.as<TextElement>();
 			} else if(obj.kind == Element::Kind::Run) {
-				auto& run = static_cast<const RunElement&>(obj);
+				auto& run = obj.as<RunElement>();
 				String s;
 				s.setLength(run.length);
 				text->text.read(run.offset, s.begin(), s.length());

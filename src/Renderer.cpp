@@ -1956,7 +1956,7 @@ bool TextRenderer::execute(Surface& surface)
 			if(e.kind != TextObject::Element::Kind::Font) {
 				continue;
 			}
-			auto font = static_cast<const TextObject::FontElement&>(e);
+			auto font = e.as<TextObject::FontElement>();
 			size.h = std::max(size.h, uint16_t(font.typeface.height()));
 		}
 		size.w = size.h * 3;
@@ -2008,10 +2008,10 @@ void TextRenderer::getNextRun()
 	for(; element != nullptr; element = element->getNext()) {
 		switch(element->kind) {
 		case TextObject::Element::Kind::Font: {
-			auto elem = static_cast<const TextObject::FontElement*>(element);
-			typeface = &elem->typeface;
-			options.scale = elem->scale;
-			options.style = elem->style;
+			auto& elem = element->as<TextObject::FontElement>();
+			typeface = &elem.typeface;
+			options.scale = elem.scale;
+			options.style = elem.style;
 			if(options.scale.scaleX() <= 1) {
 				options.style -= FontStyle::DotMatrix | FontStyle::VLine;
 			}
@@ -2021,14 +2021,14 @@ void TextRenderer::getNextRun()
 			break;
 		}
 		case TextObject::Element::Kind::Color: {
-			auto elem = static_cast<const TextObject::ColorElement*>(element);
-			options.fore = elem->fore;
-			options.back = elem->back;
+			auto& elem = element->as<TextObject::ColorElement>();
+			options.fore = elem.fore;
+			options.back = elem.back;
 			options.setPixelFormat(pixelFormat);
 			break;
 		}
 		case TextObject::Element::Kind::Run: {
-			run = static_cast<const TextObject::RunElement*>(element);
+			run = &element->as<TextObject::RunElement>();
 			// Skip any runs which fall outside the destination area
 			if(location.pos.y + run->pos.y >= location.dest.h) {
 				run = nullptr;
@@ -2051,17 +2051,17 @@ void TextRenderer::AlphaBuffer::fill()
 
 	for(; element != nullptr; element = element->getNext()) {
 		if(element->kind == TextObject::Element::Kind::Text) {
-			text = &static_cast<const TextObject::TextElement*>(element)->text;
+			text = &element->as<TextObject::TextElement>().text;
 			continue;
 		}
 		if(element->kind == TextObject::Element::Kind::Font) {
-			font = static_cast<const TextObject::FontElement*>(element);
+			font = &element->as<TextObject::FontElement>();
 			continue;
 		}
 		if(element->kind != TextObject::Element::Kind::Run) {
 			continue;
 		}
-		auto run = static_cast<const TextObject::RunElement*>(element);
+		auto run = &element->as<TextObject::RunElement>();
 		while(run->pos.y < ymax && charIndex < run->length) {
 			char ch = text->read(run->offset + charIndex);
 			auto charMetrics = font->typeface.getMetrics(ch);

@@ -30,7 +30,7 @@ bool Target::render(const Object& object, const Rect& location)
 {
 	switch(object.kind()) {
 	case Object::Kind::Reference: {
-		auto obj = static_cast<const ReferenceObject&>(object);
+		auto& obj = object.as<ReferenceObject>();
 		Rect loc = location;
 		loc += obj.pos;
 		loc.w -= obj.pos.x;
@@ -38,28 +38,28 @@ bool Target::render(const Object& object, const Rect& location)
 		return render(obj.object, loc);
 	}
 	case Object::Kind::Rect: {
-		auto& rect = static_cast<const RectObject&>(object);
+		auto& rect = object.as<RectObject>();
 		writer.setPen(rect.pen);
 		writer.moveto(rect.rect.topLeft());
 		writer.drawRect(rect.rect.bottomRight(), rect.radius);
 		break;
 	}
 	case Object::Kind::FilledRect: {
-		auto& rect = static_cast<const FilledRectObject&>(object);
+		auto& rect = object.as<FilledRectObject>();
 		writer.setBrush(rect.brush);
 		writer.moveto(rect.rect.topLeft());
 		writer.fillRect(rect.rect.bottomRight(), rect.radius);
 		break;
 	}
 	case Object::Kind::Line: {
-		auto& line = static_cast<const LineObject&>(object);
+		auto& line = object.as<LineObject>();
 		writer.setPen(line.pen);
 		writer.moveto(line.pt1);
 		writer.lineto(line.pt2);
 		break;
 	}
 	case Object::Kind::Polyline: {
-		auto& line = static_cast<const PolylineObject&>(object);
+		auto& line = object.as<PolylineObject>();
 		writer.setPen(line.pen);
 		if(line.connected) {
 			writer.moveto(line[0]);
@@ -75,47 +75,47 @@ bool Target::render(const Object& object, const Rect& location)
 		break;
 	}
 	case Object::Kind::Circle: {
-		auto& circle = static_cast<const CircleObject&>(object);
+		auto& circle = object.as<CircleObject>();
 		writer.setPen(circle.pen);
 		writer.drawCircle(circle.centre, circle.radius);
 		break;
 	}
 	case Object::Kind::FilledCircle: {
-		auto& circle = static_cast<const FilledCircleObject&>(object);
+		auto& circle = object.as<FilledCircleObject>();
 		writer.setBrush(circle.brush);
 		writer.fillCircle(circle.centre, circle.radius);
 		break;
 	}
 	case Object::Kind::Ellipse: {
-		auto& ellipse = static_cast<const EllipseObject&>(object);
+		auto& ellipse = object.as<EllipseObject>();
 		writer.setPen(ellipse.pen);
 		writer.moveto(ellipse.rect.topLeft());
 		writer.drawEllipse(ellipse.rect.bottomRight());
 		break;
 	}
 	case Object::Kind::FilledEllipse: {
-		auto& ellipse = static_cast<const FilledEllipseObject&>(object);
+		auto& ellipse = object.as<FilledEllipseObject>();
 		writer.setBrush(ellipse.brush);
 		writer.moveto(ellipse.rect.topLeft());
 		writer.fillEllipse(ellipse.rect.bottomRight());
 		break;
 	}
 	case Object::Kind::Arc: {
-		auto& arc = static_cast<const ArcObject&>(object);
+		auto& arc = object.as<ArcObject>();
 		writer.setPen(arc.pen);
 		writer.moveto(arc.rect.topLeft());
 		writer.drawArc(arc.rect.bottomRight(), arc.startAngle, arc.endAngle);
 		break;
 	}
 	case Object::Kind::FilledArc: {
-		auto& arc = static_cast<const FilledArcObject&>(object);
+		auto& arc = object.as<FilledArcObject>();
 		writer.setBrush(arc.brush);
 		writer.moveto(arc.rect.topLeft());
 		writer.fillArc(arc.rect.bottomRight(), arc.startAngle, arc.endAngle);
 		break;
 	}
 	case Object::Kind::Scene: {
-		auto& scene = static_cast<const SceneObject&>(object);
+		auto& scene = object.as<SceneObject>();
 		for(auto& obj : scene.objects) {
 			if(!render(obj, location)) {
 				return false;

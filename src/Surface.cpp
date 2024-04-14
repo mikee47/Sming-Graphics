@@ -36,7 +36,7 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 	// Handled any immediate (simple) drawing
 	switch(object.kind()) {
 	case Object::Kind::Point: {
-		auto obj = static_cast<const PointObject&>(object);
+		auto& obj = object.as<PointObject>();
 		if(obj.brush.isTransparent()) {
 			break;
 		}
@@ -55,7 +55,7 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 
 	case Object::Kind::FilledRect: {
 		// Draw solid filled non-rounded rectangles
-		auto obj = static_cast<const FilledRectObject&>(object);
+		auto& obj = object.as<FilledRectObject>();
 		if(obj.blender || obj.radius != 0 || obj.brush.isTransparent()) {
 			break;
 		}
@@ -67,7 +67,7 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 
 	case Object::Kind::Line: {
 		// Draw horizontal or vertical lines
-		auto obj = static_cast<const LineObject&>(object);
+		auto& obj = object.as<LineObject>();
 		if(obj.pen.isTransparent()) {
 			break;
 		}
@@ -94,12 +94,12 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 	}
 
 	case Object::Kind::ScrollMargins: {
-		auto obj = reinterpret_cast<const ScrollMarginsObject&>(object);
+		auto& obj = object.as<ScrollMarginsObject>();
 		return setScrollMargins(obj.top, obj.bottom);
 	}
 
 	case Object::Kind::ScrollOffset: {
-		auto obj = reinterpret_cast<const ScrollOffsetObject&>(object);
+		auto& obj = object.as<ScrollOffsetObject>();
 		return setScrollOffset(obj.offset);
 	}
 

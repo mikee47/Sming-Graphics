@@ -165,14 +165,14 @@ void MemoryImageSurface::write(uint32_t offset, const void* data, size_t length)
 
 void FileImageSurface::read(uint32_t offset, void* buffer, size_t length)
 {
-	auto& img = static_cast<FileImageObject&>(image);
+	auto& img = image.as<FileImageObject>();
 	img.seek(offset);
 	img.streamPos += file.readBytes(static_cast<uint8_t*>(buffer), length);
 }
 
 void FileImageSurface::write(uint32_t offset, const void* data, size_t length)
 {
-	auto& img = static_cast<FileImageObject&>(image);
+	auto& img = image.as<FileImageObject>();
 	img.seek(offset);
 	img.streamPos += file.write(static_cast<const uint8_t*>(data), length);
 }

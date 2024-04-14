@@ -90,11 +90,11 @@ private:
 			if(asset != nullptr) {
 				switch(asset->type()) {
 				case AssetType::Pen:
-					return *static_cast<const PenAsset*>(asset);
+					return asset->as<PenAsset>();
 				case AssetType::SolidBrush:
-					return static_cast<const SolidBrush*>(asset)->color;
+					return asset->as<SolidBrush>().color;
 				case AssetType::TextureBrush:
-					return static_cast<const TextureBrush*>(asset);
+					return asset->as<TextureBrush>();
 				default:
 					debug_e("[DRAW] Asset #%u is %s, not compatible with Brush", id, ::toString(asset->type()).c_str());
 					return Pen(state.reg.penColor, state.reg.penWidth);

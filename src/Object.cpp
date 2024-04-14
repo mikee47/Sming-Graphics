@@ -62,7 +62,7 @@ Renderer* ReferenceObject::createRenderer(const Location& location) const
 	}
 
 	if(object.kind() == Object::Kind::Image) {
-		auto& image = static_cast<const ImageObject&>(object);
+		auto& image = object.as<ImageObject>();
 		return new ImageCopyRenderer(loc, image, blend);
 	}
 

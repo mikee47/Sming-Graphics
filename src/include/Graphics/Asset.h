@@ -285,7 +285,7 @@ public:
 	{
 	}
 
-	Brush(const TextureBrush* brush) : brush(brush), kind(Kind::Texture)
+	Brush(const TextureBrush& brush) : brush(&brush), kind(Kind::Texture)
 	{
 	}
 
@@ -420,7 +420,7 @@ public:
 	{
 	}
 
-	Pen(const TextureBrush& brush, uint16_t width = 1) : Brush(&brush), width(width)
+	Pen(const TextureBrush& brush, uint16_t width = 1) : Brush(brush), width(width)
 	{
 	}
 

@@ -123,9 +123,9 @@ void TextParser::parse(const TextAsset& asset, uint32_t start, size_t size)
 						if(elem->kind != TextObject::Element::Kind::Run) {
 							continue;
 						}
-						auto seg = static_cast<TextObject::RunElement*>(elem);
-						seg->pos = textpos;
-						textpos.x += seg->width;
+						auto& seg = elem->as<TextObject::RunElement>();
+						seg.pos = textpos;
+						textpos.x += seg.width;
 					}
 				}
 			}
@@ -206,8 +206,8 @@ void TextParser::addTextSegment(Point textpos, uint16_t endx, const TextAsset& a
 			if(elem->kind != TextObject::Element::Kind::Run) {
 				continue;
 			}
-			auto seg = static_cast<TextObject::RunElement*>(elem);
-			seg->pos.x += offset.x;
+			auto& seg = elem->as<TextObject::RunElement>();
+			seg.pos.x += offset.x;
 		}
 	}
 
@@ -217,8 +217,8 @@ void TextParser::addTextSegment(Point textpos, uint16_t endx, const TextAsset& a
 			if(elem->kind != TextObject::Element::Kind::Run) {
 				continue;
 			}
-			auto seg = static_cast<TextObject::RunElement*>(elem);
-			seg->pos.y += offset.y;
+			auto& seg = elem->as<TextObject::RunElement>();
+			seg.pos.y += offset.y;
 		}
 	}
 }

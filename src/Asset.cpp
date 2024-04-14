@@ -469,12 +469,12 @@ const TypeFace* ResourceFont::getFace(FontStyles style) const
 {
 	style &= FontStyle::Bold | FontStyle::Italic;
 	for(auto& f : typefaces) {
-		auto& face = static_cast<const TypeFace&>(f);
+		auto& face = f.as<TypeFace>();
 		if(face.getStyle() == style) {
 			return &face;
 		}
 	}
-	return static_cast<const TypeFace*>(typefaces.head());
+	return &typefaces.head()->as<TypeFace>();
 }
 
 } // namespace Graphics

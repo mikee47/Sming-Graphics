@@ -402,17 +402,17 @@ Rect scrollRect;
 
 void doScroll(SceneObject* scene)
 {
-	auto scroll = static_cast<ScrollObject*>(scene->objects.head());
+	auto& scroll = scene->objects.head()->as<ScrollObject>();
 	switch(scrollCount) {
 	case 24:
-		scroll->shift.y = -scroll->shift.y;
+		scroll.shift.y = -scroll.shift.y;
 		break;
 	case 48:
-		scroll->shift.x = -scroll->shift.x;
+		scroll.shift.x = -scroll.shift.x;
 		break;
 	case 72:
-		scroll->wrapx = false;
-		// scroll->wrapy = false;
+		scroll.wrapx = false;
+		// scroll.wrapy = false;
 		break;
 	case 96:
 		delete scene;
@@ -513,7 +513,7 @@ void showFonts()
 	auto brush = new GradientBrush(BrushStyle::FullScreen, Color::Yellow, Color::Red);
 	scene->addAsset(brush);
 	TextBuilder text(*scene);
-	text.setColor(brush);
+	text.setColor(*brush);
 	text.setWrap(false);
 	text.setCursor(cursor);
 
@@ -522,8 +522,8 @@ void showFonts()
 		text.setFont(font);
 		auto brush = new GradientBrush(BrushStyle::FullScreen, ColorRange::random(), ColorRange::random());
 		scene->addAsset(brush);
-		text.setColor(brush);
-		debug_i("showFont: %s", font->name().c_str());
+		text.setColor(*brush);
+		debug_i("Font: %s", font->name().c_str());
 		text.println(font->name());
 	};
 
@@ -592,7 +592,7 @@ void showFontStyles()
 	// auto brush = new ImageBrush(bitmap);
 	scene->addAsset(brush);
 
-	text.setColor(brush, Color::Black);
+	text.setColor(*brush, Color::Black);
 
 	auto print = [&](FontStyles style) {
 		text.setStyle(style);
@@ -905,7 +905,7 @@ void memoryImageDrawing()
 	uint16_t r{120};
 	auto pt = Rect(scene->getSize()).centre();
 	auto brush = scene->addAsset(new GradientBrush(BrushStyle::FullScreen, Color::Red, Color::White));
-	scene->fillCircle(brush, pt + Point(0, -r / 2), r);
+	scene->fillCircle(*brush, pt + Point(0, -r / 2), r);
 	scene->fillCircle(makeColor(Color::GREEN, a), pt + Point(-r / 2, r / 2), r);
 	scene->fillCircle(makeColor(Color::BLUE, a), pt + Point(r / 2, r / 2), r);
 
@@ -1134,7 +1134,7 @@ void imageBrushTests()
 
 	Rect r = scene->getSize();
 	r.inflate(-50);
-	scene->fillRect(brush, r, 20);
+	scene->fillRect(*brush, r, 20);
 	scene->fillRect(makeColor(Color::Red, 20), r, 20);
 
 	TextBuilder text(*scene);

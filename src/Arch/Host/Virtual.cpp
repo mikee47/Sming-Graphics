@@ -496,7 +496,7 @@ public:
 			switch(object.kind()) {
 			case Object::Kind::FilledRect: {
 				// Handle small transparent fills using display list
-				auto obj = static_cast<const FilledRectObject&>(object);
+				auto& obj = object.as<FilledRectObject>();
 				if(obj.blender || obj.radius != 0 || !obj.brush.isTransparent()) {
 					break;
 				}
@@ -508,12 +508,12 @@ public:
 				return list.writeCommand(cmd);
 			}
 			case Object::Kind::Copy: {
-				auto obj = static_cast<const CopyObject&>(object);
+				auto& obj = object.as<CopyObject>();
 				Command::CopyPixels cmd{obj.source, obj.dest};
 				return list.writeCommand(cmd);
 			}
 			case Object::Kind::Scroll: {
-				auto obj = static_cast<const ScrollObject&>(object);
+				auto& obj = object.as<ScrollObject>();
 				Command::Scroll cmd{obj.area, obj.shift, obj.wrapx, obj.wrapy, pack(obj.fill, PixelFormat::BGR24)};
 				return list.writeCommand(cmd);
 			}
