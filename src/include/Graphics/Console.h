@@ -30,6 +30,12 @@ namespace Graphics
 class Console : public Print
 {
 public:
+	enum class Section {
+		top,
+		middle,
+		bottom,
+	};
+
 	/**
 	 * @brief Console constructor
 	 * @param display Output device
@@ -70,16 +76,28 @@ public:
 		return write(&c, 1);
 	}
 
-	bool setScrollMargins(uint16_t top, uint16_t bottom)
+	bool setScrollMargins(uint16_t top, uint16_t bottom);
+
+	void setCursor(Point pt)
 	{
-		if(!display.setScrollMargins(top, bottom)) {
-			return false;
-		}
-		topMargin = top;
-		bottomMargin = bottom;
-		cursor.y = topMargin;
-		return true;
+		debug_i("setCursor(%s)", pt.toString().c_str());
+		cursor = pt;
 	}
+
+	void moveTo(Section section)
+	{
+		setCursor(getSectionBounds(section).topLeft());
+	}
+
+	Point getCursor() const
+	{
+		return cursor;
+	}
+
+	void clear();
+
+	Rect getSectionBounds(Section section);
+	Section getSection(uint16_t line);
 
 private:
 	void update();

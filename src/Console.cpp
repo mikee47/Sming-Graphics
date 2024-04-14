@@ -26,6 +26,61 @@
 
 namespace Graphics
 {
+namespace
+{
+constexpr FontStyles fontStyle{};
+constexpr Color foreColor(Color::White);
+constexpr Color backColor(Color::Black);
+constexpr Font& font{lcdFont};
+Scale fontScale{1, 2};
+} // namespace
+
+bool Console::setScrollMargins(uint16_t top, uint16_t bottom)
+{
+	if(!display.setScrollMargins(top, bottom)) {
+		return false;
+	}
+	topMargin = top;
+	bottomMargin = bottom;
+	cursor.y = topMargin;
+	return true;
+}
+
+Console::Section Console::getSection(uint16_t line)
+{
+	Size sz{display.getSize()};
+	if(cursor.y + bottomMargin >= sz.h) {
+		return Section::bottom;
+	}
+	if(cursor.y >= topMargin) {
+		return Section::middle;
+	}
+	return Section::top;
+}
+
+Rect Console::getSectionBounds(Section section)
+{
+	Size sz{display.getSize()};
+	switch(section) {
+	case Section::top:
+		return Rect(0, 0, sz.w, topMargin);
+	case Section::middle:
+		return Rect(0, topMargin, sz.w, sz.h - (topMargin + bottomMargin));
+	case Section::bottom:
+		return Rect(0, sz.h - bottomMargin, sz.w, bottomMargin);
+	default:
+		return Rect{};
+	}
+}
+
+void Console::clear()
+{
+	auto scene = new SceneObject(display);
+	auto section = getSection(cursor.y);
+	scene->fillRect(backColor, getSectionBounds(section));
+	renderQueue.render(scene, [](SceneObject* scene) { delete scene; });
+}
+
 size_t Console::write(const uint8_t* data, size_t size)
 {
 	auto str = reinterpret_cast<const char*>(data);
@@ -67,25 +122,12 @@ void Console::update()
 	}
 
 	scene = std::make_unique<SceneObject>(display);
-	Scale scale{1, 2};
-	constexpr FontStyles style{};
-	auto face = lcdFont.getFace(style);
-	auto lineHeight = scale.scaleY(face->height());
-	Rect bounds(display.getSize());
-	if(cursor.y >= bounds.h - bottomMargin) {
-		bounds.y = bounds.h - bottomMargin;
-		bounds.h = bottomMargin;
-	} else if(cursor.y >= topMargin) {
-		bounds.y = topMargin;
-		bounds.h -= topMargin + bottomMargin;
-	} else {
-		bounds.y = 0;
-		bounds.h = topMargin;
-	}
+	auto face = font.getFace(fontStyle);
+	auto lineHeight = fontScale.scaleY(face->height());
+	auto section = getSection(cursor.y);
+	auto bounds = getSectionBounds(section);
 	debug_i("cursor (%s), bounds (%s)", cursor.toString().c_str(), bounds.toString().c_str());
 	auto text = new TextObject(bounds);
-	constexpr Color fore(Color::White);
-	constexpr Color back(Color::Black);
 
 	Point pt = cursor;
 	auto len = buffer.length();
@@ -97,7 +139,7 @@ void Console::update()
 	auto clreol = [&](Point pos) {
 		Rect r(pos, text->bounds.w - pos.x, lineHeight);
 		if(r.w != 0) {
-			scene->fillRect(back, r);
+			scene->fillRect(backColor, r);
 		}
 	};
 
@@ -131,7 +173,7 @@ void Console::update()
 		}
 		buf[offset++] = c;
 		auto metrics = face->getMetrics(c);
-		auto adv = scale.scaleX(metrics.advance);
+		auto adv = fontScale.scaleX(metrics.advance);
 		if(pt.x + adv > text->bounds.w) {
 			addLine();
 			cursor.x = 0;
@@ -176,13 +218,13 @@ void Console::update()
 	auto textAsset = new TextAsset(std::move(buffer));
 	scene->addAsset(textAsset);
 	// Insert config. elements ahead of runs
-	text->elements.insert(new TextObject::FontElement(*face, scale, style));
-	text->elements.insert(new TextObject::ColorElement(fore, back));
+	text->elements.insert(new TextObject::FontElement(*face, fontScale, fontStyle));
+	text->elements.insert(new TextObject::ColorElement(foreColor, backColor));
 	text->elements.insert(new TextObject::TextElement(*textAsset));
 
 	scene->addObject(text);
 
-	MetaWriter(Serial).write(*scene);
+	// MetaWriter(Serial).write(*scene);
 
 	renderQueue.render(scene.get(), [this](SceneObject*) {
 		scene.reset();
