@@ -341,11 +341,10 @@ struct PropertySet {
 			textBuilder.commit(scene);
 			textBuilder.commit(scene);
 		} else if(type == "Image") {
-			// xoff
-			// yoff
 			auto img = resourceMap.getImage(image);
 			if(img) {
-				scene.drawImage(*img, {x, y});
+				auto r = rect();
+				scene.drawObject(*img, r, Point{xoff, yoff});
 			}
 		} else if(type == "Button") {
 			scene.addObject(new CustomButton(*this));
@@ -507,7 +506,7 @@ void processLine(TcpClient& client, String& line)
 				resourceStream.reset();
 				break;
 			}
-			resourceStream = std::make_unique<Storage::PartitionStream>(part, true);
+			resourceStream = std::make_unique<Storage::PartitionStream>(part, Storage::Mode::BlockErase);
 			resourceSize = 0;
 			Serial << "** Writing resource bitmap" << endl;
 			break;
