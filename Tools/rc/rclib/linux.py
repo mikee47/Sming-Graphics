@@ -34,18 +34,18 @@ def parse_typeface(typeface):
 
     # Strip comments
     # https://blog.ostermiller.org/finding-comments-in-source-code-using-regular-expressions/
-    p = re.compile('(?:/\*(?:[^*]|(?:\*+[^*/]))*\*+/)|(?://.*)')
+    p = re.compile(r'(?:/\*(?:[^*]|(?:\*+[^*/]))*\*+/)|(?://.*)')
     data = p.sub('', data)
 
     # Bitmap
-    p = re.compile('const struct font_data (.+) = {\s+{.*},\s+{([\s\S^}]*?)}')
+    p = re.compile(r'const struct font_data (.+) = {\s+{.*},\s+{([\s\S^}]*?)}')
     m = p.search(data)
     bitmap = compact_string(m.groups()[1])
     bitmap = bitmap.rstrip(',')
     bitmap = bytearray([int(num, 0) for num in bitmap.split(',')])
 
     # Typeface
-    p = re.compile('const struct font_desc (.+) = {([\s\S^}]*)};')
+    p = re.compile(r'const struct font_desc (.+) = {([\s\S^}]*)};')
     m = p.search(data)
     desc = compact_string(m.groups()[1])
     # print("desc = %s" % desc)
