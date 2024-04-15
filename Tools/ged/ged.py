@@ -1071,9 +1071,9 @@ def run():
         layout.load(data['project'])
         for k, v in data['project'].items():
             project_editor.fields[k].set_value(v)
-        font_assets.load(data['fonts'])
+        font_assets.load(data.get('fonts', {}))
         font_editor.update()
-        image_assets.load(data['images'])
+        image_assets.load(data.get('images', {}))
         image_editor.update()
         layout.display_list = []
         display_list = dl_deserialise(data['layout'])
