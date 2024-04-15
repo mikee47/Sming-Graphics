@@ -1,0 +1,369 @@
+{
+    "project": {
+        "width": 320,
+        "height": 240,
+        "scale": 1.7,
+        "orientation": 0,
+        "grid_alignment": 5
+    },
+    "fonts": {
+        "font1": {
+            "family": "Noto Sans Mono",
+            "size": 10,
+            "mono": true,
+            "normal": "Regular",
+            "bold": "",
+            "italic": "",
+            "boldItalic": ""
+        }
+    },
+    "layout": {
+        "FilledRect_1": {
+            "type": "FilledRect",
+            "x": 0,
+            "y": 0,
+            "w": 200,
+            "h": 48,
+            "color": "olive",
+            "radius": 0
+        },
+        "FilledRect_2": {
+            "type": "FilledRect",
+            "x": 204,
+            "y": 0,
+            "w": 118,
+            "h": 48,
+            "color": "red",
+            "radius": 0
+        },
+        "FilledRect_3": {
+            "type": "FilledRect",
+            "x": 104,
+            "y": 50,
+            "w": 216,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_4": {
+            "type": "FilledRect",
+            "x": 0,
+            "y": 50,
+            "w": 100,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_5": {
+            "type": "FilledRect",
+            "x": 0,
+            "y": 82,
+            "w": 100,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_6": {
+            "type": "FilledRect",
+            "x": 104,
+            "y": 82,
+            "w": 216,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_7": {
+            "type": "FilledRect",
+            "x": 0,
+            "y": 146,
+            "w": 100,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_8": {
+            "type": "FilledRect",
+            "x": 104,
+            "y": 146,
+            "w": 216,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_9": {
+            "type": "FilledRect",
+            "x": 0,
+            "y": 114,
+            "w": 100,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_10": {
+            "type": "FilledRect",
+            "x": 104,
+            "y": 114,
+            "w": 216,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_11": {
+            "type": "FilledRect",
+            "x": 0,
+            "y": 210,
+            "w": 100,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_12": {
+            "type": "FilledRect",
+            "x": 104,
+            "y": 178,
+            "w": 216,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_13": {
+            "type": "FilledRect",
+            "x": 0,
+            "y": 178,
+            "w": 100,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "FilledRect_14": {
+            "type": "FilledRect",
+            "x": 104,
+            "y": 210,
+            "w": 216,
+            "h": 28,
+            "color": "darkcyan",
+            "radius": 0
+        },
+        "Text_1": {
+            "type": "Text",
+            "x": 5,
+            "y": 5,
+            "w": 380,
+            "h": 40,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "Sming is the framework",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 3
+        },
+        "Text_2": {
+            "type": "Text",
+            "x": 15,
+            "y": 56,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "a0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_3": {
+            "type": "Text",
+            "x": 119,
+            "y": 56,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_4": {
+            "type": "Text",
+            "x": 15,
+            "y": 88,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "b0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_5": {
+            "type": "Text",
+            "x": 119,
+            "y": 88,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_6": {
+            "type": "Text",
+            "x": 15,
+            "y": 120,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "c0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_7": {
+            "type": "Text",
+            "x": 119,
+            "y": 120,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_8": {
+            "type": "Text",
+            "x": 15,
+            "y": 152,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "d0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_9": {
+            "type": "Text",
+            "x": 119,
+            "y": 152,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_10": {
+            "type": "Text",
+            "x": 15,
+            "y": 184,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "e0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_11": {
+            "type": "Text",
+            "x": 119,
+            "y": 184,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_12": {
+            "type": "Text",
+            "x": 15,
+            "y": 216,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "f0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        },
+        "Text_13": {
+            "type": "Text",
+            "x": 119,
+            "y": 216,
+            "w": 60,
+            "h": 20,
+            "back_color": "#00000000",
+            "color": "white",
+            "font": "font1",
+            "text": "0",
+            "halign": "Left",
+            "valign": "Top",
+            "fontstyle": [
+                "DotMatrix"
+            ],
+            "fontscale": 2
+        }
+    }
+}
