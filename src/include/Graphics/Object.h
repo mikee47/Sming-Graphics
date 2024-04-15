@@ -155,6 +155,11 @@ public:
 	{
 	}
 
+	ReferenceObject(const Object& object, const Rect& pos, const Point& sourceOffset, const Blend* blend = nullptr)
+		: object(object), pos(pos), sourceOffset(sourceOffset), blend{blend}
+	{
+	}
+
 	void write(MetaWriter& meta) const override
 	{
 		meta.write("pos", pos);
@@ -165,6 +170,7 @@ public:
 
 	const Object& object;
 	Rect pos;
+	Point sourceOffset;
 	const Blend* blend;
 };
 

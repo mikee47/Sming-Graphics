@@ -50,6 +50,7 @@ String Object::getTypeStr() const
 Renderer* ReferenceObject::createRenderer(const Location& location) const
 {
 	Location loc(location);
+	loc.source += sourceOffset;
 	auto& r = loc.dest;
 	r += pos.topLeft();
 	r.w -= pos.x;
