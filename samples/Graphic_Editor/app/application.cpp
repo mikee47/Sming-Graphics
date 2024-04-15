@@ -108,7 +108,7 @@ public:
 			return static_cast<const Font*>(obj);
 		}
 
-		auto data = findResource(name);
+		auto data = findResource(name, "Font");
 		if(!data) {
 			return nullptr;
 		}
@@ -131,7 +131,7 @@ public:
 			return static_cast<const ImageObject*>(obj);
 		}
 
-		auto data = findResource(name);
+		auto data = findResource(name, "Image");
 		if(!data) {
 			return nullptr;
 		}
@@ -167,7 +167,7 @@ private:
 		return info->object.get();
 	}
 
-	const void* findResource(const String& name)
+	const void* findResource(const String& name, const String& type)
 	{
 		if(!map) {
 			Serial << "Resource map not initialised" << endl;
@@ -176,7 +176,7 @@ private:
 
 		auto data = (*map)[name];
 		if(!data) {
-			Serial << "Resource '" << name << "' not found" << endl;
+			Serial << type << " resource '" << name << "' not found" << endl;
 			return nullptr;
 		}
 
