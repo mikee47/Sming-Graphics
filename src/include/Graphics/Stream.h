@@ -68,11 +68,11 @@ public:
 	{
 		int sourceSize = source.seekFrom(0, SeekOrigin::End);
 		if(sourceSize < int(offset)) {
-			size = 0;
+			this->size = 0;
 			return;
 		}
 
-		size = std::min(size, size_t(sourceSize - offset));
+		this->size = std::min(size, size_t(sourceSize - offset));
 
 		source.seekFrom(offset, SeekOrigin::Start);
 	}
