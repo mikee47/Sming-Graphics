@@ -251,7 +251,7 @@ bool Brush::setPixel(Surface& surface, const Location& loc) const
 	if(isSolid()) {
 		return surface.setPixel(getPackedColor(), loc.destPos());
 	}
-	PackedColor color;
+	PackedColor color{};
 	writePixel(loc, &color);
 	return surface.setPixel(color, loc.destPos());
 }

@@ -94,7 +94,7 @@ void Writer::write(OpCode op, uint8_t off, uint32_t value)
 		type = Header::Type::uint8;
 	}
 	auto shift = uint8_t(type);
-	Header hdr{uint8_t(uint8_t(off) >> shift), type, op, value};
+	Header hdr{{uint8_t(uint8_t(off) >> shift), type, op, value}};
 	write(&hdr, 1 + (1 << shift));
 }
 

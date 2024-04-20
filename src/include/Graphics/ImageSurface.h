@@ -138,7 +138,7 @@ public:
 	{
 	}
 
-	Type getType() const
+	Type getType() const override
 	{
 		return Type::File;
 	}

@@ -858,7 +858,7 @@ public:
 	{
 	}
 
-	Kind kind() const
+	Kind kind() const override
 	{
 		return Kind::Glyph;
 	}

@@ -199,7 +199,7 @@ class MipiSurface : public Graphics::Surface
 public:
 	MipiSurface(MipiDisplay& display, size_t bufferSize);
 
-	Type getType() const
+	Type getType() const override
 	{
 		return Type::Device;
 	}

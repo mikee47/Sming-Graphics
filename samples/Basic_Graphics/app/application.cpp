@@ -810,7 +810,7 @@ void filledArcAnimation(SceneObject* scene = nullptr)
 
 void timeRender(Object::Kind kind, TextBuilder& text)
 {
-	Display::NullDevice device;
+	Graphics::Display::NullDevice device;
 	device.setOrientation(landscape);
 	auto size = device.getSize();
 	Location loc{size};

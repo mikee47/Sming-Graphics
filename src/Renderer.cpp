@@ -582,7 +582,6 @@ bool RoundedRectRenderer::execute(Surface& surface)
 			return true;
 		}
 
-		// renderer = std::make_unique<CircleRenderer>(location, pen, corners[state], radius, 0, 0x01 << state);
 		++state;
 	}
 

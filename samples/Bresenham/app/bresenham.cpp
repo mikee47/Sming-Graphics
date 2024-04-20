@@ -881,7 +881,7 @@ void plotQuadRationalBezierSegAA(int x0, int y0, int x1, int y1, int x2, int y2,
 			ed += 2 * ed * cur * cur / (4. * ed * ed + cur * cur); /* approximate error distance */
 			x1 = 255 * fabs(err - dx - dy + xy) / ed;			   /* get blend value by pixel error */
 			if(x1 < 256)
-				setPixelAA(x0, y0, x1); /* plot curve */
+				setPixelAA(x0, y0, x1);  /* plot curve */
 			if((f = 2 * err + dy < 0)) { /* y step */
 				if(y0 == y2)
 					return; /* last pixel -> curve finished */

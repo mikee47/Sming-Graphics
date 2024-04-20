@@ -76,7 +76,6 @@ struct ReadPixelInfo {
 			[](void* param) {
 				auto info = static_cast<ReadPixelInfo*>(param);
 				info->readComplete();
-				// memset(info, 0, sizeof(*info));
 				delete info;
 			},
 			info);
@@ -372,7 +371,7 @@ public:
 	{
 	}
 
-	Type getType() const
+	Type getType() const override
 	{
 		return Type::Device;
 	}
@@ -431,7 +430,7 @@ public:
 		return list.setPixel(color, 3, pt);
 	}
 
-	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param)
+	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param) override
 	{
 		if(buffer.format == PixelFormat::None) {
 			buffer.format = PixelFormat::BGR24;

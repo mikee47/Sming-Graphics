@@ -8,7 +8,6 @@ namespace Graphics
 namespace
 {
 constexpr int16_t Z_THRESHOLD{400};
-constexpr int16_t Z_THRESHOLD_INT{75};
 constexpr uint32_t clockSpeed{2000000};
 
 XPT2046* isrTouch;
@@ -35,8 +34,6 @@ enum Control {
 	PD2 = 2,
 	PD3 = 3,
 };
-
-constexpr uint8_t ctrl{DER | mode12 | Start};
 
 #define COMMAND(powermode, addr) ((DER | mode12 | Start | powermode | addr) << 8),
 

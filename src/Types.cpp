@@ -22,14 +22,6 @@
 #include "include/Graphics/Types.h"
 #include <Data/CStringArray.h>
 
-namespace
-{
-#ifndef M_PI
-constexpr float M_PI{3.14159265358979};
-#endif
-
-} // namespace
-
 String toString(Graphics::Orientation orientation)
 {
 	return String(unsigned(orientation) * 90);

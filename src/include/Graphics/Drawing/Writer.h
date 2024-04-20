@@ -201,7 +201,6 @@ private:
 	Registers active;
 	Point pt1{};
 	Point pt2{};
-	int16_t angle{};
 	uint16_t subIndex{0};
 };
 

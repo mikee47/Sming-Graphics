@@ -463,7 +463,7 @@ class CircleRenderer : public Renderer
 {
 public:
 	CircleRenderer(const Location& location, const CircleObject& object)
-		: CircleRenderer(location, object.pen, object.centre, object.radius, 0, 0x0f)
+		: CircleRenderer(location, object.pen, object.centre, object.radius, 0x0f)
 	{
 		pixels.add(x0, y0 + y);
 		pixels.add(x0, y0 - y);
@@ -474,10 +474,9 @@ public:
 	/**
 	 * @brief Used to draw corners only
 	 */
-	CircleRenderer(const Location& location, const Pen& pen, Point centre, uint16_t radius, uint16_t delta,
-				   uint8_t corners)
+	CircleRenderer(const Location& location, const Pen& pen, Point centre, uint16_t radius, uint8_t corners)
 		: Renderer(location), pixels(location.dest, pen, 8), x0(centre.x), y0(centre.y), f(1 - radius), ddF_x(1),
-		  ddF_y(-2 * radius), x(0), y(radius), delta(delta), corners(corners)
+		  ddF_y(-2 * radius), x(0), y(radius), corners(corners)
 	{
 	}
 
@@ -492,7 +491,6 @@ private:
 	int16_t ddF_y;
 	int16_t x;
 	int16_t y;
-	uint16_t delta;
 	uint8_t corners;
 };
 
@@ -542,7 +540,6 @@ private:
 	uint16_t delta;
 	uint8_t quadrants;
 	Location loc;
-	uint16_t pixelsToWrite{0};
 };
 
 /**

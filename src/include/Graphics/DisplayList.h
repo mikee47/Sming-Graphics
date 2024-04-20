@@ -465,10 +465,10 @@ protected:
 	{
 		// debug_i("%p writeHeader(%s, %u)", this, toString(code).c_str(), length);
 		if(length < Header::lenMax) {
-			Header hdr{code, uint8_t(length)};
+			Header hdr{{code, uint8_t(length)}};
 			write(hdr.u8);
 		} else {
-			Header hdr{code, Header::lenMax};
+			Header hdr{{code, Header::lenMax}};
 			write(hdr.u8);
 			writeVar(length);
 		}

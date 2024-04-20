@@ -38,7 +38,7 @@ public:
 	{
 	}
 
-	Type getType() const
+	Type getType() const override
 	{
 		return Type::Device;
 	}
@@ -102,7 +102,7 @@ public:
 		return true;
 	}
 
-	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param)
+	int readDataBuffer(ReadBuffer& buffer, ReadStatus* status, ReadCallback callback, void* param) override
 	{
 		auto& addrWindow = device.addrWindow;
 		auto sz = addrWindow.bounds.size();

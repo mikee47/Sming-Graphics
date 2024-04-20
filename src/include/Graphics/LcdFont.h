@@ -83,7 +83,7 @@ public:
 		return LcdGlyph::rawSize.h;
 	}
 
-	const TypeFace* getFace(FontStyles style) const
+	const TypeFace* getFace(FontStyles style) const override
 	{
 		(void)style;
 		return &typeface;

@@ -203,7 +203,7 @@ public:
 		meta.write("color2", color2);
 	}
 
-	size_t readPixels(const Location& loc, PixelFormat format, void* buffer, uint16_t pixelCount) const;
+	size_t readPixels(const Location& loc, PixelFormat format, void* buffer, uint16_t pixelCount) const override;
 
 	String getTypeStr() const override
 	{
