@@ -44,7 +44,7 @@
 #define GDRAW_TYPE(type) GDRAW_FIELD(Header::type, 4)
 #define GDRAW_CMD(cmd) GDRAW_OPCODE(OpCode::execute) | GDRAW_TYPE(Type::uint8) | uint8_t(Graphics::Drawing::cmd),
 #define GDRAW_UINT16(value) uint8_t(value), uint8_t((value) >> 8),
-#define GDRAW_INT16(value) uint8_t(abs(value)), uint8_t(abs(value) >> 8),
+#define GDRAW_INT16(value) uint8_t(value), uint8_t(uint16_t(value) >> 8),
 #define GDRAW_UINT32(value) uint8_t(value), uint8_t((value) >> 8), uint8_t((value) >> 16), uint8_t((value) >> 24),
 #define GDRAW_MAKE_UINT32(w1, w2) (uint32_t(w2) << 16) | uint32_t(w1)
 #define GDRAW_REGDEF(reg, size) uint8_t(offsetof(Graphics::Drawing::Registers, reg) / size)
