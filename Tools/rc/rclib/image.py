@@ -19,11 +19,11 @@ class Image(Resource):
         self.format = None
         self.headerSize = 0
 
-    def serialize(self, bmOffset, res_offset):
+    def serialize(self, bmOffset, res_offset, ptr64: bool):
         """struct ImageResource"""
         fmt = PixelFormat[self.format.upper()].value
         print(f'image {self.name} format {self.format} {fmt}')
-        return struct.pack('<IIIHHI',
+        return struct.pack('<QIIHHI' if ptr64 else '<IIIHHI',
             0, # FSTR::String* name
             bmOffset,
             len(self.bitmap),

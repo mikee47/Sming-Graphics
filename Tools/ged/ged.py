@@ -1193,7 +1193,7 @@ def run():
 
         print(json_dumps(resources))
 
-        def build_resource_index(data, res_offset):
+        def build_resource_index(data, res_offset, ptr64: bool):
             """
             Resource map is FSTR_VECTOR so we can refer to resources by name
             Alternative is using indices, but names are easier for debugging
@@ -1218,7 +1218,7 @@ def run():
                 aligned_length = 4 * ((len(data) + 3) // 4)
                 return data.ljust(aligned_length, b'\0')
 
-            PAIR_SIZE = 8
+            PAIR_SIZE = 16 if ptr64 else 8
             map_struct_size = 4 + len(data) * PAIR_SIZE
             res_offset += map_struct_size
             res_offsets = []
@@ -1226,7 +1226,7 @@ def run():
             bmOffset = 0
             for item in data:
                 res_offsets.append(res_offset)
-                itemdata = align_up(item.serialize(bmOffset, res_offset))
+                itemdata = align_up(item.serialize(bmOffset, res_offset, ptr64))
                 res_offset += len(itemdata)
                 resdata += itemdata
                 bmOffset += item.get_bitmap_size()
@@ -1234,37 +1234,43 @@ def run():
             resmap = struct.pack('<I', len(data) * PAIR_SIZE)
             resnames = b''
             for i, item in enumerate(data):
-                resmap += struct.pack('<II', res_offset, res_offsets[i])
+                resmap += struct.pack('<QQ' if ptr64 else '<II', res_offset, res_offsets[i])
                 name = item.name.encode()
                 namedata = struct.pack('<I', len(name)) + align_up(name)
                 res_offset += len(namedata)
                 resdata += namedata
             return resmap + resdata
 
-        print('Building resource data ...')
-        data = rclib.parse(resources)
-        index = build_resource_index(data, 0)
+        def get_resaddr(size) -> tuple[int, bool]:
+            client.send_line(f'@:resaddr;size={size};')
+            rsp = client.recv_line()
+            print("RESADDR:", rsp)
+            if rsp.startswith('@:'):
+                rsp = rsp[2:]
+                res_offset = 0
+                ptr64 = False
+                while rsp:
+                    tag, _, rsp = rsp.partition('=')
+                    value, _, rsp = rsp.partition(';')
+                    if tag == 'ptr64':
+                        ptr64 = True
+                    elif tag == 'addr':
+                        res_offset = int(value, 0)
+                        if res_offset == 0 and size != 0:
+                            raise ValueError('Resource index too big!')
+                        return res_offset, ptr64
+            raise ValueError('BAD RESPONSE')
 
         print("Connecting ...")
         client = remote.Client(layout.client)
 
-        client.send_line(f'@:resaddr;size={len(index)};')
-        rsp = client.recv_line()
-        print("RESADDR:", rsp)
+        res_addr, ptr64 = get_resaddr(0)
 
-        if not rsp.startswith('@:'):
-            print("BAD RESPONSE")
-        else:
-            while rsp:
-                tag, _, rsp = rsp[2:].partition('=')
-                value, _, rsp = rsp.partition(';')
-                if tag == 'addr':
-                    res_offset = int(value, 0)
-                    if res_offset == 0:
-                        raise ValueError('Resource index too big!')
-                    index = build_resource_index(data, res_offset)
-                    break
-
+        print('Building resource data ...')
+        data = rclib.parse(resources)
+        index = build_resource_index(data, 0, ptr64)
+        res_addr, _ = get_resaddr(len(index))
+        index = build_resource_index(data, res_addr, ptr64)
 
         def send_resource(kind, data):
             client.send_line(f'@:{kind}')

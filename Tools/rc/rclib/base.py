@@ -43,6 +43,10 @@ class StructSize(enum.IntEnum):
     Typeface = 16,
     Font = 24,
     Image = 20,
+    # These values are used for 64-bit host builds
+    Typeface64 = 24,
+    Font64 = 44,
+    Image64 = 24,
 
 
 def compact_string(s):

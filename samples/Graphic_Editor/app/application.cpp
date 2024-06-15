@@ -199,7 +199,7 @@ uint32_t hexValue(const String& s)
 	return strtoul(s.c_str(), nullptr, 16);
 }
 
-class PropertySet;
+struct PropertySet;
 
 class CustomLabel : public Label
 {
@@ -487,8 +487,12 @@ void processLine(TcpClient& client, String& line)
 			scene = nullptr;
 			auto buffer = resourceMap.reset(props.size);
 			String line;
-			line += "@:addr=0x";
-			line += String(uint32_t(buffer), HEX);
+			line += "@:";
+			if (sizeof(uintptr_t) == 8) {
+				line += "ptr64=;";
+			}
+			line += "addr=0x";
+			line += String(uintptr_t(buffer), HEX);
 			line += ";\n";
 			client.sendString(line);
 			break;

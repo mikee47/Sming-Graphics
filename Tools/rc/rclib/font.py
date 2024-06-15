@@ -161,21 +161,22 @@ class Typeface(Resource):
         self.glyphs = []
         self.headerSize = 0
 
-    def serialize(self, bmOffset, res_offset):
+    def serialize(self, bmOffset, res_offset, ptr64: bool):
         glyph_data = self.serialize_glyphs()
         block_data = self.serialize_glyph_blocks()
 
         # `struct TypefaceResource'
-        face_res = struct.pack('<IBBBBII',
+        typefaceSize = StructSize.Typeface64 if ptr64 else StructSize.Typeface
+        face_res = struct.pack('<IBBBBQQ' if ptr64 else '<IBBBBII',
             bmOffset,
             FontStyle.evaluate(self.style),
             self.yAdvance,
             self.descent,
             len(block_data) // StructSize.GlyphBlock,
-            res_offset + StructSize.Typeface,
-            res_offset + StructSize.Typeface + len(glyph_data)
+            res_offset + typefaceSize,
+            res_offset + typefaceSize + len(glyph_data)
         )
-        assert(len(face_res) == StructSize.Typeface)
+        assert(len(face_res) == typefaceSize)
 
         return face_res + glyph_data + block_data
 
@@ -299,27 +300,28 @@ class Font(Resource):
         self.descent = 0
         self.headerSize = 0
 
-    def serialize(self, bmOffset, res_offset):
+    def serialize(self, bmOffset, res_offset, ptr64: bool):
         resdata = b''
         face_offsets = []
+        fontSize = StructSize.Font64 if ptr64 else StructSize.Font
         for typeface in self.typefaces:
             # print(typeface.name)
-            offset = res_offset + StructSize.Font + len(resdata)
+            offset = res_offset + fontSize + len(resdata)
             face_offsets.append(offset)
-            resdata += typeface.serialize(bmOffset, offset)
+            resdata += typeface.serialize(bmOffset, offset, ptr64)
             bmOffset += typeface.get_bitmap_size()
         while len(face_offsets) < 4:
             face_offsets.append(0)
 
         # `struct FontResource`
-        font_res = struct.pack('<IBB2B4I',
+        font_res = struct.pack('<QBB2B4Q' if ptr64 else '<IBB2B4I',
             0,
             self.yAdvance,
             self.descent,
             0, 0,
             *face_offsets)
 
-        assert(len(font_res) == StructSize.Font)
+        assert(len(font_res) == fontSize)
 
         return font_res + resdata
 
