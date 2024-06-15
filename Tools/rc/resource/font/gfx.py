@@ -32,12 +32,12 @@ def parse_typeface(typeface):
 
     # Strip comments
     # https://blog.ostermiller.org/finding-comments-in-source-code-using-regular-expressions/
-    p = re.compile('(?:/\*(?:[^*]|(?:\*+[^*/]))*\*+/)|(?://.*)')
+    p = re.compile(r'(?:/\*(?:[^*]|(?:\*+[^*/]))*\*+/)|(?://.*)')
     data = p.sub('', data)
 
     # Code based on https://github.com/tchapi/Adafruit-GFX-Font-Customiser/blob/master/index.html
     # Bitmap
-    p = re.compile('const\ uint8\_t\ (.*)Bitmaps\[\]\ PROGMEM\ =\ {([\s\S^}]*?)};')
+    p = re.compile(r'const\ uint8\_t\ (.*)Bitmaps\[\]\ PROGMEM\ =\ {([\s\S^}]*?)};')
     m = p.search(data)
     typeface.name = m.groups()[0]
     bitmap = compact_string(m.groups()[1])
@@ -47,7 +47,7 @@ def parse_typeface(typeface):
     # print(typeface.bitmap)
 
     # Typeface
-    p = re.compile('const\ GFXfont\ ([\s\S^}]*)}')
+    p = re.compile(r'const\ GFXfont\ ([\s\S^}]*)}')
     m = p.search(data)
     last_part = m.groups()[0]
     last_part = compact_string(last_part)
@@ -57,11 +57,11 @@ def parse_typeface(typeface):
     typeface.yAdvance = int(parts[4], 0)
 
     # Glyph index
-    p = re.compile('const\ GFXglyph\ (.*)Glyphs\[\]\ PROGMEM\ =\ {([\s\S^}]*?)};')
+    p = re.compile(r'const\ GFXglyph\ (.*)Glyphs\[\]\ PROGMEM\ =\ {([\s\S^}]*?)};')
     m = p.search(data)
     name = m.groups()[0]
     glyphGroups = m.groups()[1]
-    p = re.compile('\s*{([\s\S^}]*?)}')
+    p = re.compile(r'\s*{([\s\S^}]*?)}')
     glyphGroups = p.findall(glyphGroups)
     descent = 0
     for s in glyphGroups:
