@@ -1484,8 +1484,6 @@ DEFINE_FSTR_ARRAY_LOCAL(myDrawing, uint8_t,
 )
 	// clang-format on
 
-	constexpr Size size{320, 240};
-
 	auto drawing = new DrawingObject(myDrawing);
 	drawing->assets.store(new TextAsset(100, F("This is some text")));
 	drawing->assets.store(new ResourceFont(1, Resource::freeSans9pt));
@@ -1535,8 +1533,6 @@ DEFINE_FSTR_ARRAY_LOCAL(buttonLayout, uint8_t,
 	GDRAW_CALL(1)
 )
 	// clang-format on
-
-	constexpr Size size{320, 240};
 
 	auto drawing = new DrawingObject(buttonLayout);
 	drawing->assets.store(new TextAsset(100, F("This is some text")));

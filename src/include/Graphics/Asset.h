@@ -26,6 +26,13 @@
 #include <FlashString/Stream.hpp>
 #include "resource.h"
 
+// Verify structure size is as expected. This is an optimisation; we don't care for Host builds.
+#ifdef ARCH_HOST
+#define GRAPHICS_VERIFY_SIZE(type_name, size)
+#else
+#define GRAPHICS_VERIFY_SIZE(type_name, size) static_assert(sizeof(type_name) == size, "Bad " #type_name " size");
+#endif
+
 namespace Graphics
 {
 class Object;
@@ -118,7 +125,7 @@ private:
 	static ID nextId;
 };
 
-static_assert(sizeof(Asset) == 12, "Bad Asset size");
+GRAPHICS_VERIFY_SIZE(Asset, 12)
 
 using AssetType = Asset::Type;
 
@@ -397,7 +404,7 @@ private:
 	PixelFormat pixelFormat{};
 };
 
-static_assert(sizeof(Brush) == 8, "Brush Size");
+GRAPHICS_VERIFY_SIZE(Brush, 8);
 
 class Pen : public Brush
 {
@@ -433,7 +440,7 @@ public:
 	uint16_t width{1};
 };
 
-static_assert(sizeof(Pen) == 8, "Pen Size");
+GRAPHICS_VERIFY_SIZE(Pen, 8);
 
 class PenAsset : public AssetTemplate<AssetType::Pen>, public Pen
 {

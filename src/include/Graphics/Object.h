@@ -968,7 +968,7 @@ public:
 
 		Kind kind;
 	};
-	static_assert(sizeof(Element) == 12, "Element");
+	GRAPHICS_VERIFY_SIZE(Element, 12);
 
 	class TextElement : public Element
 	{
@@ -1009,7 +1009,7 @@ public:
 		FontStyles style;
 		const TypeFace& typeface;
 	};
-	static_assert(sizeof(FontElement) == 16, "RunElement");
+	GRAPHICS_VERIFY_SIZE(FontElement, 16);
 
 	class ColorElement : public Element
 	{
@@ -1049,7 +1049,7 @@ public:
 		uint16_t offset;
 		uint8_t length;
 	};
-	static_assert(sizeof(RunElement) == 20, "RunElement");
+	GRAPHICS_VERIFY_SIZE(RunElement, 20);
 
 	template <typename T> T* addElement(T* elem)
 	{

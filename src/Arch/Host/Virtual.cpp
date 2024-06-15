@@ -307,7 +307,7 @@ protected:
 	{
 		// host_printf("[VS] sendPacket %u\r\n", size);
 
-		Header hdr{size};
+		Header hdr(size);
 		if(socket.send(&hdr, sizeof(hdr)) == int(sizeof(hdr))) {
 			if(socket.send(data, size) == int(size)) {
 				return true;
