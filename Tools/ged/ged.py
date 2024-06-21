@@ -1,13 +1,17 @@
-import os
+from __future__ import annotations
 import sys
+
+if not sys.version_info >= (3, 10):
+    raise RuntimeError('Requires python 3.11 or later')
+
+import os
 import io
 import binascii
 import copy
 import struct
-from enum import Enum, IntEnum, StrEnum
+from enum import Enum, IntEnum
 import random
 from random import randrange, randint
-import dataclasses
 from dataclasses import dataclass
 import json
 import tkinter as tk
@@ -16,17 +20,16 @@ from tkinter import ttk, filedialog, colorchooser
 from gtypes import colormap, ColorFormat
 import resource
 from item import *
-from typing import TypeAlias
 from widgets import *
 import remote
 
-TkVarType: TypeAlias = str | int | float # python types used for tk.StringVar, tk.IntVar, tk.DoubleVar
-CanvasPoint: TypeAlias = tuple[int, int] # x, y on canvas
-CanvasRect: TypeAlias = tuple[int, int, int, int] # x0, y0, x1, y1 on canvas
-DisplayPoint: TypeAlias = tuple[int, int] # x, y on display
-ItemList: TypeAlias = list[GItem]
+TkVarType: str | int | float # python types used for tk.StringVar, tk.IntVar, tk.DoubleVar
+CanvasPoint: tuple[int, int] # x, y on canvas
+CanvasRect: tuple[int, int, int, int] # x0, y0, x1, y1 on canvas
+DisplayPoint: tuple[int, int] # x, y on display
+ItemList: list[GItem]
 
-class Tag(StrEnum):
+class Tag:
     """TK Canvas tags to identify class of item"""
     HANDLE = '@@handle'
     ITEM = '@@item'
@@ -412,7 +415,7 @@ class LayoutEditor(ttk.Frame):
         if not self.sel_items:
             return
         hr = None
-        tags = (Tag.HANDLE, str(Element.ITEM))
+        tags = (Tag.HANDLE, str(Element.ITEM.value))
         for item in self.sel_items:
             hr = union(hr, item) if hr else item.bounds
             r = tk_inflate(self.tk_bounds(item), 1, 1)
@@ -423,7 +426,7 @@ class LayoutEditor(ttk.Frame):
         for e in Element:
             if e == Element.ITEM:
                 continue
-            tags = (Tag.HANDLE, str(e))
+            tags = (Tag.HANDLE, str(e.value))
             pt = get_handle_pos(hr, e)
             r = self.tk_bounds(Rect(pt[0], pt[1]))
             r = tk_inflate(r, 4, 4)
