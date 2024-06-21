@@ -24,6 +24,13 @@ namespace
 RenderQueue renderQueue(tft);
 TcpServer server;
 
+/*
+ * This is an experimental feature where we store resouce information in flash memory
+ * instead of RAM.
+ *
+ * This works OK on the esp8266 and rp2040, but the esp32 has memory protection so blocks
+ * attempts to write to the program region.
+ */
 // #define RESOURCE_MAP_IN_FLASH
 
 #ifdef RESOURCE_MAP_IN_FLASH

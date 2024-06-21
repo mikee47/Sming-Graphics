@@ -15,6 +15,9 @@ COMPONENT_INCDIRS := \
 	resource
 
 COMPONENT_DOXYGEN_INPUT := src/include
+COMPONENT_DOCFILES := \
+	Tools/ged/README.rst \
+	Tools/ged/graphic-editor.png
 
 export GRAPHICS_LIB_ROOT := $(COMPONENT_PATH)
 
