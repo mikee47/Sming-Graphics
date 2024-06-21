@@ -62,7 +62,9 @@ graphics-clean:
 
 endif
 
-#
+
+##@Tools
+
 ifeq ($(SMING_ARCH),Host)
 
 # For application use
@@ -79,14 +81,10 @@ endif
 VIRTUAL_SCREEN_PY := $(GRAPHICS_LIB_ROOT)/Tools/vs/screen.py
 VIRTUAL_SCREEN_CMDLINE := $(PYTHON) $(VIRTUAL_SCREEN_PY) --localport $(VSPORT)
 
-GEDIT_PY := $(GRAPHICS_LIB_ROOT)/Tools/ged/ged.py
-GEDIT_CMDLINE := $(PYTHON) $(GEDIT_PY)
-
 # When using WSL without an X server available, use native Windows python
 ifdef WSL_ROOT
 ifndef DISPLAY
 VIRTUAL_SCREEN_CMDLINE := powershell.exe -Command "$(VIRTUAL_SCREEN_CMDLINE)"
-GEDIT_CMDLINE := powershell.exe -Command "$(GEDIT_CMDLINE)"
 endif
 endif
 
@@ -96,9 +94,16 @@ virtual-screen: ##Start virtual screen server
 	$(info Starting virtual screen server)
 	$(Q) $(VIRTUAL_SCREEN_CMDLINE) &
 
+endif
+
+
+GEDIT_PY := $(GRAPHICS_LIB_ROOT)/Tools/ged/ged.py
+GEDIT_CMDLINE := $(PYTHON) $(GEDIT_PY)
+ifdef WSL_ROOT
+GEDIT_CMDLINE := powershell.exe -Command "$(GEDIT_CMDLINE)"
+endif
+
 .PHONY: graphic-editor
 graphic-editor: ##Run graphical editor
 	$(info Starting graphical editor)
 	$(Q) $(GEDIT_CMDLINE) &
-
-endif
