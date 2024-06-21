@@ -25,7 +25,6 @@ import enum
 ORDER_RGB = 0
 ORDER_BGR = 1
 
-@staticmethod
 def pixel_format(bytes, bpp, color_order):
     return (bytes - 1) | ((bpp >> 1) << 2) | (color_order << 7)
 

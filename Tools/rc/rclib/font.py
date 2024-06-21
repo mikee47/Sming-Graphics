@@ -19,6 +19,7 @@
 # @author: July 2021 - mikee47 <mike@sillyhouse.net>
 #
 
+from __future__ import annotations
 import enum
 import os
 import sys
