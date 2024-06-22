@@ -90,7 +90,7 @@ struct TypefaceResource {
 	const GlyphBlock* blocks;
 };
 
-struct FontResource {
+struct __attribute__((packed)) FontResource {
 	const FSTR::String* name;
 	uint8_t yAdvance;
 	uint8_t descent;

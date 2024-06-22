@@ -15,6 +15,9 @@ COMPONENT_INCDIRS := \
 	resource
 
 COMPONENT_DOXYGEN_INPUT := src/include
+COMPONENT_DOCFILES := \
+	Tools/ged/README.rst \
+	Tools/ged/graphic-editor.png
 
 export GRAPHICS_LIB_ROOT := $(COMPONENT_PATH)
 
@@ -62,7 +65,9 @@ graphics-clean:
 
 endif
 
-#
+
+##@Tools
+
 ifeq ($(SMING_ARCH),Host)
 
 # For application use
@@ -93,3 +98,15 @@ virtual-screen: ##Start virtual screen server
 	$(Q) $(VIRTUAL_SCREEN_CMDLINE) &
 
 endif
+
+
+GEDIT_PY := $(GRAPHICS_LIB_ROOT)/Tools/ged/ged.py
+GEDIT_CMDLINE := $(PYTHON) $(GEDIT_PY)
+ifdef WSL_ROOT
+GEDIT_CMDLINE := powershell.exe -Command "$(GEDIT_CMDLINE)"
+endif
+
+.PHONY: graphic-editor
+graphic-editor: ##Run graphical editor
+	$(info Starting graphical editor)
+	$(Q) $(GEDIT_CMDLINE) &

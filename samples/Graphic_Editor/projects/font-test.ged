@@ -1,0 +1,41 @@
+{
+    "project": {
+        "width": 320,
+        "height": 240,
+        "scale": 2,
+        "orientation": 0,
+        "grid_alignment": 8
+    },
+    "fonts": {
+        "font1": {
+            "family": "Droid Sans",
+            "size": 18,
+            "mono": false,
+            "normal": "Regular",
+            "bold": "",
+            "italic": "",
+            "boldItalic": ""
+        }
+    },
+    "layout": {
+        "Text_1": {
+            "type": "Text",
+            "x": 8,
+            "y": 8,
+            "w": 304,
+            "h": 224,
+            "back_color": "black",
+            "color": "orange",
+            "font": "font1",
+            "text": "Text\nsupport\n\nis intended\nto assist with sizing controls.\n\nIt's unlikely to match actual display though, and some styles aren't supported.",
+            "halign": "Centre",
+            "valign": "Middle",
+            "fontstyle": [
+                "Italic",
+                "DotMatrix",
+                "Bold"
+            ],
+            "fontscale": 1
+        }
+    }
+}

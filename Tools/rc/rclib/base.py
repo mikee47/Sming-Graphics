@@ -22,6 +22,19 @@
 import os
 import enum
 
+ORDER_RGB = 0
+ORDER_BGR = 1
+
+def pixel_format(bytes, bpp, color_order):
+    return (bytes - 1) | ((bpp >> 1) << 2) | (color_order << 7)
+
+class PixelFormat(enum.Enum):
+    NONE = 0
+    RGB24 = pixel_format(3, 24, ORDER_RGB)
+    BGRA32 = pixel_format(4, 32, ORDER_RGB)
+    BGR24 = pixel_format(3, 24, ORDER_BGR)
+    RGB565 = pixel_format(2, 16, ORDER_RGB)
+
 # Used to calculate compiled size of resource header information
 class StructSize(enum.IntEnum):
     GlyphResource = 8
@@ -29,6 +42,10 @@ class StructSize(enum.IntEnum):
     Typeface = 16,
     Font = 24,
     Image = 20,
+    # These values are used for 64-bit host builds
+    Typeface64 = 24,
+    Font64 = 44,
+    Image64 = 24,
 
 
 def compact_string(s):
@@ -66,10 +83,10 @@ def findFile(filename, dirs = []):
     if os.path.exists(filename):
         return filename
 
-    alldirs = []
-    for directory in [os.path.expandvars(path) for path in resourcePaths + dirs]:
-        for walkroot, walkdir, walkfilenames in os.walk(directory):
-            alldirs.append(walkroot)
+    alldirs = set()
+    for path in resourcePaths + dirs:
+        for walkroot, _, _ in os.walk(os.path.expandvars(path)):
+            alldirs.add(walkroot)
 
     for dir in alldirs:
         path = os.path.join(dir, filename)

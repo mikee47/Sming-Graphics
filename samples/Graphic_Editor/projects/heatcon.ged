@@ -1,0 +1,302 @@
+{
+    "project": {
+        "width": 320,
+        "height": 240,
+        "scale": 2.1,
+        "orientation": 0,
+        "grid_alignment": 5
+    },
+    "fonts": {
+        "control_font": {
+            "family": "Droid Sans",
+            "size": 18,
+            "mono": false,
+            "normal": "Regular",
+            "bold": "Bold",
+            "italic": "",
+            "boldItalic": ""
+        },
+        "small_font": {
+            "family": "Droid Sans",
+            "size": 14,
+            "mono": false,
+            "normal": "Regular",
+            "bold": "Bold",
+            "italic": "",
+            "boldItalic": ""
+        }
+    },
+    "images": {
+        "sun_raw": {
+            "source": "heatcon/sun.png",
+            "format": "RGB565",
+            "width": 50,
+            "height": 50
+        },
+        "house_raw": {
+            "source": "heatcon/house.png",
+            "format": "RGB565",
+            "width": 50,
+            "height": 60
+        },
+        "tap_raw": {
+            "source": "heatcon/faucet.png",
+            "format": "RGB565",
+            "width": 50,
+            "height": 60
+        },
+        "grid_raw": {
+            "source": "heatcon/grid.png",
+            "format": "RGB565",
+            "width": 50,
+            "height": 60
+        }
+    },
+    "layout": {
+        "boostButton": {
+            "type": "Button",
+            "x": 5,
+            "y": 5,
+            "w": 80,
+            "h": 50,
+            "back_color": "grey",
+            "border": "white",
+            "color": "black",
+            "font": "control_font",
+            "text": "Boost",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "fanButton": {
+            "type": "Button",
+            "x": 235,
+            "y": 5,
+            "w": 80,
+            "h": 50,
+            "back_color": "grey",
+            "border": "white",
+            "color": "black",
+            "font": "control_font",
+            "text": "Fan",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "boostState": {
+            "type": "Label",
+            "x": 90,
+            "y": 5,
+            "w": 120,
+            "h": 50,
+            "back_color": "black",
+            "color": "white",
+            "font": "control_font",
+            "text": "Boost State",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "gridEnergy": {
+            "type": "Label",
+            "x": 0,
+            "y": 90,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "15.0",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "Image_1": {
+            "type": "Image",
+            "x": 5,
+            "y": 120,
+            "w": 50,
+            "h": 60,
+            "image": "grid_raw",
+            "xoff": 0,
+            "yoff": 0
+        },
+        "gridPower": {
+            "type": "Label",
+            "x": 0,
+            "y": 180,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "5000",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "pvEnergy": {
+            "type": "Label",
+            "x": 65,
+            "y": 90,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "8.0",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "Image_2": {
+            "type": "Image",
+            "x": 70,
+            "y": 120,
+            "w": 50,
+            "h": 60,
+            "image": "sun_raw",
+            "xoff": 0,
+            "yoff": 0
+        },
+        "pvPower": {
+            "type": "Label",
+            "x": 65,
+            "y": 180,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "5000",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "batteryPower": {
+            "type": "Label",
+            "x": 130,
+            "y": 180,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "5000",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "Image_4": {
+            "type": "Image",
+            "x": 200,
+            "y": 120,
+            "w": 50,
+            "h": 60,
+            "image": "house_raw",
+            "xoff": 0,
+            "yoff": 0
+        },
+        "loadPower": {
+            "type": "Label",
+            "x": 195,
+            "y": 180,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "1234",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "loadEnergy": {
+            "type": "Label",
+            "x": 195,
+            "y": 90,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "7.6",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "waterEnergy": {
+            "type": "Label",
+            "x": 260,
+            "y": 90,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "3.4",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "Image_5": {
+            "type": "Image",
+            "x": 265,
+            "y": 120,
+            "w": 50,
+            "h": 60,
+            "image": "tap_raw",
+            "xoff": 0,
+            "yoff": 0
+        },
+        "waterPower": {
+            "type": "Label",
+            "x": 260,
+            "y": 180,
+            "w": 60,
+            "h": 26,
+            "back_color": "black",
+            "color": "lightgreen",
+            "font": "control_font",
+            "text": "1888",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "battery": {
+            "type": "FilledRect",
+            "x": 135,
+            "y": 100,
+            "w": 50,
+            "h": 80,
+            "color": "orange",
+            "radius": 2
+        },
+        "Label_1": {
+            "type": "Label",
+            "x": 0,
+            "y": 213,
+            "w": 200,
+            "h": 26,
+            "back_color": "black",
+            "color": "white",
+            "font": "control_font",
+            "text": "messages....",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        },
+        "timeClock": {
+            "type": "Label",
+            "x": 254,
+            "y": 216,
+            "w": 64,
+            "h": 24,
+            "back_color": "black",
+            "color": "white",
+            "font": "control_font",
+            "text": "18:37",
+            "halign": "Centre",
+            "fontscale": 1,
+            "fontstyle": []
+        }
+    }
+}

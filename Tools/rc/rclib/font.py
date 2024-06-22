@@ -19,10 +19,35 @@
 # @author: July 2021 - mikee47 <mike@sillyhouse.net>
 #
 
+from __future__ import annotations
 import enum
 import os
 import sys
+import struct
 from .base import Resource, findFile, StructSize, fstrSize
+
+class FontStyle(enum.Enum):
+    """Style is a set of these values, using strings here but bitfields in library"""
+    # typeface
+    Bold = 0
+    Italic = 1
+    Underscore = 2
+    Overscore = 3
+    Strikeout = 4
+    DoubleUnderscore = 5
+    DoubleOverscore = 6
+    DoubleStrikeout = 7
+    DotMatrix = 8
+    HLine = 9
+    VLine = 10
+
+    @staticmethod
+    def evaluate(value: list[str]):
+        n = 0
+        for x in value:
+            n |= 1 << FontStyle[x].value
+        return n
+
 
 class Glyph(Resource):
     class Flag(enum.IntEnum):
@@ -137,6 +162,66 @@ class Typeface(Resource):
         self.glyphs = []
         self.headerSize = 0
 
+    def serialize(self, bmOffset, res_offset, ptr64: bool):
+        glyph_data = self.serialize_glyphs()
+        block_data = self.serialize_glyph_blocks()
+
+        # `struct TypefaceResource'
+        typefaceSize = StructSize.Typeface64 if ptr64 else StructSize.Typeface
+        face_res = struct.pack('<IBBBBQQ' if ptr64 else '<IBBBBII',
+            bmOffset,
+            FontStyle.evaluate(self.style),
+            self.yAdvance,
+            self.descent,
+            len(block_data) // StructSize.GlyphBlock,
+            res_offset + typefaceSize,
+            res_offset + typefaceSize + len(glyph_data)
+        )
+        assert(len(face_res) == typefaceSize)
+
+        return face_res + glyph_data + block_data
+
+    def serialize_glyphs(self):
+        # Array of `struct GlyphResource`
+        resdata = b''
+        bmOffset = 0
+        for g in self.glyphs:
+            glyph_res = struct.pack('<HBBbbBB',
+                bmOffset,
+                g.width,
+                g.height,
+                g.xOffset,
+                g.yOffset,
+                g.xAdvance,
+                g.flags)
+            assert(len(glyph_res) == StructSize.GlyphResource)
+            resdata += glyph_res
+            bmOffset += len(g.bitmap)
+        return resdata
+
+    def serialize_glyph_blocks(self):
+        # Array of `struct GlyphBlock`
+        resdata = b''
+        cp = -1
+        count = 0
+        length = 0
+
+        def writeBlock():
+            nonlocal resdata
+            resdata += struct.pack('<HH', cp, length)
+
+        for g in self.glyphs:
+            if cp >= 0 and g.codePoint == cp + length:
+                length += 1
+                continue
+            if cp >= 0:
+                writeBlock()
+                count += 1
+            cp = g.codePoint
+            length = 1
+        writeBlock()
+        return resdata
+
     def writeGlyphRecords(self, out):
         # Array of glyph definitions
         bmOffset = 0
@@ -179,6 +264,9 @@ class Typeface(Resource):
         count += 1
         return count
 
+    def get_bitmap_size(self):
+        return sum(len(g.bitmap) for g in self.glyphs)
+
     def writeHeader(self, bmOffset, out):
         self.headerSize = 0
         bmSize = self.writeGlyphRecords(out)
@@ -187,7 +275,7 @@ class Typeface(Resource):
         super().writeComment(out)
         out.write("const TypefaceResource %s_typeface PROGMEM {\n" % self.name)
         out.write("\t.bmOffset = 0x%08x,\n" % bmOffset)
-        bmSize = sum(len(g.bitmap) for g in self.glyphs)
+        bmSize = self.get_bitmap_size()
         out.write("//\t.bmSize = %u,\n" % bmSize)
         if self.style != []:
             out.write("\t.style = uint8_t(FontStyles(%s).value()),\n" % ' | '.join('FontStyle::' + style for style in self.style))
@@ -212,6 +300,34 @@ class Font(Resource):
         self.yAdvance = 0
         self.descent = 0
         self.headerSize = 0
+
+    def serialize(self, bmOffset, res_offset, ptr64: bool):
+        resdata = b''
+        face_offsets = []
+        fontSize = StructSize.Font64 if ptr64 else StructSize.Font
+        for typeface in self.typefaces:
+            # print(typeface.name)
+            offset = res_offset + fontSize + len(resdata)
+            face_offsets.append(offset)
+            resdata += typeface.serialize(bmOffset, offset, ptr64)
+            bmOffset += typeface.get_bitmap_size()
+        while len(face_offsets) < 4:
+            face_offsets.append(0)
+
+        # `struct FontResource`
+        font_res = struct.pack('<QBB2B4Q' if ptr64 else '<IBB2B4I',
+            0,
+            self.yAdvance,
+            self.descent,
+            0, 0,
+            *face_offsets)
+
+        assert(len(font_res) == fontSize)
+
+        return font_res + resdata
+
+    def get_bitmap_size(self):
+        return sum(face.get_bitmap_size() for face in self.typefaces)
 
     def writeHeader(self, bmOffset, out):
         self.headerSize = 0
@@ -311,24 +427,36 @@ def parse_item(item, name):
     return font
 
 
-def findFont(filename):
-    dirs = []
+def get_system_font_directories():
+    font_dirs = set()
+
     if sys.platform == "win32":
         windir = os.environ.get("WINDIR")
         if windir:
-            dirs.append(os.path.join(windir, "fonts"))
+            font_dirs.add(os.path.join(windir, "fonts"))
     elif sys.platform in ("linux", "linux2"):
         lindirs = os.environ.get("XDG_DATA_DIRS", "")
-        if not lindirs:
-            lindirs = "/usr/share"
-        dirs += [os.path.join(lindir, "fonts") for lindir in lindirs.split(":")]
+        if lindirs:
+            font_dirs |= {os.path.join(lindir, "fonts") for lindir in lindirs.split(":")}
+        font_dirs |= {
+            "/usr/share/fonts",
+            "/usr/share/x11/fonts",
+            "$HOME/.local/share/fonts",
+        }
     elif sys.platform == "darwin":
-        dirs += [
+        font_dirs |= {
             "/Library/Fonts",
             "/System/Library/Fonts",
             os.path.expanduser("~/Library/Fonts"),
-        ]
+        }
     else:
         raise SystemError("Unsupported platform: " % sys.platform)
 
-    return findFile(filename, dirs)
+    return sorted(list(font_dirs))
+
+
+def findFont(filename):
+    return findFile(filename, system_font_directories)
+
+
+system_font_directories = get_system_font_directories()

@@ -20,6 +20,27 @@ Try building a sample application::
     make python-requirements
     make
 
+If you get errors relating to tkinter or TkImage then additional system packages may be required.
+
+Debian/Ubuntu::
+
+    sudo apt install python3-tk
+
+Fedora::
+
+    sudo dnf install python3-tkinter python3-pillow-tk
+
+MacOS::
+
+    brew install python-tk
+
+
+Graphic Editor
+--------------
+
+This library contains a basic layout editor which may be useful regardless of which graphics library is being used.
+See :doc:`Tools/ged/README` for further details.
+
 
 Virtual Screen
 --------------
