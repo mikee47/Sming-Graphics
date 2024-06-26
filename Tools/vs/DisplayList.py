@@ -38,7 +38,7 @@ class DisplayList():
         datalen = cmd >> 4
         if datalen == 0x0f:
             datalen = self.readVar()
-        return cmd & 0x0f, datalen
+        return Code(cmd & 0x0f), datalen
 
     def readByte(self):
         value = self.data[self.offset]

@@ -82,6 +82,8 @@ class Screen:
         if self.width == width and self.height == height:
             return
         debug("SIZE (%u x %u) -> (%u x %u)" % (self.width, self.height, width, height))
+        if width * height == 0:
+            return
         self.width, self.height = width, height
         self.addr = AddressWindow()
         if self.texture is not None:
@@ -223,7 +225,7 @@ class Screen:
         while not list.done():
             offset = list.offset
             cmd, datalen = list.readHeader()
-            # debug("@ %u hdr %s(%u)" % (offset, Code(cmd), datalen))
+            # debug(f'@ {offset} hdr {cmd.name}({datalen})')
             if cmd == Code.setColumn:
                 self.addr.setColumn(list.readVar(), datalen + 1)
             elif cmd == Code.setRow:
@@ -236,7 +238,7 @@ class Screen:
                 data = list.read(datalen)
                 self.setPixels(data)
             elif cmd == Code.writeDataBuffer:
-                addr = list.read(4) # Discard pointer to buffer
+                addr = list.read(datalen) # Discard pointer to buffer
                 data = self.packetQueue.get(timeout=0.5)
                 if data is None:
                     debug("Missing WRITE packet")
@@ -282,6 +284,8 @@ class Screen:
                 list.read(4) # Discard pointer to callback
                 list.offset = (list.offset + 3) & ~3
                 list.read(datalen)
+            else:
+                debug('!! Not handled')
             # debug("addr %s, column %u" % (self.addr, self.column))
         self.pixels.updateTexture(self.texture)
         self.update()
