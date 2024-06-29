@@ -109,7 +109,7 @@ public:
 			r.h = rectSize.random();
 			r.x = Range(0, tftSize.w - r.w).random();
 			r.y = Range(0, tftSize.h - r.h).random();
-		} else if(visible && !fillRect(surface, Color::Black, r - statusArea)) {
+		} else if(visible && !fillRect(surface, Color::Black, Region(r) - statusArea)) {
 			return;
 		}
 
@@ -127,7 +127,7 @@ public:
 		r.x = x;
 		r.y = y;
 
-		auto rgn = r - statusArea;
+		auto rgn = Region(r) - statusArea;
 		visible = bool(rgn);
 		if(visible) {
 			fillRect(surface, colour, rgn);

@@ -1609,7 +1609,7 @@ void regionTests()
 			lineSize.h = std::max(lineSize.h, u.h);
 		}
 
-		auto rgn = r1 - r2;
+		auto rgn = Region(r1) - r2;
 		debug_i("(%s) - (%s) = %s", r1.toString().c_str(), r2.toString().c_str(), rgn.toString().c_str());
 		Color colours[]{Color::Red, Color::Green, Color::Blue, Color::Magenta};
 		for(unsigned i = 0; i < 4; ++i) {

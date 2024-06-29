@@ -595,7 +595,7 @@ public:
 	constexpr Region() = default;
 	constexpr Region(const Region& other) = default;
 
-	constexpr Region(const Rect& r) : rects{r}
+	constexpr explicit Region(const Rect& r) : rects{r}
 	{
 	}
 
