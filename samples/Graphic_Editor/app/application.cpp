@@ -495,7 +495,7 @@ void processLine(TcpClient& client, String& line)
 			auto buffer = resourceMap.reset(props.size);
 			String line;
 			line += "@:";
-			if (sizeof(uintptr_t) == 8) {
+			if(sizeof(uintptr_t) == 8) {
 				line += "ptr64=;";
 			}
 			line += "addr=0x";
@@ -566,7 +566,7 @@ bool processClientData(TcpClient& client, char* data, int size)
 	return true;
 }
 
-void gotIP(IpAddress ip, IpAddress netmask, IpAddress gateway)
+void gotIP(IpAddress, IpAddress, IpAddress)
 {
 	server.setClientReceiveHandler(processClientData);
 	server.listen(23);

@@ -192,7 +192,7 @@ void renderFrame()
 
 	frame.state = Frame::State::rendering;
 	frame.drawTimer.start();
-	frame.surface->present([](void* param) {
+	frame.surface->present([](void*) {
 		auto& frame = frames[frameIndex];
 		frameIndex = 1 - frameIndex;
 		frameTime.update(frame.drawTimer.elapsedTime());

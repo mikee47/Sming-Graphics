@@ -124,8 +124,10 @@ PixelBuffer unpack(PixelBuffer src, PixelFormat format)
 	}
 	case PixelFormat::RGB24:
 		std::swap(src.bgra32.r, src.bgra32.b);
+		[[fallthrough]];
 	case PixelFormat::BGR24:
 		src.bgra32.a = 255;
+		[[fallthrough]];
 	default:
 		return src;
 	}

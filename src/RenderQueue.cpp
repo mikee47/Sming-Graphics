@@ -81,6 +81,7 @@ void RenderQueue::run()
 
 void RenderQueue::renderDone(const Object* object)
 {
+	assert(object == &item->object);
 	if(!item->callback) {
 		item.reset();
 		return;

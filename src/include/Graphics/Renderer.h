@@ -173,7 +173,7 @@ public:
 	}
 
 protected:
-	void renderDone(const Object* object) override
+	void renderDone(const Object*) override
 	{
 	}
 
@@ -824,7 +824,7 @@ protected:
 	void startRead(Surface& surface);
 
 	/* Position is given in `location` */
-	virtual void readComplete(uint8_t* data, size_t length)
+	virtual void readComplete([[maybe_unused]] uint8_t* data, [[maybe_unused]] size_t length)
 	{
 	}
 

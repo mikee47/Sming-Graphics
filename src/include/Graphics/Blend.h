@@ -128,7 +128,7 @@ public:
 		meta.write("key", key);
 	}
 
-	static void blend(PixelFormat format, PackedColor src, uint8_t* dstptr, size_t length)
+	static void blend(PixelFormat, PackedColor, uint8_t*, size_t)
 	{
 		// Makes no sense for this blender
 	}

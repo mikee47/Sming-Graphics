@@ -39,7 +39,7 @@ public:
 	}
 
 protected:
-	void renderDone(const Object* object) override
+	void renderDone(const Object*) override
 	{
 		this->object.reset();
 	}
