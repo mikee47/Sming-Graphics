@@ -15,6 +15,7 @@ RenderQueue renderQueue(tft);
 
 void done(SceneObject* scene)
 {
+	delete scene;
 	Serial.println("Scene ready");
 }
 
