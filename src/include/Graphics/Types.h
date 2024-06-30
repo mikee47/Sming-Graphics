@@ -606,7 +606,7 @@ public:
 	 */
 	Region& operator+=(const Rect& r)
 	{
-		rects[0] += rects[1] + rects[2] + rects[3];
+		rects[0] += rects[1] + rects[2] + rects[3] + r;
 		rects[1] = rects[2] = rects[3] = Rect{};
 		return *this;
 	}
