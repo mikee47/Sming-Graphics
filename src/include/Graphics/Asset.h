@@ -150,7 +150,7 @@ enum class BrushStyle {
 class SolidBrush : public AssetTemplate<AssetType::SolidBrush>
 {
 public:
-	SolidBrush(AssetID id, Color color) : AssetTemplate(), color(color)
+	SolidBrush(AssetID id, Color color) : AssetTemplate(id), color(color)
 	{
 	}
 
