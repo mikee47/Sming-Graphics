@@ -241,7 +241,7 @@ PackedColor Brush::getPackedColor(PixelFormat format) const
 	}
 }
 
-PackedColor Brush::getPackedColor(Point pt) const
+PackedColor Brush::getPackedColor(Point) const
 {
 	return getPackedColor(pixelFormat);
 }

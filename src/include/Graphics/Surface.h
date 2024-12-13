@@ -70,7 +70,7 @@ public:
 
 	/* Meta */
 
-	void write(MetaWriter& meta) const override
+	void write(MetaWriter&) const override
 	{
 	}
 
