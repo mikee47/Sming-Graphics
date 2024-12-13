@@ -47,7 +47,7 @@ public:
 
 	virtual void draw(SceneObject& scene) const = 0;
 
-	void write(MetaWriter& meta) const override
+	void write(MetaWriter&) const override
 	{
 	}
 
