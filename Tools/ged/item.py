@@ -18,7 +18,7 @@ class GItem(Rect):
             itemtype = getattr(sys.modules[__name__], f'G{itemtype}')
         return itemtype(**field_values)
 
-    def copy_as(itemtype):
+    def copy_as(self, itemtype):
         """Create a new item and copy over any applicable attributes"""
         item = self.create(itemtype)
         for a, v in self.asdict().items():
@@ -26,10 +26,9 @@ class GItem(Rect):
                 setattr(item, a, v)
         return item
 
-    @classmethod
     @property
-    def typename(cls):
-        return cls.__name__[1:]
+    def typename(self):
+        return self.__class__.__name__[1:]
 
     def assign_unique_id(self, existing_ids_or_list):
         if isinstance(existing_ids_or_list, set):
@@ -195,5 +194,7 @@ class GLabel(GItem):
         self._tk_image_ref = c.draw_text(self, self.text)
 
 
-TYPENAMES = tuple(t.typename for t in sys.modules[__name__].__dict__.values()
+import inspect
+
+TYPENAMES = tuple(name[1:] for name, t in inspect.getmembers(sys.modules[__name__])
     if isinstance(t, type) and t != GItem and issubclass(t, GItem))
