@@ -276,7 +276,7 @@ class Typeface(Resource):
         out.write("const TypefaceResource %s_typeface PROGMEM {\n" % self.name)
         out.write("\t.bmOffset = 0x%08x,\n" % bmOffset)
         bmSize = self.get_bitmap_size()
-        out.write("//\t.bmSize = %u,\n" % bmSize)
+        out.write("\t.bmSize = %u,\n" % bmSize)
         if self.style != []:
             out.write("\t.style = uint8_t(FontStyles(%s).value()),\n" % ' | '.join('FontStyle::' + style for style in self.style))
         out.write("\t.yAdvance = %u,\n" % self.yAdvance)

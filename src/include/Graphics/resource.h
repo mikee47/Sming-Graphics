@@ -82,6 +82,7 @@ struct GlyphBlock {
 
 struct TypefaceResource {
 	uint32_t bmOffset; ///< Start of bitmap data in resource stream
+	uint32_t bmSize;
 	uint8_t style;
 	uint8_t yAdvance;
 	uint8_t descent;
