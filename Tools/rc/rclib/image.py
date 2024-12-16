@@ -79,17 +79,28 @@ def convert_rgb565(image, source):
     return data
 
 
-def convert_bmp(image, source):
-    image.format = 'None'
+def convert_standard(image, source, format):
+    image.format = format
     bytes = io.BytesIO()
-    source.convert('RGB').save(bytes, 'BMP')
+    source.convert('RGB').save(bytes, format)
     return bytes.getbuffer()
+
+def convert_bmp(image, source):
+    return convert_standard(image, source, 'BMP')
+
+def convert_jpeg(image, source):
+    return convert_standard(image, source, 'JPEG')
+
+def convert_png(image, source):
+    return convert_standard(image, source, 'PNG')
 
 
 converters = {
     'RGB24': convert_rgb24,
     'RGB565': convert_rgb565,
     'BMP': convert_bmp,
+    'JPEG': convert_jpeg,
+    'PNG': convert_png,
 }
 
 # Crop image to "x, y, w, h"
@@ -178,14 +189,18 @@ def parse_item(item, name):
     if resname.startswith("http://") or resname.startswith("https://"):
         headers = {'user-agent': 'resource-compiler/1.0'}
         r = requests.get(resname, headers=headers)
+        imgdata = r.content
         img = PIL.Image.open(io.BytesIO(r.content))
         imgsize = len(r.content)
     else:
         filename = findFile(resname)
         img = PIL.Image.open(filename)
         imgsize = os.path.getsize(filename)
+        imgdata = None
 
     # status("Source image %s: '%s': %s %s, %u bytes" % (name, resname, img.format, img.size, imgsize))
+
+    img_format = img.format
 
     transform = item.get('transform')
     if transform is not None:
@@ -200,9 +215,12 @@ def parse_item(item, name):
         convert = converters[format]
         image.bitmap = convert(image, img)
     else:
-        image.format = 'None'
-        with open(filename, 'rb') as f:
-            image.bitmap = f.read()
+        image.format = img_format
+        if imgdata:
+            image.bitmap = imgdata
+        else:
+            with open(filename, 'rb') as f:
+                image.bitmap = f.read()
 
     # status("Image %s: %s %s, %u bytes" % (name, image.format, img.size, len(image.bitmap)))
 

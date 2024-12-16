@@ -175,6 +175,9 @@ void BlendTransparent::blend(PixelFormat format, const uint8_t* srcptr, uint8_t*
 		}
 		break;
 	case PixelFormat::None:
+	case PixelFormat::BMP:
+	case PixelFormat::JPEG:
+	case PixelFormat::PNG:
 		break;
 	}
 }

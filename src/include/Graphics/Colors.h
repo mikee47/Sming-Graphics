@@ -290,7 +290,10 @@ enum ColorOrder { orderRGB, orderBGR };
 	XX(RGB24, 3, 24, orderRGB, "24-bit RGB")                                                                           \
 	XX(BGRA32, 4, 32, orderRGB, "32-bit ARGB")                                                                         \
 	XX(BGR24, 3, 24, orderBGR, "24-bit BGR")                                                                           \
-	XX(RGB565, 2, 16, orderRGB, "16-bit RGB 5/6/5")
+	XX(RGB565, 2, 16, orderRGB, "16-bit RGB 5/6/5")                                                                    \
+	XX(BMP, 1, 33, 1, "BMP")                                                                                           \
+	XX(JPEG, 1, 34, 0, "JPEG")                                                                                         \
+	XX(PNG, 1, 34, 1, "PNG")
 
 enum class PixelFormat : uint8_t {
 	None,
