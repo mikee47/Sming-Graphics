@@ -344,7 +344,7 @@ public:
 		Bits bits;
 
 		uint32_t offset = typeface.bmOffset + glyph.bmOffset;
-		if(glyph.flags[Resource::GlyphResource::Flag::alpha]) {
+		if(glyph.alpha) {
 			offset += (row - bm.y) * glyph.width;
 			for(int x = bm.left(); x <= bm.right(); ++x, ++offset) {
 				uint8_t c = resourceStream->read(offset++);
@@ -386,7 +386,7 @@ public:
 		assert(y + glyph.height <= typeface.yAdvance);
 		auto bufptr = static_cast<uint8_t*>(buffer) + off;
 
-		if(glyph.flags[Resource::GlyphResource::Flag::alpha]) {
+		if(glyph.alpha) {
 			for(unsigned y = 0; y < glyph.height; ++y, offset += glyph.width, bufptr += stride) {
 				resourceStream->read(offset, bufptr, glyph.width);
 			}

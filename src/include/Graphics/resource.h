@@ -32,10 +32,12 @@ namespace Resource
  * @brief Describes glyph bitmap and position
  */
 struct GlyphResource {
-	enum class Flag {
-		alpha,
+	enum Alpha {
+		L1 = 0,
+		L8 = 1,
+		L2 = 2,
+		L4 = 3,
 	};
-	using Flags = BitSet<uint8_t, Flag, 1>;
 
 	uint16_t bmOffset; ///< Offset relative to TypefaceResource::bmpOffset
 	uint8_t width;	 ///< Bitmap dimensions in pixels
@@ -43,7 +45,7 @@ struct GlyphResource {
 	int8_t xOffset;	///< X dist from cursor pos to UL corner
 	int8_t yOffset;	///< Y dist from cursor pos to UL corner
 	uint8_t xAdvance;  ///< Distance to advance cursor (x axis)
-	Flags flags;
+	uint8_t alpha : 2;
 
 	GlyphMetrics getMetrics() const
 	{
@@ -81,9 +83,18 @@ struct GlyphBlock {
 };
 
 struct TypefaceResource {
+	union Format {
+		uint8_t value;
+		struct {
+			uint8_t style : 4;
+			uint8_t alpha : 2;
+			uint8_t reserved : 2;
+		};
+	};
+
 	uint32_t bmOffset; ///< Start of bitmap data in resource stream
 	uint32_t bmSize;
-	uint8_t style;
+	uint8_t format;
 	uint8_t yAdvance;
 	uint8_t descent;
 	uint8_t numBlocks;

@@ -605,7 +605,10 @@ public:
 
 	FontStyles getStyle() const override
 	{
-		return FSTR::readValue(&typeface.style);
+		Resource::TypefaceResource::Format format{
+			.value = FSTR::readValue(&typeface.format),
+		};
+		return FontStyles(format.style);
 	}
 
 	uint8_t height() const override

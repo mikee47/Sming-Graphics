@@ -49,7 +49,7 @@ def parse_typeface(typeface):
         if index == 0:
             continue # No glyph for this codepoint
         flags = freetype.FT_LOAD_RENDER
-        if typeface.font.mono:
+        if not typeface.font.alpha:
             flags |= freetype.FT_LOAD_MONOCHROME | freetype.FT_LOAD_TARGET_MONO
         face.load_glyph(index, flags)
         bitmap = face.glyph.bitmap
@@ -73,7 +73,7 @@ def parse_typeface(typeface):
                 rows[y] = r
             g.packBits(rows, bitmap.width)
         else:
-            g.flags = Glyph.Flag.alpha
+            g.alpha = Glyph.Alpha.L8
             g.bitmap = bytearray(g.width * g.height)
             i = off = 0
             for y in range(bitmap.rows):

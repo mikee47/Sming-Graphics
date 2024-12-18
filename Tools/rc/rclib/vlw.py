@@ -87,7 +87,7 @@ def parse_typeface(typeface):
                 descent = max(descent, g.height - topExtent)
                 ascent = max(ascent, topExtent)
             g.yOffset = -topExtent
-            g.flags = Glyph.Flag.alpha
+            g.alpha = Glyph.Alpha.L8
             g.bitmap = data[bmOffset:bmOffset+bmSize]
             typeface.glyphs.append(g)
         offset += GLYPH_HEADER_SIZE

@@ -50,8 +50,11 @@ class FontStyle(enum.Enum):
 
 
 class Glyph(Resource):
-    class Flag(enum.IntEnum):
-        alpha = 0x01,
+    class Alpha(enum.IntEnum):
+        L1 = 0
+        L8 = 1
+        L2 = 2
+        L4 = 3
 
     def __init__(self, typeface):
         super().__init__()
@@ -63,7 +66,7 @@ class Glyph(Resource):
         self.xOffset = None
         self.yOffset = None
         self.xAdvance = None
-        self.flags = 0
+        self.alpha = Glyph.Alpha.L1
 
     def packBits(self, rows, width):
         """ Convert bitmap to internal (GFX) format
@@ -72,7 +75,7 @@ class Glyph(Resource):
             We identify defined area, exclude surround empty region, then pack bits
             and update glyph details.
         """
-        if self.flags & Glyph.Flag.alpha:
+        if self.alpha:
             return
 
         height = len(rows)
@@ -232,8 +235,8 @@ class Typeface(Resource):
                 c = ''
             elif c == '\\':
                 c = "'\\'"
-            out.write("\t{ 0x%04x, %3u, %3u, %3d, %3d, %3u, 0x%02x }, // #0x%04x %s \n" %
-                (bmOffset, g.width, g.height, g.xOffset, g.yOffset, g.xAdvance, g.flags, g.codePoint, c))
+            out.write("\t{ 0x%04x, %3u, %3u, %3d, %3d, %3u, %u }, // #0x%04x %s \n" %
+                (bmOffset, g.width, g.height, g.xOffset, g.yOffset, g.xAdvance, g.alpha, g.codePoint, c))
             bmOffset += len(g.bitmap)
             self.headerSize += StructSize.GlyphResource
         out.write("};\n\n")
@@ -277,8 +280,8 @@ class Typeface(Resource):
         out.write("\t.bmOffset = 0x%08x,\n" % bmOffset)
         bmSize = self.get_bitmap_size()
         out.write("\t.bmSize = %u,\n" % bmSize)
-        if self.style != []:
-            out.write("\t.style = uint8_t(FontStyles(%s).value()),\n" % ' | '.join('FontStyle::' + style for style in self.style))
+        format = FontStyle.evaluate(self.style)
+        out.write("\t.format = 0x%02x,\n" % format)
         out.write("\t.yAdvance = %u,\n" % self.yAdvance)
         out.write("\t.descent = %u,\n" % self.descent)
         out.write("\t.numBlocks = %u,\n" % numBlocks)
@@ -363,7 +366,7 @@ class Font(Resource):
 #   typeface.font
 #   typeface.font.name
 #   typeface.font.pointSize
-#   typeface.font.mono
+#   typeface.font.alpha
 #   typeface.font.codePoints
 #   typeface.style
 #
@@ -400,7 +403,8 @@ def parse_item(item, name):
     font = Font()
     font.name = name
     font.pointSize = item.get('size')
-    font.mono = item.get('mono', False)
+    mono = item.get('mono', False)
+    font.alpha = item.get('alpha', Glyph.Alpha.L1 if mono else Glyph.Alpha.L8)
     font.codePoints = codePoints
 
     def add(name, style):
