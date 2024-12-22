@@ -27,6 +27,7 @@ import array
 import struct
 from .font import Glyph
 from .base import compact_string
+from PIL import Image
 
 def parse_typeface(typeface):
     with open(typeface.source) as f:
@@ -66,37 +67,26 @@ def parse_typeface(typeface):
     typeface.yAdvance = 5 + height
     typeface.descent = 2
 
-    # Convert bitmap to internal (GFX) format
-    # 1. Identify defined area, exclude surround empty region
-    # 2. Pack bits
-    colBytes = (width + 7) // 8
-
-    def getRows(off):
-        # Convert src bytearray to array of words
-        rows = array.array('Q', [0 for x in range(height)])
-        for a in range(height):
-            w = 0
-            for b in bitmap[off:off+colBytes]:
-                w = (w << 8) | b
-            s = width % 8
-            if s != 0:
-                w >>= 8 - s
-            rows[a] = w
-            off += colBytes
-        return rows
-
     # Build the glyphs
+    stride = (width + 7) // 8
+    bmp_bytes = height * stride
     codePoint = 0
     offset = 0
     for codePoint in range(charcount):
         if codePoint in typeface.font.codePoints:
             g = Glyph(typeface)
             g.codePoint = codePoint
-            rows = getRows(offset)
-            g.packBits(rows, width)
+            img = Image.frombuffer('1', (width, height), bitmap[offset : offset+bmp_bytes], 'raw', ('1', stride))
+            img = img.convert('L')
+            g.width = width
+            g.height = height
+            g.xOffset = 0
+            g.yOffset = -height
+            g.alpha = Glyph.Alpha.L8
+            g.bitmap = img.tobytes()
             g.xAdvance = 1 + width
             typeface.glyphs.append(g)
-        offset += height * colBytes
+        offset += bmp_bytes
 
 
 from .font import parsers

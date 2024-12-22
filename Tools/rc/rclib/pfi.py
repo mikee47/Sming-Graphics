@@ -20,7 +20,7 @@
 #
 
 import os
-import PIL
+from PIL import Image, ImageOps
 import array
 from .font import Glyph
 
@@ -43,8 +43,9 @@ def parse_typeface(typeface):
     typeface.descent = 2
 
     pbmFilename = os.path.splitext(typeface.source)[0] + '.pbm'
-    pbm = PIL.Image.open(pbmFilename)
-    # print("%s: %s, mode %s" % (os.path.basename(pbmFilename), pbm.size, pbm.mode))
+    pbm = Image.open(pbmFilename)
+    pbm = ImageOps.invert(pbm)
+    print(f'{os.path.basename(pbmFilename)}: {pbm.size}, mode {pbm.mode}')
 
     for line in pfi[3:]:
         line = line.split(' ')
@@ -69,20 +70,18 @@ def parse_typeface(typeface):
             w = width
         g.xAdvance = 1 + w
 
-        rows = array.array('Q', [0 for y in range(height)])
         if line and line[0] != '':
             xo, yo = int(line[0]), int(line[1])
-            for y in range(height):
-                mask = 1 << (w - 1)
-                for x in range(w):
-                    xx = xo + x
-                    try:
-                        if pbm.getpixel((xx, yo + y)) == 0:
-                            rows[y] |= mask
-                    except IndexError:
-                        pass # Empty pixels
-                    mask >>= 1
-        g.packBits(rows, w)
+            img = pbm.crop((xo, yo, xo+w, yo+height))
+            img = img.convert('L')
+            g.bitmap = img.tobytes()
+        else:
+            g.bitmap = bytearray(w*height)
+        g.width = w
+        g.height = height
+        g.xOffset = 0
+        g.yOffset = -height
+        g.alpha = Glyph.Alpha.L8
         typeface.glyphs.append(g)
 
     def sortkey(g):
