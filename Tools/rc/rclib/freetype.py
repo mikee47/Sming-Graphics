@@ -26,8 +26,8 @@ import struct
 import array
 import freetype
 from .font import Glyph, Typeface
-
 from PIL import Image, ImageChops
+from io import BytesIO
 
 
 def pointsToPixels(points26):
@@ -76,23 +76,26 @@ def parse_typeface(typeface: Typeface):
             flags |= freetype.FT_LOAD_MONOCHROME | freetype.FT_LOAD_TARGET_MONO
         face.load_glyph(index, flags)
         bitmap = face.glyph.bitmap
+        w, h = bitmap.width, bitmap.rows
         g = Glyph(typeface)
         g.codePoint = c
-        g.width = bitmap.width
-        g.height = bitmap.rows
+        g.width = w
+        g.height = h
         g.xAdvance = pointsToPixels(face.glyph.advance.x)
         g.xOffset = face.glyph.bitmap_left
         g.yOffset = 1 - face.glyph.bitmap_top
 
-        if bitmap.pixel_mode == freetype.FT_PIXEL_MODE_MONO:
+        if w + h == 0:
+            g.bitmap = bytearray(0)
+        elif False: #bitmap.pixel_mode == freetype.FT_PIXEL_MODE_MONO:
             print_bitmap_diff(bitmap)
+
             g.alpha = Glyph.Alpha.L1
             g.bitmap = bytearray(bitmap.buffer)
 
             # Pack source bits so resulting data is as compact as possible
-            w, h = bitmap.width, bitmap.rows
             stride = bitmap.pitch
-            # print(f'Bitmap {w} x {h}, stride {stride}')
+            print(f'Bitmap {w} x {h}, stride {stride}')
             dstsize = (w * h + 7) // 8
             dstbuf = bytearray(dstsize)
             if stride == 1:
@@ -163,8 +166,16 @@ def parse_typeface(typeface: Typeface):
         else:
             # print_bitmap_diff(bitmap)
 
-            g.alpha = Glyph.Alpha.L8
-            g.bitmap = bytearray(bitmap.buffer)
+            if bitmap.pixel_mode == freetype.FT_PIXEL_MODE_MONO:
+                img = Image.frombuffer('1', (w, h), bytearray(bitmap.buffer), 'raw', ('1', bitmap.pitch))
+                img = img.convert('L')
+                imgdata = img.tobytes()
+                g.alpha = Glyph.Alpha.L8
+                g.bitmap = imgdata
+            else:
+                g.alpha = Glyph.Alpha.L8
+                g.bitmap = bytearray(bitmap.buffer)
+
         typeface.glyphs.append(g)
 
 
