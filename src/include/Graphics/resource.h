@@ -32,6 +32,9 @@ namespace Resource
  * @brief Describes glyph bitmap and position
  */
 struct GlyphResource {
+	/*
+	 * Bits per pixel, packed.
+	 */
 	enum Alpha {
 		L1 = 0,
 		L8 = 1,

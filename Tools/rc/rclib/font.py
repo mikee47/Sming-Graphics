@@ -75,9 +75,6 @@ class Glyph(Resource):
             We identify defined area, exclude surround empty region, then pack bits
             and update glyph details.
         """
-        if self.alpha:
-            return
-
         height = len(rows)
 
         # Identify leading/trailing blank rows and columns
@@ -303,6 +300,7 @@ class Font(Resource):
         self.yAdvance = 0
         self.descent = 0
         self.headerSize = 0
+        self.alpha: Glyph.Alpha = None
 
     def serialize(self, bmOffset, res_offset, ptr64: bool):
         resdata = b''
