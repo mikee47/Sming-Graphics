@@ -71,39 +71,34 @@ class Glyph(Resource):
         self.width = w
         self.height = h
         stride = w # All modes 1 byte per pixel
-        self.alpha = 1 if img.mode == '1' else self.typeface.font.alpha
-        pixels_per_byte = 8 // self.alpha
+        alpha = 1 if img.mode == '1' else self.typeface.font.alpha
+        self.alpha = alpha
+        pixels_per_byte = 8 // alpha
         dstsize = (w * h + pixels_per_byte - 1) // pixels_per_byte
 
         # Pack source bits so resulting data is as compact as possible
-        imgdata = img.tobytes('raw', ('L'))
+        imgdata = img.tobytes('raw', ('L', 0, 1))
 
-        # print(f'Bitmap {w} x {h}, bpp {bpp}, src {len(imgdata)} bytes, dst {dstsize}')
+        # print(f'{self.typeface.font.name} bitmap {w} x {h}, alpha {alpha}, src {len(imgdata)} bytes, dst {dstsize}')
 
-        if self.alpha == 8:
+        if pixels_per_byte == 1:
             self.bitmap = imgdata
-            return
-
-        dstbuf = bytearray(dstsize)
-        srcoff = 0
-        dstoff = 0
-        dstbits = 0
-        dstbitlen = 0
-        mask = 1 << 8
-        for bit in imgdata:
-            mask >>= 1
-            if bit:
-                dstbits |= mask
-            dstbitlen += 1
-            if dstbitlen == 8:
-                dstbuf[dstoff] = dstbits
-                dstoff += 1
-                dstbits = 0
-                dstbitlen = 0
-                mask = 1 << 8
-        if dstbitlen:
-            dstbuf[dstoff] = dstbits
-        self.bitmap = dstbuf
+        else:
+            dstbuf = bytearray(dstsize)
+            dstoff = 0
+            dstbyte = 0
+            shift = 8
+            for pixel in imgdata:
+                shift -= alpha
+                dstbyte |= (pixel >> (8 - alpha)) << shift
+                if shift == 0:
+                    dstbuf[dstoff] = dstbyte
+                    dstoff += 1
+                    dstbyte = 0
+                    shift = 8
+            if shift != 8:
+                dstbuf[dstoff] = dstbyte
+            self.bitmap = dstbuf
 
 
 class Typeface(Resource):

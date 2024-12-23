@@ -386,27 +386,36 @@ public:
 		assert(y + glyph.height <= typeface.yAdvance);
 		auto bufptr = static_cast<uint8_t*>(buffer) + off;
 
-		if(glyph.alpha) {
+		using Alpha = Resource::GlyphResource::Alpha;
+		if(glyph.alpha == Alpha::L8) {
 			for(unsigned y = 0; y < glyph.height; ++y, offset += glyph.width, bufptr += stride) {
 				resourceStream->read(offset, bufptr, glyph.width);
 			}
 		} else {
-			uint8_t raw{0};
-			uint8_t mask{0};
+			uint8_t bitsPerPixel = 1;
+			switch(glyph.alpha) {
+			case Alpha::L4:
+				bitsPerPixel = 4;
+				break;
+			case Alpha::L2:
+				bitsPerPixel = 2;
+				break;
+			}
+			uint8_t srcbyte = 0;
+			uint8_t srcShift = 0;
+			const uint8_t mask = (1 << bitsPerPixel) - 1;
+			const uint8_t dstShift = 8 - bitsPerPixel;
+			auto rowptr = bufptr;
 			for(unsigned y = 0; y < glyph.height; ++y) {
-				auto rowptr = bufptr;
 				for(unsigned x = 0; x < glyph.width; ++x) {
-					if(mask == 0) {
-						raw = resourceStream->read(offset++);
-						mask = 0x80;
+					if(srcShift == 0) {
+						srcbyte = resourceStream->read(offset++);
+						srcShift = 8;
 					}
-					if(raw & mask) {
-						bufptr[x] = 0xff;
-					}
-					mask >>= 1;
+					srcShift -= bitsPerPixel;
+					rowptr[x] = ((srcbyte >> srcShift) & mask) << dstShift;
 				}
 				rowptr += stride;
-				bufptr = rowptr;
 			}
 		}
 	}
