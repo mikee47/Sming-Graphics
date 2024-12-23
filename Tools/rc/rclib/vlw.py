@@ -64,6 +64,7 @@
 
 import struct
 from .font import Glyph
+from PIL import Image
 
 def parse_typeface(typeface):
     with open(typeface.source, "rb") as f:
@@ -79,16 +80,16 @@ def parse_typeface(typeface):
     bmOffset = offset + (numGlyphs * GLYPH_HEADER_SIZE)
     for i in range(numGlyphs):
         g = Glyph(typeface)
-        g.codePoint, g.height, g.width, g.xAdvance, topExtent, g.xOffset, c_ptr = struct.unpack_from('>7i', data, offset)
-        bmSize = g.height * g.width
+        g.codePoint, h, w, g.xAdvance, topExtent, g.xOffset, c_ptr = struct.unpack_from('>7i', data, offset)
+        bmSize = w * h
         if g.codePoint in typeface.font.codePoints:
             topExtent = min(topExtent, 127)
             if g.codePoint > 0x20 and g.codePoint != 0x7F and (g.codePoint < 0xA0 or g.codePoint > 0xFF):
-                descent = max(descent, g.height - topExtent)
+                descent = max(descent, h - topExtent)
                 ascent = max(ascent, topExtent)
             g.yOffset = -topExtent
-            g.alpha = Glyph.Alpha.L8
-            g.bitmap = data[bmOffset:bmOffset+bmSize]
+            img = Image.frombuffer('L', (w, h), data[bmOffset:bmOffset+bmSize], 'raw', ('L', 0, 1))
+            g.set_bitmap(img)
             typeface.glyphs.append(g)
         offset += GLYPH_HEADER_SIZE
         bmOffset += bmSize

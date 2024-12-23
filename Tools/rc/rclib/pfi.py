@@ -45,7 +45,7 @@ def parse_typeface(typeface):
     pbmFilename = os.path.splitext(typeface.source)[0] + '.pbm'
     pbm = Image.open(pbmFilename)
     pbm = ImageOps.invert(pbm)
-    print(f'{os.path.basename(pbmFilename)}: {pbm.size}, mode {pbm.mode}')
+    # print(f'{os.path.basename(pbmFilename)}: {pbm.size}, mode {pbm.mode}')
 
     for line in pfi[3:]:
         line = line.split(' ')
@@ -69,19 +69,15 @@ def parse_typeface(typeface):
         else:
             w = width
         g.xAdvance = 1 + w
+        g.xOffset = 0
+        g.yOffset = -height
 
         if line and line[0] != '':
             xo, yo = int(line[0]), int(line[1])
             img = pbm.crop((xo, yo, xo+w, yo+height))
-            img = img.convert('L')
-            g.bitmap = img.tobytes()
         else:
-            g.bitmap = bytearray(w*height)
-        g.width = w
-        g.height = height
-        g.xOffset = 0
-        g.yOffset = -height
-        g.alpha = Glyph.Alpha.L8
+            img = Image.new('1', (w, height))
+        g.set_bitmap(img)
         typeface.glyphs.append(g)
 
     def sortkey(g):

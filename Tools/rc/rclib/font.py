@@ -25,6 +25,7 @@ import os
 import sys
 import struct
 from .base import Resource, findFile, StructSize, fstrSize
+from PIL import Image
 
 class FontStyle(enum.Enum):
     """Style is a set of these values, using strings here but bitfields in library"""
@@ -50,116 +51,69 @@ class FontStyle(enum.Enum):
 
 
 class Glyph(Resource):
-    class Alpha(enum.IntEnum):
-        L1 = 0
-        L8 = 1
-        L2 = 2
-        L4 = 3
-
-    def __init__(self, typeface):
+    def __init__(self, typeface: Typeface):
         super().__init__()
-        self.typeface = typeface
+        self.typeface: Typeface = typeface
         self.codePoint = None
-        self.bitmap = None
+        self.bitmap: bytearray = None
         self.width = None
         self.height = None
         self.xOffset = None
         self.yOffset = None
         self.xAdvance = None
-        self.alpha = Glyph.Alpha.L1
+        self.alpha = 1
 
-    def packBits(self, rows, width):
-        """ Convert bitmap to internal (GFX) format
-            Source bitmap source data is array.array('I') of row bitmap data,
-            with last bit in position 0.
-            We identify defined area, exclude surround empty region, then pack bits
-            and update glyph details.
+    def set_bitmap(self, img: Image):
+        """ Convert bitmap to internal (GFX) format and set width, height.
+        We remove space round the glyph, update glyph offsets and pack the resulting bits.
         """
-        height = len(rows)
+        w, h = img.width, img.height
+        self.width = w
+        self.height = h
+        stride = w # All modes 1 byte per pixel
+        self.alpha = 1 if img.mode == '1' else self.typeface.font.alpha
+        pixels_per_byte = 8 // self.alpha
+        dstsize = (w * h + pixels_per_byte - 1) // pixels_per_byte
 
-        # Identify leading/trailing blank rows and columns
-        leadingRows = trailingRows = 0
-        leadingCols = trailingCols = width
-        started = False
-        for row in rows:
-            if row == 0:
-                if started:
-                    trailingRows += 1
-                else:
-                    leadingRows += 1
-            else:
-                started = True
-                trailingRows = 0
-                # Examine columns
-                n = 0
-                mask = 1 << (width - 1)
-                for i in range(width):
-                    if row & mask != 0:
-                        break
-                    n += 1
-                    mask >>= 1
-                leadingCols = min(leadingCols, n)
-                mask = 0x01
-                n = 0
-                for i in range(width):
-                    if row & mask != 0:
-                        break
-                    n += 1
-                    mask <<= 1
-                trailingCols = min(trailingCols, n)
+        # Pack source bits so resulting data is as compact as possible
+        imgdata = img.tobytes('raw', ('L'))
 
-        # print("leadingRows %u, trailingRows %u, height %u" % (leadingRows, trailingRows, height))
+        # print(f'Bitmap {w} x {h}, bpp {bpp}, src {len(imgdata)} bytes, dst {dstsize}')
 
-        if leadingRows == height:
-            self.width = self.height = self.xOffset = self.yOffset = 0
-            self.bitmap = bytearray(0)
+        if self.alpha == 8:
+            self.bitmap = imgdata
             return
 
-        # Existing glyph attributes should only be adjusted
-        if self.width is None:
-            self.width = width
-        self.width -= leadingCols + trailingCols
-        if self.height is None:
-            self.height = height
-        self.height -= leadingRows + trailingRows
-        if self.xOffset is None:
-            self.xOffset = 0
-        self.xOffset += leadingCols
-        if self.yOffset is None:
-            self.yOffset = -height
-        self.yOffset += leadingRows
-
-        # print("glyph %d x %d, leadingRows %u, trailingRows %u, leadingCols %u, trailingCols %u"
-        #     % (self.width, self.height, leadingRows, trailingRows, leadingCols, trailingCols))
-
-        n = self.height
-        destBytes = (self.width * self.height + 7) // 8
-        self.bitmap = bytearray(destBytes)
-        off = 0
-        dstmask = 0x80
-        for i in range(n):
-            row = rows[leadingRows + i]
-            srcmask = 1 << (width - leadingCols - 1)
-            for j in range(self.width):
-                if row & srcmask != 0:
-                    self.bitmap[off] |= dstmask
-                srcmask >>= 1
-                dstmask >>= 1
-                if dstmask == 0:
-                    dstmask = 0x80
-                    off += 1
-        # print("packBits %u; width %u, height %u, leading %u, trailing %u" % (len(src), width, height, leading, trailing))
+        dstbuf = bytearray(dstsize)
+        srcoff = 0
+        dstoff = 0
+        dstbits = 0
+        dstbitlen = 0
+        mask = 1 << 8
+        for bit in imgdata:
+            mask >>= 1
+            if bit:
+                dstbits |= mask
+            dstbitlen += 1
+            if dstbitlen == 8:
+                dstbuf[dstoff] = dstbits
+                dstoff += 1
+                dstbits = 0
+                dstbitlen = 0
+                mask = 1 << 8
+        if dstbitlen:
+            dstbuf[dstoff] = dstbits
+        self.bitmap = dstbuf
 
 
 class Typeface(Resource):
-    def __init__(self, font, style):
+    def __init__(self, font: Font, style):
         super().__init__()
-        self.font = font
+        self.font: Font = font
         self.style = style
-        self.bitmap = None
         self.yAdvance = None
         self.descent = None
-        self.glyphs = []
+        self.glyphs: list[Glyph] = []
         self.headerSize = 0
 
     def serialize(self, bmOffset, res_offset, ptr64: bool):
@@ -232,7 +186,7 @@ class Typeface(Resource):
                 c = ''
             elif c == '\\':
                 c = "'\\'"
-            out.write("\t{ 0x%04x, %3u, %3u, %3d, %3d, %3u, %u }, // #0x%04x %s \n" %
+            out.write("\t{ 0x%04x, %3u, %3u, %3d, %3d, %3u, GlyphResource::L%u }, // #0x%04x %s \n" %
                 (bmOffset, g.width, g.height, g.xOffset, g.yOffset, g.xAdvance, g.alpha, g.codePoint, c))
             bmOffset += len(g.bitmap)
             self.headerSize += StructSize.GlyphResource
@@ -300,7 +254,7 @@ class Font(Resource):
         self.yAdvance = 0
         self.descent = 0
         self.headerSize = 0
-        self.alpha: Glyph.Alpha = None
+        self.alpha = 1
 
     def serialize(self, bmOffset, res_offset, ptr64: bool):
         resdata = b''
@@ -402,7 +356,7 @@ def parse_item(item, name):
     font.name = name
     font.pointSize = item.get('size')
     mono = item.get('mono', False)
-    font.alpha = item.get('alpha', Glyph.Alpha.L1 if mono else Glyph.Alpha.L8)
+    font.alpha = item.get('alpha', 1 if mono else 8)
     font.codePoints = codePoints
 
     def add(name, style):

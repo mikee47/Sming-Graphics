@@ -56,8 +56,6 @@ def print_bitmap_diff(bitmap: freetype.Bitmap):
 def parse_typeface(typeface: Typeface):
     face = freetype.Face(typeface.source)
 
-    # printDetails(face)
-
     if typeface.font.pointSize is None:
         face.select_size(0)
     else:
@@ -72,32 +70,20 @@ def parse_typeface(typeface: Typeface):
         if index == 0:
             continue # No glyph for this codepoint
         flags = freetype.FT_LOAD_RENDER
-        if not typeface.font.alpha:
+        if typeface.font.alpha == 1:
             flags |= freetype.FT_LOAD_MONOCHROME | freetype.FT_LOAD_TARGET_MONO
         face.load_glyph(index, flags)
         bitmap = face.glyph.bitmap
         w, h = bitmap.width, bitmap.rows
         g = Glyph(typeface)
         g.codePoint = c
-        g.width = w
-        g.height = h
         g.xAdvance = pointsToPixels(face.glyph.advance.x)
         g.xOffset = face.glyph.bitmap_left
         g.yOffset = 1 - face.glyph.bitmap_top
 
-        if w + h == 0:
-            g.bitmap = bytearray(0)
-        else:
-            if bitmap.pixel_mode == freetype.FT_PIXEL_MODE_MONO:
-                img = Image.frombuffer('1', (w, h), bytearray(bitmap.buffer), 'raw', ('1', bitmap.pitch))
-                img = img.convert('L')
-                imgdata = img.tobytes()
-                g.alpha = Glyph.Alpha.L8
-                g.bitmap = imgdata
-            else:
-                g.alpha = Glyph.Alpha.L8
-                g.bitmap = bytearray(bitmap.buffer)
-
+        mode = '1' if bitmap.pixel_mode == freetype.FT_PIXEL_MODE_MONO else 'L'
+        img = Image.frombuffer(mode, (w, h), bytearray(bitmap.buffer), 'raw', (mode, bitmap.pitch, 1))
+        g.set_bitmap(img)
         typeface.glyphs.append(g)
 
 

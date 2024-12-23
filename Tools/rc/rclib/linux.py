@@ -76,15 +76,11 @@ def parse_typeface(typeface):
         if codePoint in typeface.font.codePoints:
             g = Glyph(typeface)
             g.codePoint = codePoint
-            img = Image.frombuffer('1', (width, height), bitmap[offset : offset+bmp_bytes], 'raw', ('1', stride))
-            img = img.convert('L')
-            g.width = width
-            g.height = height
             g.xOffset = 0
             g.yOffset = -height
-            g.alpha = Glyph.Alpha.L8
-            g.bitmap = img.tobytes()
             g.xAdvance = 1 + width
+            img = Image.frombuffer('1', (width, height), bitmap[offset : offset+bmp_bytes], 'raw', ('1', stride))
+            g.set_bitmap(img)
             typeface.glyphs.append(g)
         offset += bmp_bytes
 
