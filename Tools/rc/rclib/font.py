@@ -25,7 +25,7 @@ import os
 import sys
 import struct
 from .base import Resource, findFile, StructSize, fstrSize
-from PIL import Image
+from PIL import Image, ImageChops
 
 class FontStyle(enum.Enum):
     """Style is a set of these values, using strings here but bitfields in library"""
@@ -67,10 +67,24 @@ class Glyph(Resource):
         """ Convert bitmap to internal (GFX) format and set width, height.
         We remove space round the glyph, update glyph offsets and pack the resulting bits.
         """
+
+        # Find smallest bounding box and crop
         w, h = img.width, img.height
+        bg = Image.new('L', (w, h), 0)
+        diff = ImageChops.difference(img, bg)
+        diff = ImageChops.add(diff, diff, 2.0, -100)
+        bbox = diff.getbbox()
+
+        if bbox:
+            img = img.crop(bbox)
+            self.xOffset += bbox[0]
+            self.yOffset += bbox[1]
+        else:
+            img = img.crop((0,0,0,0))
+        w, h = img.width, img.height
+
         self.width = w
         self.height = h
-        stride = w # All modes 1 byte per pixel
         alpha = 1 if img.mode == '1' else self.typeface.font.alpha
         self.alpha = alpha
         pixels_per_byte = 8 // alpha

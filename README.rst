@@ -179,6 +179,9 @@ Resource script entries look like this:
         "<name>": {
             "codepoints": "<filter>", // Which character glyphs to include. See below.
             "chars": "<text string>", // List of required character codepoints
+            "alpha",                  // Optional: maximum number of bits per pixel (1, 2, 4 or 8). Default is 8.
+            "mono",                   // Optional: Set to *true* to use 1 bit per pixel. Default is *false*.
+            "size",                   // Optional parameter for freetype fonts
             "normal": "<filename>",
             "italic": "<filename>",
             "bold": "<filename>",
@@ -188,7 +191,7 @@ Resource script entries look like this:
 
 Styles are optional but a font must have at least one typeface.
 
-By default, all ASCII characters from 0x20 (space) to 0x7e (~).
+By default, all ASCII characters from 0x20 (space) to 0x7e (~) are generated.
 The ``codepoints`` parameter is a comma-separated list of ranges:
 
     a-z,A-Z,0-9,0x4000-0x4050
@@ -196,6 +199,14 @@ The ``codepoints`` parameter is a comma-separated list of ranges:
 This overrides the default and includes only characters and digits, plus unicode characters in the given range.
 The ``chars`` parameter is a simple list of characters, e.g. "Include these chars".
 Both lists are combined, de-duplicated and sorted in ascending order.
+
+The **alpha** parameter sets a limit on the number of bits per pixel used for the generated glyphs.
+This cannot be used to convert monochrome fonts to grayscale, only to reduce grayscale resolution.
+
+The **mono** parameter is equivalent to **alpha: 1**, and is ignored if **alpha** is specified.
+
+Generated glyphs are cropped to remove any blank space around the image, then packed to minimise memory usage.
+This means that the bitmap data is contiguous, without breaks, from top left to bottom right.
 
 The following font classes are currently supported:
 
@@ -215,6 +226,10 @@ The following font classes are currently supported:
         These are from the `TFT_eSPI <https://github.com/Bodmer/TFT_eSPI>`__ library.
         See ``resource/fonts/VLW``.
 
+        Glyphs are defined using 8 bits per pixel, so have a default **alpha** of 8.
+        Changing the alpha to 4 or 2 reduces the glyph size (by 50% or 75%) in many cases without
+        affecting perceived quality. Conversion to monochrome (alpha 1) looks terrible.
+
         Note that TTF/OTF scalable vector fonts are supported directly by this library
         so is the preferred format for new fonts.
     freetype
@@ -228,12 +243,11 @@ The following font classes are currently supported:
 
         The ``freetype`` library supports other types so if required these are easily added.
 
-        These fonts have some additional parameters:
-            "mono": <True/False>
-                Whether to produce monochrome (1-bit) or grayscale (8-bit alpha) glyphs.
-                If not specified, defaults to grayscale.
-            "size": <Point size of font>
-                e.g. 16, 14.5
+        An optional **size** parameter indicates the point size for the font to generate.
+        If omitted, the first typeface defined for that font is used.
+
+        High quality glyphs of any size can be produced, by default with **alpha** of 8.
+        TrueType and OpenType fonts can produce good monochrome glyphs, good for larger sizes.
 
 
 Images

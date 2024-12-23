@@ -26,31 +26,11 @@ import struct
 import array
 import freetype
 from .font import Glyph, Typeface
-from PIL import Image, ImageChops
-from io import BytesIO
+from PIL import Image
 
 
 def pointsToPixels(points26):
     return round(points26 / 64)
-
-
-def print_bitmap_diff(bitmap: freetype.Bitmap):
-    if bitmap.width + bitmap.rows == 0:
-        return
-    mode = '1' if bitmap.pixel_mode == freetype.FT_PIXEL_MODE_MONO else 'L'
-    img = Image.frombuffer(mode, (bitmap.width, bitmap.rows), bytearray(bitmap.buffer))
-    bg = Image.new(mode, (bitmap.width, bitmap.rows), 0)
-    diff = ImageChops.difference(img, bg)
-    diff = ImageChops.add(diff, diff, 2.0, -100)
-    bbox = diff.getbbox()
-    if bbox is None:
-        return
-    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    size_orig = bitmap.width * bitmap.rows
-    size_new = w * h
-    pix_diff = size_orig - size_new
-    if pix_diff:
-        print(f'glyph = ({bitmap.width}, {bitmap.rows}), bbox = ({w}, {h}), pix. diff {pix_diff} ({size_orig} -> {size_new})')
 
 
 def parse_typeface(typeface: Typeface):
