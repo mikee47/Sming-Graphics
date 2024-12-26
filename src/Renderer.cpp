@@ -2062,7 +2062,7 @@ void TextRenderer::AlphaBuffer::fill()
 		}
 		auto run = static_cast<const TextObject::RunElement*>(element);
 		while(run->pos.y < ymax && charIndex < run->length) {
-			char ch = text->read(run->offset + charIndex);
+			uint8_t ch = text->read(run->offset + charIndex);
 			auto charMetrics = font->typeface.getMetrics(ch);
 
 			if(x + (charMetrics.advance * 2) > size.w) {

@@ -48,7 +48,7 @@ void TextParser::parse(const TextAsset& asset, uint32_t start, size_t size)
 	};
 
 	for(unsigned i = 0; i < size; ++i, ++index) {
-		char ch = asset.read(index);
+		uint8_t ch = asset.read(index);
 		if(ch == '\n') {
 			addSeg();
 			newLine();

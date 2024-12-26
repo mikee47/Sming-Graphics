@@ -159,7 +159,7 @@ void LcdGlyph::readAlpha(void* buffer, Point origin, size_t stride) const
 	}
 }
 
-std::unique_ptr<GlyphObject> LcdTypeFace::getGlyph(char ch, const GlyphObject::Options& options) const
+std::unique_ptr<GlyphObject> LcdTypeFace::getGlyph(uint16_t ch, const GlyphObject::Options& options) const
 {
 	auto w(LcdGlyph::rawSize.w);
 

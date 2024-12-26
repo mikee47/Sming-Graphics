@@ -61,13 +61,13 @@ public:
 		return 1;
 	}
 
-	GlyphObject::Metrics getMetrics(char ch) const override
+	GlyphObject::Metrics getMetrics(uint16_t ch) const override
 	{
 		(void)ch;
 		return LcdGlyph::metrics;
 	}
 
-	std::unique_ptr<GlyphObject> getGlyph(char ch, const GlyphObject::Options& options) const override;
+	std::unique_ptr<GlyphObject> getGlyph(uint16_t ch, const GlyphObject::Options& options) const override;
 };
 
 class LcdFont : public Font

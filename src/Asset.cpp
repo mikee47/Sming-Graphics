@@ -449,20 +449,20 @@ bool ResourceTypeface::findGlyph(uint16_t codePoint, Resource::GlyphResource& gl
 	return false;
 }
 
-GlyphMetrics ResourceTypeface::getMetrics(char ch) const
+GlyphMetrics ResourceTypeface::getMetrics(uint16_t ch) const
 {
 	Resource::GlyphResource glyph;
 	if(findGlyph(ch, glyph)) {
 		return glyph.getMetrics();
 	}
 
-	GlyphMetrics metrics{};
-	metrics.height = FSTR::readValue(&font.yAdvance);
-	metrics.advance = FSTR::readValue(&typeface.yAdvance) / 2;
-	return metrics;
+	return GlyphMetrics{
+		.height = FSTR::readValue(&font.yAdvance),
+		.advance = uint8_t(FSTR::readValue(&typeface.yAdvance) / 2),
+	};
 }
 
-std::unique_ptr<GlyphObject> ResourceTypeface::getGlyph(char ch, const GlyphOptions& options) const
+std::unique_ptr<GlyphObject> ResourceTypeface::getGlyph(uint16_t ch, const GlyphOptions& options) const
 {
 	Resource::GlyphResource glyph;
 	if(findGlyph(ch, glyph)) {

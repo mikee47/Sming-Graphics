@@ -540,7 +540,7 @@ public:
 	/**
 	 * @brief Get metrics for a character
 	 */
-	virtual GlyphMetrics getMetrics(char ch) const = 0;
+	virtual GlyphMetrics getMetrics(uint16_t ch) const = 0;
 
 	/**
 	 * @brief Get the glyph for a character
@@ -550,7 +550,7 @@ public:
 	 * 
 	 * Caller is responsible for destroying the glyph when no longer required.
 	 */
-	virtual std::unique_ptr<GlyphObject> getGlyph(char ch, const GlyphOptions& options) const = 0;
+	virtual std::unique_ptr<GlyphObject> getGlyph(uint16_t ch, const GlyphOptions& options) const = 0;
 
 	/**
 	 * @brief Get baseline relative to top of mbox
@@ -631,9 +631,9 @@ public:
 		return FSTR::readValue(&font.descent);
 	}
 
-	GlyphMetrics getMetrics(char ch) const override;
+	GlyphMetrics getMetrics(uint16_t ch) const override;
 
-	std::unique_ptr<GlyphObject> getGlyph(char ch, const GlyphOptions& options) const override;
+	std::unique_ptr<GlyphObject> getGlyph(uint16_t ch, const GlyphOptions& options) const override;
 
 private:
 	bool findGlyph(uint16_t codePoint, Resource::GlyphResource& res) const;
