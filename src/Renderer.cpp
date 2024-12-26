@@ -2082,7 +2082,7 @@ void TextRenderer::AlphaBuffer::fill()
 				auto line = [&](uint8_t line) {
 					// Typeface may not  have room for this
 					if(line < font->typeface.height()) {
-						memset(&data[x + size.w * line], 0xff, charMetrics.advance);
+						memset(&data[x + size.w * line], 0x80, charMetrics.advance);
 					}
 				};
 
@@ -2102,10 +2102,10 @@ void TextRenderer::AlphaBuffer::fill()
 					line(3);
 				}
 				if(font->style[FontStyle::Strikeout]) {
-					line(charMetrics.height / 2);
+					line(baseline - font->typeface.height() / 2);
 				}
 				if(font->style[FontStyle::DoubleStrikeout]) {
-					uint8_t c = charMetrics.height / 2;
+					uint8_t c = baseline - font->typeface.height() / 2;
 					line(c - 1);
 					line(c + 2);
 				}
