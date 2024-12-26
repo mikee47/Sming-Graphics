@@ -19,7 +19,7 @@
 # @author: July 2021 - mikee47 <mike@sillyhouse.net>
 #
 
-from . import font, gfx, linux, vlw, freetype, pfi
+from . import font, gfx, linux, vlw, freetype, pfi, evf
 from . import image
 
 # Dictionary of registered resource type parsers

@@ -21,6 +21,7 @@
 
 import os
 import enum
+from common import status
 
 ORDER_RGB = 0
 ORDER_BGR = 1
@@ -77,21 +78,27 @@ class Resource(object):
 
 resourcePaths = [
     '${GRAPHICS_LIB_ROOT}/resource',
+    '${RESOURCE_PATH}',
 ]
 
 def findFile(filename, dirs = []):
     if os.path.exists(filename):
         return filename
 
-    alldirs = set()
+    status(f'findFile "{filename}"')
+
+    alldirs = []
     for path in resourcePaths + dirs:
+        status(f'Walking {path} -> {os.path.expandvars(path)}')
         for walkroot, _, _ in os.walk(os.path.expandvars(path)):
-            alldirs.add(walkroot)
+            if walkroot not in alldirs:
+                alldirs.append(walkroot)
 
     for dir in alldirs:
+        status(f'Searching {dir}')
         path = os.path.join(dir, filename)
         if os.path.exists(path):
-            # status("Found '%s'" % path)
+            status(f'Found "{path}"')
             return path
 
     raise FileNotFoundError(filename)

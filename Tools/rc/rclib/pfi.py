@@ -21,7 +21,6 @@
 
 import os
 from PIL import Image, ImageOps
-import array
 from .font import Glyph
 
 def parse_typeface(typeface):

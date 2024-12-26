@@ -86,7 +86,10 @@ class Glyph(Resource):
         self.width = w
         self.height = h
         alpha = 1 if img.mode == '1' else self.typeface.font.alpha
-        self.alpha = alpha
+        if self.alpha and alpha > self.alpha:
+            alpha = self.alpha
+        else:
+            self.alpha = alpha
         pixels_per_byte = 8 // alpha
         dstsize = (w * h + pixels_per_byte - 1) // pixels_per_byte
 
