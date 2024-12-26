@@ -2079,7 +2079,7 @@ void TextRenderer::AlphaBuffer::fill()
 				glyph->readAlpha(data.get(), Point(x, 0), size.w);
 				glyph.reset();
 
-				auto line = [&](int8_t line) {
+				auto line = [&](uint8_t line) {
 					// Typeface may not  have room for this
 					if(line < font->typeface.height()) {
 						memset(&data[x + size.w * line], 0xff, charMetrics.advance);
