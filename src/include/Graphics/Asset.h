@@ -150,6 +150,10 @@ enum class BrushStyle {
 class SolidBrush : public AssetTemplate<AssetType::SolidBrush>
 {
 public:
+	SolidBrush(Color color) : AssetTemplate(), color(color)
+	{
+	}
+
 	SolidBrush(AssetID id, Color color) : AssetTemplate(id), color(color)
 	{
 	}
@@ -289,6 +293,10 @@ public:
 	}
 
 	Brush(PackedColor color) : packedColor(color), kind(Kind::PackedColor)
+	{
+	}
+
+	Brush(const SolidBrush* brush) : color(brush->color), kind(Kind::Color)
 	{
 	}
 
@@ -512,6 +520,8 @@ using GlyphOptions = TextOptions;
 class TypeFace : public AssetTemplate<AssetType::Typeface>
 {
 public:
+	using AssetTemplate::AssetTemplate;
+
 	/**
 	 * @brief Style of this typeface (bold, italic, etc.)
 	 */
