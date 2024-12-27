@@ -92,13 +92,13 @@ public:
 #undef XX
 	};
 
-	Asset() : mId(nextId++)
+	Asset() : mId(++lastId)
 	{
 	}
 
 	Asset(ID id) : mId(id)
 	{
-		nextId = std::max(nextId, ID(id + 1));
+		lastId = std::max(lastId, id);
 	}
 
 	using LinkedObjectTemplate::operator==;
@@ -122,7 +122,7 @@ public:
 
 private:
 	ID mId;
-	static ID nextId;
+	static ID lastId; ///< 0 is not used, indicates 'not assigned'
 };
 
 GRAPHICS_VERIFY_SIZE(Asset, 12)

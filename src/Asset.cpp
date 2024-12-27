@@ -51,7 +51,7 @@ String toString(Graphics::AssetType type)
 
 namespace Graphics
 {
-Asset::ID Asset::nextId;
+Asset::ID Asset::lastId;
 
 namespace
 {
