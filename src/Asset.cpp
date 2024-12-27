@@ -428,6 +428,14 @@ private:
 
 /* ResourceTypeface */
 
+GlyphBlock ResourceTypeface::getBlock(unsigned index) const
+{
+	if(index < FSTR::readValue(&typeface.numBlocks)) {
+		return FSTR::readValue(&typeface.blocks[index]);
+	}
+	return GlyphBlock{};
+}
+
 bool ResourceTypeface::findGlyph(uint16_t codePoint, Resource::GlyphResource& glyph) const
 {
 	auto glyphPtr = typeface.glyphs;

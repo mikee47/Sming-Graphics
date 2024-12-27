@@ -512,6 +512,7 @@ public:
 	}
 };
 
+using GlyphBlock = Resource::GlyphBlock;
 using GlyphOptions = TextOptions;
 
 /**
@@ -521,6 +522,23 @@ class TypeFace : public AssetTemplate<AssetType::Typeface>
 {
 public:
 	using AssetTemplate::AssetTemplate;
+
+	/**
+	 * @brief Return any device-specific information
+	 *
+	 * Controllers with internal fonts return private structures here to support rendering.
+	 */
+	virtual const void* getDeviceData() const
+	{
+		return nullptr;
+	}
+
+	/**
+	 * @brief Support enumeration of codepoint ranges
+	 * @param index Zero-based index of glyph block to return
+	 * @retval GlyphBlock
+	 */
+	virtual GlyphBlock getBlock(unsigned index) const = 0;
 
 	/**
 	 * @brief Style of this typeface (bold, italic, etc.)
@@ -612,6 +630,8 @@ public:
 		: font(font), typeface(typeface)
 	{
 	}
+
+	GlyphBlock getBlock(unsigned index) const override;
 
 	FontStyles getStyle() const override
 	{

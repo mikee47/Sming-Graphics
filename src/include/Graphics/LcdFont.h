@@ -46,6 +46,14 @@ private:
 class LcdTypeFace : public TypeFace
 {
 public:
+	GlyphBlock getBlock(unsigned index) const override
+	{
+		if(index == 0) {
+			return GlyphBlock{0, 255};
+		}
+		return GlyphBlock{};
+	}
+
 	FontStyles getStyle() const override
 	{
 		return 0;
