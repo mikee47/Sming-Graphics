@@ -392,15 +392,7 @@ public:
 				resourceStream->read(offset, bufptr, glyph.width);
 			}
 		} else {
-			uint8_t bitsPerPixel = 1;
-			switch(glyph.alpha) {
-			case Alpha::L4:
-				bitsPerPixel = 4;
-				break;
-			case Alpha::L2:
-				bitsPerPixel = 2;
-				break;
-			}
+			uint8_t bitsPerPixel = 1 << glyph.alpha;
 			uint8_t srcbyte = 0;
 			uint8_t srcShift = 0;
 			const uint8_t mask = (1 << bitsPerPixel) - 1;

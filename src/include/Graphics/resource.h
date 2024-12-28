@@ -32,14 +32,12 @@ namespace Resource
  * @brief Describes glyph bitmap and position
  */
 struct GlyphResource {
-	/*
-	 * Bits per pixel, packed.
-	 */
+	// log2(bits per pixel)
 	enum Alpha {
 		L1 = 0,
-		L8 = 1,
-		L2 = 2,
-		L4 = 3,
+		L2 = 1,
+		L4 = 2,
+		L8 = 3,
 	};
 
 	uint16_t bmOffset; ///< Offset relative to TypefaceResource::bmpOffset
