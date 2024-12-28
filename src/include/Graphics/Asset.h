@@ -583,6 +583,13 @@ public:
 	 */
 	uint16_t getTextWidth(const char* text, uint16_t length) const;
 
+	/**
+	 * @brief Determine the character index in this typeface
+	 * @param ch codepoint
+	 * @retval int Index of character, -1 if not found
+	 */
+	int getCharIndex(uint16_t ch) const;
+
 	/* Meta */
 
 	void write(MetaWriter& meta) const override

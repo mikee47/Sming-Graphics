@@ -317,6 +317,21 @@ uint16_t TypeFace::getTextWidth(const char* text, uint16_t length) const
 	return x + std::max(advance, width);
 }
 
+int TypeFace::getCharIndex(uint16_t ch) const
+{
+	unsigned charIndex{0};
+	for(unsigned blockIndex = 0;; ++blockIndex) {
+		GlyphBlock block = getBlock(blockIndex);
+		if(block.length == 0) {
+			return -1;
+		}
+		if(block.contains(ch)) {
+			return charIndex + ch - block.codePoint;
+		}
+		charIndex += block.length;
+	}
+}
+
 /* ResourceGlyph */
 
 class ResourceGlyph : public GlyphObject
