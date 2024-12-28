@@ -889,6 +889,14 @@ public:
 	 */
 	virtual void readAlpha(void* buffer, Point origin, size_t stride) const = 0;
 
+	/**
+	 * @brief Get raw glyph data
+	 * @param buffer Buffer for data
+	 * @param bufSize Size of buffer in bytes
+	 * @retval size_t Size of glyph data in bytes, can be greater than bufSize
+	 */
+	virtual size_t readRaw(void* buffer, size_t bufSize) const = 0;
+
 	const Metrics& getMetrics() const
 	{
 		return metrics;

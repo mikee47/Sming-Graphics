@@ -21,7 +21,7 @@ public:
 		.width = rawSize.w + 1,
 		.height = rawSize.h,
 		.xOffset = 0,
-		.yOffset = rawSize.h,
+		.yOffset = 1 - rawSize.h,
 		.advance = rawSize.w + 1,
 		.alpha = 0,
 	};
@@ -39,6 +39,8 @@ public:
 	}
 
 	void readAlpha(void* buffer, Point origin, size_t stride) const override;
+
+	size_t readRaw(void* buffer, size_t bufSize) const override;
 
 private:
 	std::bitset<rawSize.w> rowBits[rawSize.h];
@@ -70,9 +72,8 @@ public:
 		return 1;
 	}
 
-	GlyphObject::Metrics getMetrics(uint16_t ch) const override
+	GlyphObject::Metrics getMetrics(uint16_t) const override
 	{
-		(void)ch;
 		return LcdGlyph::metrics;
 	}
 

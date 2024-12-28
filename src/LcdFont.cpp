@@ -159,6 +159,31 @@ void LcdGlyph::readAlpha(void* buffer, Point origin, size_t stride) const
 	}
 }
 
+size_t LcdGlyph::readRaw(void* buffer, size_t bufSize) const
+{
+	unsigned glyphDataSize = (metrics.width * rawSize.h + 7) / 8;
+	if(buffer && bufSize >= glyphDataSize) {
+		auto dst = static_cast<uint8_t*>(buffer);
+		int dstoff{-1};
+		uint8_t mask{0};
+		for(unsigned y = 0; y < rawSize.h; ++y) {
+			auto bits = getBits(y);
+			for(unsigned x = 0; x < metrics.width; ++x) {
+				if(mask == 0) {
+					++dstoff;
+					dst[dstoff] = 0;
+					mask = 0x80;
+				}
+				if(bits[x]) {
+					dst[dstoff] |= mask;
+				}
+				mask >>= 1;
+			}
+		}
+	}
+	return rawSize.h;
+}
+
 std::unique_ptr<GlyphObject> LcdTypeFace::getGlyph(uint16_t ch, const GlyphObject::Options& options) const
 {
 	auto w(LcdGlyph::rawSize.w);

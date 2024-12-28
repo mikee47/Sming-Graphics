@@ -412,6 +412,22 @@ public:
 		}
 	}
 
+	size_t readRaw(void* buffer, size_t bufSize) const override
+	{
+		uint8_t bitsPerPixel = 1 << glyph.alpha;
+		uint8_t pixelsPerByte = 8 / bitsPerPixel;
+		size_t glyphDataSize = (unsigned(glyph.width) * glyph.height + pixelsPerByte - 1) / pixelsPerByte;
+		if(buffer) {
+			unsigned offset = typeface.bmOffset + glyph.bmOffset;
+			size_t bytesToRead = std::min(glyphDataSize, bufSize);
+			size_t readCount = resourceStream->read(offset, buffer, bytesToRead);
+			if(readCount != bytesToRead) {
+				debug_e("READ %u, expected %u", readCount, bytesToRead);
+			}
+		}
+		return glyphDataSize;
+	}
+
 private:
 	uint8_t fontDescent;
 	const Resource::TypefaceResource typeface;
