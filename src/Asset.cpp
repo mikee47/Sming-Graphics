@@ -411,7 +411,6 @@ public:
 			uint8_t srcbyte = 0;
 			uint8_t srcShift = 0;
 			const uint8_t mask = (1 << bitsPerPixel) - 1;
-			const uint8_t dstShift = 8 - bitsPerPixel;
 			auto rowptr = bufptr;
 			for(unsigned y = 0; y < glyph.height; ++y) {
 				for(unsigned x = 0; x < glyph.width; ++x) {
@@ -420,7 +419,7 @@ public:
 						srcShift = 8;
 					}
 					srcShift -= bitsPerPixel;
-					rowptr[x] = ((srcbyte >> srcShift) & mask) << dstShift;
+					rowptr[x] = 255 * ((srcbyte >> srcShift) & mask) / mask;
 				}
 				rowptr += stride;
 			}
