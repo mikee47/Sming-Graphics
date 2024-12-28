@@ -40,6 +40,21 @@ void WriteStream::flush()
 
 size_t ReadStream::read(uint32_t offset, void* buffer, size_t count)
 {
+	if(count > size) {
+		start = stream.seekFrom(offset, SeekOrigin::Start);
+		auto bytesRead = stream.readBytes(static_cast<char*>(buffer), count);
+		if(bytesRead <= size) {
+			memcpy(data, buffer, bytesRead);
+			length = bytesRead;
+		} else {
+			auto off = bytesRead - size;
+			start += off;
+			memcpy(data, static_cast<const uint8_t*>(buffer) + off, size);
+			length = size;
+		}
+		return bytesRead;
+	}
+
 	if(offset < start || offset + count > start + length) {
 		start = stream.seekFrom(offset, SeekOrigin::Start);
 		length = stream.readBytes(data, size);
