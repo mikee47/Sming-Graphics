@@ -841,6 +841,7 @@ struct GlyphMetrics {
 	int8_t xOffset;  ///< Glyph position relative to cursor
 	int8_t yOffset;  ///< Distance from upper-left corner to baseline
 	uint8_t advance; ///< Distance to next character
+	uint8_t alpha;   ///< log2(Bits per pixel)
 
 	Size size() const
 	{

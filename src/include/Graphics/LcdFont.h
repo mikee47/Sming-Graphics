@@ -23,6 +23,7 @@ public:
 		.xOffset = 0,
 		.yOffset = rawSize.h,
 		.advance = rawSize.w + 1,
+		.alpha = 0,
 	};
 
 	LcdGlyph(size_t bmOffset, const Options& options);

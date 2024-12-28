@@ -58,6 +58,7 @@ struct GlyphResource {
 			.xOffset = xOffset,
 			.yOffset = yOffset,
 			.advance = xAdvance,
+			.alpha = alpha,
 		};
 	}
 };
