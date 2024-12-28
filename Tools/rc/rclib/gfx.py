@@ -78,6 +78,7 @@ def parse_typeface(typeface):
             g.yOffset = e[5]
             bmSize = (g.width * g.height + 7) // 8
             g.bitmap = bitmap[bmOffset:bmOffset+bmSize]
+            g.alpha = 1
             typeface.glyphs.append(g)
             descent = max(descent, g.yOffset + g.height)
         codePoint += 1

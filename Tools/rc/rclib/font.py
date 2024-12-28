@@ -61,7 +61,7 @@ class Glyph(Resource):
         self.xOffset = None
         self.yOffset = None
         self.xAdvance = None
-        self.alpha = 1
+        self.alpha = None
 
     def set_bitmap(self, img: Image):
         """ Convert bitmap to internal (GFX) format and set width, height.
