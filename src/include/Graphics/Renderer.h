@@ -26,6 +26,16 @@
 #include "Surface.h"
 #include <Delegate.h>
 
+/**
+ * @brief For use by implementations to create default renderer
+ */
+#define DEFAULT_RENDER(object_kind)                                                                                    \
+	case Object::Kind::object_kind: {                                                                                  \
+		auto& obj = static_cast<const object_kind##Object&>(object);                                                   \
+		renderer.reset(obj.createRenderer(loc));                                                                       \
+		return true;                                                                                                   \
+	}
+
 namespace Graphics
 {
 /**

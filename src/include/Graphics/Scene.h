@@ -57,7 +57,7 @@ public:
 		meta.writeArray("assets", "Asset", assets);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	/**
 	 * @brief Add a new object to the scene

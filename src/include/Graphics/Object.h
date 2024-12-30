@@ -111,10 +111,12 @@ public:
 	 * @brief Create a software renderer for this object
 	 * @param location
 	 * @retval renderer Returned renderer object
-	 * 
-	 * Return nullptr if object cannot/should not be rendered
+	 * Return nullptr if object cannot/should not be rendered.
+	 *
+	 * This is a non-virtual method so the compiler can discard implementations
+	 * which are not required by more capable Surface implementations.
 	 */
-	virtual Renderer* createRenderer(const Location& location) const = 0;
+	// Renderer* createRenderer(const Location& location);
 
 	bool operator==(const Object& other) const
 	{
@@ -139,7 +141,14 @@ public:
 /**
  * @brief Base class for a custom object
  */
-using CustomObject = ObjectTemplate<Object::Kind::Custom>;
+class CustomObject : public ObjectTemplate<Object::Kind::Custom>
+{
+public:
+	/**
+	 * @brief Custom objects must provide a renderer implementation.
+	 */
+	virtual Renderer* createRenderer(const Location& location) const = 0;
+};
 
 /**
  * @brief Reference to another object
@@ -166,7 +175,10 @@ public:
 		meta.write("object", object);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	/**
+	 * @brief Adjust render location for correct placement of contained object
+	 */
+	void adjustLocation(Location& loc) const;
 
 	const Object& object;
 	Rect pos;
@@ -190,7 +202,7 @@ public:
 		meta.write("point", point);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Brush brush;
 	Point point;
@@ -219,7 +231,7 @@ public:
 		}
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Pen pen;
 	Rect rect;
@@ -249,7 +261,7 @@ public:
 		}
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	const Blend* blender{nullptr};
 	Brush brush;
@@ -286,7 +298,7 @@ public:
 		meta.write("pt2", pt2);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Pen pen{};
 	Point pt1{};
@@ -361,7 +373,7 @@ public:
 		meta.writeArray("points", "Point", points.get(), numPoints);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Pen pen;
 	std::unique_ptr<Point[]> points;
@@ -403,7 +415,7 @@ public:
 		meta.write("radius", radius);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Pen pen;
 	Point centre;
@@ -446,7 +458,7 @@ public:
 		meta.write("radius", radius);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Brush brush;
 	Point centre;
@@ -474,7 +486,7 @@ public:
 		meta.write("rect", rect);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Pen pen;
 	Rect rect;
@@ -501,7 +513,7 @@ public:
 		meta.write("rect", rect);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Brush brush;
 	Rect rect;
@@ -526,7 +538,7 @@ public:
 		meta.write("endAngle", endAngle);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Pen pen;
 	Rect rect;
@@ -553,7 +565,7 @@ public:
 		meta.write("endAngle", endAngle);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Brush brush;
 	Rect rect;
@@ -576,7 +588,7 @@ public:
 		meta.write("size", imageSize);
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	Size getSize() const
 	{
@@ -940,7 +952,7 @@ public:
 		meta.endArray();
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	class Element : public LinkedObjectTemplate<Element>, public Meta
 	{
@@ -1118,7 +1130,7 @@ public:
 	{
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	/* Meta */
 
@@ -1139,7 +1151,7 @@ public:
 	{
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	/* Meta */
 
@@ -1164,7 +1176,7 @@ public:
 	{
 	}
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	/* Meta */
 
@@ -1208,7 +1220,7 @@ public:
 
 	void write(MetaWriter& meta) const override;
 
-	Renderer* createRenderer(const Location& location) const override;
+	Renderer* createRenderer(const Location& location) const;
 
 	IDataSourceStream& getStream() const
 	{

@@ -32,13 +32,17 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 		constexpr size_t maxFillPixels{16};
 		return (r.w * r.h) <= maxFillPixels;
 	};
+	Location loc{location, location.size()};
 
 	// Handled any immediate (simple) drawing
 	switch(object.kind()) {
+		DEFAULT_RENDER(Custom)
+
 	case Object::Kind::Point: {
 		auto& obj = static_cast<const PointObject&>(object);
 		if(obj.brush.isTransparent()) {
-			break;
+			renderer.reset(obj.createRenderer(loc));
+			return true;
 		}
 		auto pixelFormat = getPixelFormat();
 		Point pt = obj.point + location.topLeft();
@@ -53,14 +57,14 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 		return setPixel(cl, pt);
 	}
 
+		DEFAULT_RENDER(Rect)
+
 	case Object::Kind::FilledRect: {
 		// Draw solid filled non-rounded rectangles
 		auto& obj = static_cast<const FilledRectObject&>(object);
-		if(obj.blender || obj.radius != 0 || obj.brush.isTransparent()) {
-			break;
-		}
-		if(!obj.brush.isSolid() && !isSmall(obj.rect)) {
-			break;
+		if(obj.blender || obj.radius != 0 || obj.brush.isTransparent() || !(obj.brush.isSolid() || isSmall(obj.rect))) {
+			renderer.reset(obj.createRenderer(loc));
+			return true;
 		}
 		return fillSmallRect(obj.brush, location, obj.rect);
 	}
@@ -69,7 +73,8 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 		// Draw horizontal or vertical lines
 		auto& obj = static_cast<const LineObject&>(object);
 		if(obj.pen.isTransparent()) {
-			break;
+			renderer.reset(obj.createRenderer(loc));
+			return true;
 		}
 		Point pt1 = obj.pt1;
 		Point pt2 = obj.pt2;
@@ -85,19 +90,52 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 			}
 			r = Rect(pt1, 1 + pt2.x - pt1.x, obj.pen.width);
 		} else {
-			break;
+			renderer.reset(obj.createRenderer(loc));
+			return true;
 		}
 		if(!obj.pen.isSolid() || !isSmall(r)) {
-			break;
+			renderer.reset(obj.createRenderer(loc));
+			return true;
 		}
 		return fillSmallRect(obj.pen, location, r);
 	}
 
-	default:; // Continue to use renderer
+		DEFAULT_RENDER(Polyline)
+		DEFAULT_RENDER(Circle)
+		DEFAULT_RENDER(FilledCircle)
+		DEFAULT_RENDER(Ellipse)
+		DEFAULT_RENDER(FilledEllipse)
+		DEFAULT_RENDER(Arc)
+		DEFAULT_RENDER(FilledArc)
+		DEFAULT_RENDER(Drawing)
+		DEFAULT_RENDER(Image)
+		DEFAULT_RENDER(Glyph)
+		DEFAULT_RENDER(Text)
+		DEFAULT_RENDER(Scene)
+
+	case Object::Kind::Reference: {
+		auto& ref = static_cast<const ReferenceObject&>(object);
+
+		ref.adjustLocation(loc);
+
+		if(ref.blend == nullptr) {
+			return render(ref.object, loc.dest);
+			// return ref.object.createRenderer(loc);
+		}
+
+		if(ref.object.kind() == Object::Kind::Image) {
+			auto& image = static_cast<const ImageObject&>(ref.object);
+			return new ImageCopyRenderer(loc, image, ref.blend);
+		}
+
+		return new BlendRenderer(loc, ref.object, ref.blend);
 	}
 
-	Location loc{location, location.size()};
-	renderer.reset(object.createRenderer(loc));
+		DEFAULT_RENDER(Surface)
+		DEFAULT_RENDER(Copy)
+		DEFAULT_RENDER(Scroll)
+	}
+
 	return true;
 }
 

@@ -47,9 +47,8 @@ String Object::getTypeStr() const
 
 /* ReferenceObject */
 
-Renderer* ReferenceObject::createRenderer(const Location& location) const
+void ReferenceObject::adjustLocation(Location& loc) const
 {
-	Location loc(location);
 	loc.source += sourceOffset;
 	auto& r = loc.dest;
 	r += pos.topLeft();
@@ -57,17 +56,6 @@ Renderer* ReferenceObject::createRenderer(const Location& location) const
 	r.h -= pos.y;
 	r.w = std::min(r.w, pos.w);
 	r.h = std::min(r.h, pos.h);
-
-	if(blend == nullptr) {
-		return object.createRenderer(loc);
-	}
-
-	if(object.kind() == Object::Kind::Image) {
-		auto& image = static_cast<const ImageObject&>(object);
-		return new ImageCopyRenderer(loc, image, blend);
-	}
-
-	return new BlendRenderer(loc, object, blend);
 }
 
 /* PointObject */
