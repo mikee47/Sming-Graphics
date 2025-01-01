@@ -27,6 +27,7 @@ import array
 import freetype
 from .font import Glyph, Typeface
 from PIL import Image
+from common import critical
 
 
 def pointsToPixels(points26):
@@ -34,20 +35,26 @@ def pointsToPixels(points26):
 
 
 def parse_typeface(typeface: Typeface):
-    face = freetype.Face(typeface.source)
+    paths = typeface.source if isinstance(typeface.source, list) else [typeface.source]
+    faces = [freetype.Face(path) for path in paths]
+    for face in faces:
+        if typeface.font.pointSize is None:
+            face.select_size(0)
+        else:
+            face.set_char_size(round(typeface.font.pointSize * 64))
 
-    if typeface.font.pointSize is None:
-        face.select_size(0)
-    else:
-        face.set_char_size(round(typeface.font.pointSize * 64))
-
+    face = faces[0]
     typeface.comment = "%s %s" % (face.family_name.decode(), face.style_name.decode())
     typeface.yAdvance = pointsToPixels(face.size.ascender + abs(face.size.descender))
     typeface.descent = abs(pointsToPixels(face.size.descender))
 
     for c in typeface.font.codePoints:
-        index = face.get_char_index(c)
+        for face in faces:
+            index = face.get_char_index(c)
+            if index > 0:
+                break
         if index == 0:
+            critical(f'No glyph available for character {c:x}')
             continue # No glyph for this codepoint
         flags = freetype.FT_LOAD_RENDER
         if typeface.font.alpha == 1:

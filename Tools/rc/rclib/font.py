@@ -376,12 +376,24 @@ def parse_item(item, name):
         if resname is None:
             return
 
+        reslist = resname if isinstance(resname, list) else [resname]
+
+        if isinstance(resname, list):
+            reslist = resname[1:]
+            resname = reslist[0]
+        else:
+            reslist = []
+
         path = findFont(resname)
         parse = getParser(resname)
 
         typeface = Typeface(font, style)
         typeface.name = font.name + '_' + name
-        typeface.source = path
+
+        if reslist:
+            typeface.source = [findFont(resname) for resname in reslist]
+        else:
+            typeface.source = path
         # status("  typeface: '%s'..." % resname)
 
         parse(typeface)
