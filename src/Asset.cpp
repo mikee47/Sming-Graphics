@@ -332,6 +332,20 @@ int TypeFace::getCharIndex(uint16_t ch) const
 	}
 }
 
+int TypeFace::getChar(uint16_t index) const
+{
+	for(unsigned blockIndex = 0;; ++blockIndex) {
+		GlyphBlock block = getBlock(blockIndex);
+		if(index < block.length) {
+			return block.codePoint + index;
+		}
+		if(block.length == 0) {
+			return -1;
+		}
+		index -= block.length;
+	}
+}
+
 /* ResourceGlyph */
 
 class ResourceGlyph : public GlyphObject

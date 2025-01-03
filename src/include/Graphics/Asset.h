@@ -590,6 +590,13 @@ public:
 	 */
 	int getCharIndex(uint16_t ch) const;
 
+	/**
+	 * @brief Get character codepoint for given index
+	 * @param index Zero-based index
+	 * @retval int Codepoint of character, -1 if not found
+	 */
+	int getChar(uint16_t index) const;
+
 	/* Meta */
 
 	void write(MetaWriter& meta) const override
