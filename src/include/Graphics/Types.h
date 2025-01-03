@@ -822,7 +822,8 @@ private:
 	XX(DoubleStrikeout, "")                                                                                            \
 	XX(DotMatrix, "Draw only top-left dot in scaled glyphs")                                                           \
 	XX(HLine, "Draw only top line in scaled glyphs")                                                                   \
-	XX(VLine, "Draw only left line in scaled glyphs")
+	XX(VLine, "Draw only left line in scaled glyphs")                                                                  \
+	XX(Block, "Generate glyphs in a uniform block for EVE co-processor compatibility")
 
 enum class FontStyle {
 #define XX(name, desc) name,
