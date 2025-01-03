@@ -192,14 +192,14 @@ class Typeface(Resource):
         # Array of glyph definitions
         bmOffset = 0
         out.write("const GlyphResource %s_glyphs[] PROGMEM {\n" % self.name)
-        for g in self.glyphs:
+        for i, g in enumerate(self.glyphs):
             c = chr(g.codePoint)
             if not c.isprintable():
                 c = ''
             elif c == '\\':
                 c = "'\\'"
-            out.write("\t{ 0x%04x, %3u, %3u, %3d, %3d, %3u, GlyphResource::L%u }, // #0x%04x %s \n" %
-                (bmOffset, g.width, g.height, g.xOffset, g.yOffset, g.xAdvance, g.alpha, g.codePoint, c))
+            out.write("\t{ 0x%04x, %3u, %3u, %3d, %3d, %3u, GlyphResource::L%u }, // #%u 0x%04x %s \n" %
+                (bmOffset, g.width, g.height, g.xOffset, g.yOffset, g.xAdvance, g.alpha, i, g.codePoint, c))
             bmOffset += len(g.bitmap)
             self.headerSize += StructSize.GlyphResource
         out.write("};\n\n")
