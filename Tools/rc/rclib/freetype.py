@@ -73,6 +73,11 @@ def parse_typeface(typeface: Typeface):
         g.set_bitmap(img)
         typeface.glyphs.append(g)
 
+        # Check size does not exceed typeface bounds, adjust y offset if required
+        diff = typeface.descent - g.yOffset - g.height
+        if diff < 0:
+            g.yOffset += diff
+
 
 from .font import parsers
 parsers['.ttf'] = parse_typeface
