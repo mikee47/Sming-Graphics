@@ -626,6 +626,16 @@ public:
 	 */
 	virtual size_t readPixels(const Location& loc, PixelFormat format, void* buffer, uint16_t width) const = 0;
 
+	/**
+	 * @brief For access to raw stream
+	 */
+	virtual size_t readRaw(void* buffer, size_t length) const
+	{
+		(void)buffer;
+		(void)length;
+		return 0;
+	}
+
 protected:
 	Size imageSize{};
 };
@@ -650,6 +660,11 @@ public:
 		if(stream) {
 			meta.write("stream", stream->getName());
 		}
+	}
+
+	size_t readRaw(void* buffer, size_t length) const override
+	{
+		return stream ? stream->readBytes(static_cast<uint8_t*>(buffer), length) : 0;
 	}
 
 protected:
@@ -703,6 +718,48 @@ private:
 	uint32_t imageOffset;
 	uint16_t stride;
 	bool flip;
+};
+
+/**
+ * @brief A PNG format image
+ *
+ * Doesn't decode the data fully, just the header.
+ */
+class PngImageObject : public StreamImageObject
+{
+public:
+	using StreamImageObject::StreamImageObject;
+
+	PngImageObject(const Resource::ImageResource& image)
+		: StreamImageObject(Resource::createSubStream(image.bmOffset, image.bmSize), image.getSize())
+	{
+	}
+
+	void write(MetaWriter& meta) const override
+	{
+		StreamImageObject::write(meta);
+		meta.write("size", imageSize);
+	}
+
+	bool init() override;
+
+	PixelFormat getPixelFormat() const override
+	{
+		return PixelFormat::PNG;
+	}
+
+	size_t readPixels(const Location&, PixelFormat, void*, uint16_t) const override
+	{
+		return 0;
+	}
+
+	uint8_t colorType() const
+	{
+		return mColorType;
+	}
+
+private:
+	uint8_t mColorType{};
 };
 
 /**

@@ -323,6 +323,62 @@ size_t BitmapObject::readPixels(const Location& loc, PixelFormat format, void* b
 	return width * bytesPerPixel;
 }
 
+/* PngImageObject */
+
+const uint64_t pngSignature{0x0a1a0a0d474e5089ULL};
+const uint32_t pngChunkIHDR{0x52444849};
+
+struct PngChunk {
+	uint32_t length;
+	uint32_t type;
+	uint8_t data[];
+	// Checksum
+};
+
+// type == IHDR
+struct PngHeader {
+	uint32_t width;
+	uint32_t height;
+	uint8_t bitDepth;
+	uint8_t colorType;
+	uint8_t compressionMethod;
+	uint8_t filterMethod;
+	uint8_t interlaceMethod;
+};
+
+struct PngHeaderChunk {
+	uint32_t length;
+	uint32_t type;
+	PngHeader data;
+};
+
+bool PngImageObject::init()
+{
+	seek(0);
+
+	uint64_t sig;
+	read(&sig, sizeof(sig));
+	if(sig != pngSignature) {
+		debug_e("[PNG] Bad signature");
+		return false;
+	}
+
+	PngHeaderChunk hdr;
+	read(&hdr, sizeof(hdr));
+	if(hdr.type != pngChunkIHDR) {
+		debug_e("[PNG] Expected IHDR");
+		return false;
+	}
+
+	imageSize.w = hdr.data.width;
+	imageSize.h = hdr.data.height;
+	mColorType = hdr.data.colorType;
+	debug_i("[PNG] Color type %u", mColorType);
+
+	seek(0);
+	return true;
+}
+
 /* RawImageObject */
 
 size_t RawImageObject::readPixels(const Location& loc, PixelFormat format, void* buffer, uint16_t width) const
