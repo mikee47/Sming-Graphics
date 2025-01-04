@@ -381,6 +381,14 @@ union __attribute__((packed)) PixelBuffer {
 		uint16_t r : 5;
 	};
 	RGB565 rgb565;
+
+	struct ARGB1555 {
+		uint16_t b : 5;
+		uint16_t g : 5;
+		uint16_t r : 5;
+		uint16_t a : 1;
+	};
+	ARGB1555 argb1555;
 };
 
 /**
