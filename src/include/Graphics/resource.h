@@ -26,6 +26,16 @@
 
 namespace Graphics
 {
+/**
+ * @brief Image container format
+ */
+enum class ImageFormat : uint8_t {
+	RAW, ///< Contains raw image data described by PixelFormat
+	BMP,
+	JPEG,
+	PNG,
+};
+
 namespace Resource
 {
 /**
@@ -129,16 +139,22 @@ struct ImageResource {
 	uint32_t bmSize;
 	uint16_t width;
 	uint16_t height;
-	PixelFormat format;
+	ImageFormat format;
+	PixelFormat pixelFormat;
 
 	Size getSize() const
 	{
 		return Size{FSTR::readValue(&width), FSTR::readValue(&height)};
 	}
 
-	PixelFormat getFormat() const
+	ImageFormat getFormat() const
 	{
 		return FSTR::readValue(&format);
+	}
+
+	PixelFormat getPixelFormat() const
+	{
+		return FSTR::readValue(&pixelFormat);
 	}
 };
 

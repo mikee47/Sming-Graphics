@@ -36,6 +36,13 @@ class PixelFormat(enum.Enum):
     BGR24 = pixel_format(3, 24, ORDER_BGR)
     RGB565 = pixel_format(2, 16, ORDER_RGB)
 
+
+class ImageFormat(enum.Enum):
+    RAW = 0
+    BMP = 1
+    JPEG = 2
+    PNG = 3
+
 # Used to calculate compiled size of resource header information
 class StructSize(enum.IntEnum):
     GlyphResource = 8

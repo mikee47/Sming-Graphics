@@ -147,7 +147,7 @@ public:
 		// Serial << "bmOffset " << imgres.bmOffset << ", bmSize " << imgres.bmSize << ", width " << imgres.width
 		// 	   << ", height " << imgres.height << ", format " << imgres.format << endl;
 		ImageObject* img;
-		if(imgres.getFormat() == PixelFormat::None) {
+		if(imgres.getFormat() == ImageFormat::BMP) {
 			img = new BitmapObject(imgres);
 			if(!img->init()) {
 				debug_e("Bad bitmap");

@@ -611,6 +611,12 @@ public:
 	virtual bool init() = 0;
 
 	/**
+	 * @brief Get image container format
+	 * @retval ImageFormat
+	 */
+	virtual ImageFormat getImageFormat() const = 0;
+
+	/**
 	 * @brief Get native pixel format
 	 * @retval PixelFormat Return None if ambivalent about format (e.g. calculated pixel data)
 	 */
@@ -707,6 +713,11 @@ public:
 
 	bool init() override;
 
+	ImageFormat getImageFormat() const override
+	{
+		return ImageFormat::BMP;
+	}
+
 	PixelFormat getPixelFormat() const override
 	{
 		return PixelFormat::RGB24;
@@ -743,9 +754,14 @@ public:
 
 	bool init() override;
 
+	ImageFormat getImageFormat() const override
+	{
+		return ImageFormat::PNG;
+	}
+
 	PixelFormat getPixelFormat() const override
 	{
-		return PixelFormat::PNG;
+		return PixelFormat::None;
 	}
 
 	size_t readPixels(const Location&, PixelFormat, void*, uint16_t) const override
@@ -781,7 +797,8 @@ public:
 	}
 
 	RawImageObject(const Resource::ImageResource& image)
-		: RawImageObject(Resource::createSubStream(image.bmOffset, image.bmSize), image.getFormat(), image.getSize())
+		: RawImageObject(Resource::createSubStream(image.bmOffset, image.bmSize), image.getPixelFormat(),
+						 image.getSize())
 	{
 	}
 
@@ -794,6 +811,11 @@ public:
 	bool init() override
 	{
 		return true;
+	}
+
+	ImageFormat getImageFormat() const override
+	{
+		return ImageFormat::RAW;
 	}
 
 	PixelFormat getPixelFormat() const override
@@ -936,6 +958,11 @@ public:
 	Kind kind() const override
 	{
 		return Kind::Glyph;
+	}
+
+	ImageFormat getImageFormat() const override
+	{
+		return ImageFormat::RAW;
 	}
 
 	PixelFormat getPixelFormat() const override

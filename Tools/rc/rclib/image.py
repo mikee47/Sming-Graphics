@@ -17,19 +17,20 @@ class Image(Resource):
         self.width = None
         self.height = None
         self.format = None
+        self.pixel_format = None
         self.headerSize = 0
 
     def serialize(self, bmOffset, res_offset, ptr64: bool):
         """struct ImageResource"""
-        fmt = PixelFormat[self.format.upper()].value
-        print(f'image {self.name} format {self.format} {fmt}')
+        pixel_format = PixelFormat[self.pixel_format.upper()].value
+        print(f'image {self.name} pixel_format {self.pixel_format} {fmt}')
         return struct.pack('<QIIHHI' if ptr64 else '<IIIHHI',
             0, # FSTR::String* name
             bmOffset,
             len(self.bitmap),
             self.width,
             self.height,
-            fmt)
+            pixel_format)
 
     def get_bitmap_size(self):
         return len(self.bitmap)
@@ -45,7 +46,8 @@ class Image(Resource):
         out.write("\t.bmSize = 0x%06x,\n" % len(self.bitmap))
         out.write("\t.width = %u,\n" % self.width)
         out.write("\t.height = %u,\n" % self.height)
-        out.write("\t.format = PixelFormat::%s,\n" % self.format)
+        out.write("\t.format = ImageFormat::%s,\n" % self.format)
+        out.write("\t.pixelFormat = PixelFormat::%s,\n" % self.pixel_format)
         out.write("};\n\n")
         self.headerSize += StructSize.Image
         return bmOffset + self.get_bitmap_size()
@@ -55,7 +57,8 @@ class Image(Resource):
 
 
 def convert_rgb24(image, source):
-    image.format = 'RGB24'
+    image.format = 'RAW'
+    image.pixel_format = 'RGB24'
     data = bytearray(image.width * image.height * 3)
     i = 0
     for p in source.getdata():
@@ -67,7 +70,8 @@ def convert_rgb24(image, source):
 
 
 def convert_rgb565(image, source):
-    image.format = 'RGB565'
+    image.format = 'RAW'
+    image.pixel_format = 'RGB565'
     data = bytearray(image.width * image.height * 2)
     i = 0
     for p in source.getdata():
@@ -81,6 +85,7 @@ def convert_rgb565(image, source):
 
 def convert_standard(image, source, format):
     image.format = format
+    image.pixel_format = 'None'
     bytes = io.BytesIO()
     source.convert('RGB').save(bytes, format)
     return bytes.getbuffer()
