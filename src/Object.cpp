@@ -427,6 +427,94 @@ bool PngImageObject::init()
 	return true;
 }
 
+/* JpegImageObject */
+
+bool JpegImageObject::init()
+{
+	seek(0);
+
+	const uint16_t SOI = 0xffd8;
+	const uint16_t SOF0 = 0xffc0;
+
+	auto read16 = [&]() -> uint16_t {
+		uint16_t mark{};
+		read(&mark, sizeof(mark));
+		return HSPI::bswap16(mark);
+	};
+
+	if(read16() != SOI) {
+		debug_e("[JPEG] Bad SOI");
+		return false;
+	}
+
+	struct Frame {
+		uint16_t marker;
+		uint16_t length;
+
+		void bswap()
+		{
+			marker = HSPI::bswap16(marker);
+			length = HSPI::bswap16(length);
+		}
+	};
+
+	/*
+		ff c0		SOF0
+		00 11		Length (17 - 2) = 15 bytes
+		08			sample precision
+		03 84		lines (HEIGHT)
+		04 fe		samples per line (WIDTH)
+		03 			image components
+		01 22 00	C1=1, H1=2, V1=2, Tq1=0
+		02 11 01	C2=2, H2=1, V2=1, Tq2=1
+		03 11 01	C3=3, H3=1, V3=1, Tq3=1
+	*/
+	struct __attribute__((packed)) BaselineDct {
+		uint8_t samplePrecision;
+		uint16_t numberOfLines;
+		uint16_t samplesPerLine;
+		uint8_t numberOfImageComponents;
+		uint8_t imageComponents[];
+
+		void bswap()
+		{
+			numberOfLines = HSPI::bswap16(numberOfLines);
+			samplesPerLine = HSPI::bswap16(samplesPerLine);
+		}
+	};
+
+	auto readFrame = [&]() -> Frame {
+		Frame frame;
+		read(&frame, sizeof(frame));
+		frame.bswap();
+		return frame;
+	};
+
+	// Look for SOF0 marker
+	while(true) {
+		auto frame = readFrame();
+		if(frame.marker == 0) {
+			debug_w("[JPEG] SOF0 not found");
+			return false;
+		}
+		if(frame.marker != SOF0) {
+			stream->seekFrom(frame.length - 2, SeekOrigin::Current);
+			continue;
+		}
+
+		BaselineDct dct;
+		read(&dct, sizeof(dct));
+		dct.bswap();
+		imageSize.w = dct.samplesPerLine;
+		imageSize.h = dct.numberOfLines;
+		debug_w("[JPEG] SOF0 found, %u x %u", dct.samplesPerLine, dct.numberOfLines);
+		break;
+	}
+
+	seek(0);
+	return true;
+}
+
 /* RawImageObject */
 
 size_t RawImageObject::readPixels(const Location& loc, PixelFormat format, void* buffer, uint16_t width) const

@@ -652,7 +652,7 @@ protected:
 class StreamImageObject : public ImageObject
 {
 public:
-	StreamImageObject(IDataSourceStream* source, Size size) : ImageObject(size), stream(source)
+	StreamImageObject(IDataSourceStream* source, Size size = {}) : ImageObject(size), stream(source)
 	{
 	}
 
@@ -790,6 +790,43 @@ private:
 	uint16_t mPaletteSize{};
 	uint8_t mColorType{};
 	bool mHasTransparency{};
+};
+
+/**
+ * @brief A JPEG format image
+ */
+class JpegImageObject : public StreamImageObject
+{
+public:
+	using StreamImageObject::StreamImageObject;
+
+	JpegImageObject(const Resource::ImageResource& image)
+		: StreamImageObject(Resource::createSubStream(image.bmOffset, image.bmSize), image.getSize())
+	{
+	}
+
+	void write(MetaWriter& meta) const override
+	{
+		StreamImageObject::write(meta);
+		meta.write("size", imageSize);
+	}
+
+	bool init() override;
+
+	ImageFormat getImageFormat() const override
+	{
+		return ImageFormat::JPEG;
+	}
+
+	PixelFormat getPixelFormat() const override
+	{
+		return PixelFormat::None;
+	}
+
+	size_t readPixels(const Location&, PixelFormat, void*, uint16_t) const override
+	{
+		return 0;
+	}
 };
 
 /**
