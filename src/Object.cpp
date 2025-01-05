@@ -22,6 +22,7 @@
 #include "include/Graphics/Object.h"
 #include "include/Graphics/ImageSurface.h"
 #include "include/Graphics/Drawing/Renderer.h"
+#include <HSPI/Common.h>
 
 String toString(Graphics::Object::Kind kind)
 {
@@ -327,16 +328,24 @@ size_t BitmapObject::readPixels(const Location& loc, PixelFormat format, void* b
 
 const uint64_t pngSignature{0x0a1a0a0d474e5089ULL};
 const uint32_t pngChunkIHDR{0x52444849};
+const uint32_t pngChunkPLTE{0x45544c50};
+const uint32_t pngChunktRNS{0x534e5274};
+const uint32_t pngChunkIDAT{0x54414449};
 
 struct PngChunk {
 	uint32_t length;
 	uint32_t type;
 	uint8_t data[];
 	// Checksum
+
+	void bswap()
+	{
+		length = HSPI::bswap32(length);
+	}
 };
 
 // type == IHDR
-struct PngHeader {
+struct __attribute__((packed)) PngHeader {
 	uint32_t width;
 	uint32_t height;
 	uint8_t bitDepth;
@@ -344,36 +353,75 @@ struct PngHeader {
 	uint8_t compressionMethod;
 	uint8_t filterMethod;
 	uint8_t interlaceMethod;
+
+	void bswap()
+	{
+		width = HSPI::bswap32(width);
+		height = HSPI::bswap32(height);
+	}
 };
 
-struct PngHeaderChunk {
+static_assert(sizeof(PngHeader) == 13);
+
+struct __attribute__((packed)) PngFileHeader {
+	uint64_t signature;
 	uint32_t length;
 	uint32_t type;
 	PngHeader data;
+	uint32_t crc;
+
+	void bswap()
+	{
+		length = HSPI::bswap32(length);
+		data.bswap();
+	}
 };
+
+static_assert(sizeof(PngFileHeader) == 8 + 8 + 13 + 4);
 
 bool PngImageObject::init()
 {
 	seek(0);
 
-	uint64_t sig;
-	read(&sig, sizeof(sig));
-	if(sig != pngSignature) {
+	PngFileHeader hdr;
+	auto len = read(&hdr, sizeof(hdr));
+	if(len != sizeof(hdr)) {
+		debug_e("[PNG] Bad PNG, read %u bytes", len);
+		return false;
+	}
+	hdr.bswap();
+	if(hdr.signature != pngSignature) {
 		debug_e("[PNG] Bad signature");
 		return false;
 	}
-
-	PngHeaderChunk hdr;
-	read(&hdr, sizeof(hdr));
 	if(hdr.type != pngChunkIHDR) {
 		debug_e("[PNG] Expected IHDR");
+		m_printHex("HDR", &hdr, len);
 		return false;
 	}
-
 	imageSize.w = hdr.data.width;
 	imageSize.h = hdr.data.height;
 	mColorType = hdr.data.colorType;
 	debug_i("[PNG] Color type %u", mColorType);
+
+	// Look for palette, stop if IDAT found
+	while(true) {
+		PngChunk chunk{};
+		if(read(&chunk, sizeof(chunk)) != sizeof(chunk)) {
+			break;
+		}
+		chunk.bswap();
+		if(chunk.type == pngChunkIDAT) {
+			break;
+		}
+		if(chunk.type == pngChunkPLTE) {
+			mPaletteSize = chunk.length;
+			debug_i("[PNG] Found palette size %u", mPaletteSize);
+		} else if(chunk.type == pngChunktRNS) {
+			mHasTransparency = true;
+		}
+		stream->seekFrom(chunk.length + 4, SeekOrigin::Current);
+	}
 
 	seek(0);
 	return true;

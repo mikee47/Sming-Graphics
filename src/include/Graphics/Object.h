@@ -681,9 +681,11 @@ protected:
 		}
 	}
 
-	void read(void* buffer, size_t length) const
+	size_t read(void* buffer, size_t length) const
 	{
-		streamPos += stream->readBytes(static_cast<uint8_t*>(buffer), length);
+		auto readCount = stream->readBytes(static_cast<uint8_t*>(buffer), length);
+		streamPos += readCount;
+		return readCount;
 	}
 
 	std::unique_ptr<IDataSourceStream> stream;
@@ -774,8 +776,20 @@ public:
 		return mColorType;
 	}
 
+	uint16_t paletteSize() const
+	{
+		return mPaletteSize;
+	}
+
+	bool hasTransparency() const
+	{
+		return mHasTransparency;
+	}
+
 private:
+	uint16_t mPaletteSize{};
 	uint8_t mColorType{};
+	bool mHasTransparency{};
 };
 
 /**
