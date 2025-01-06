@@ -324,7 +324,12 @@ size_t BitmapObject::readPixels(const Location& loc, PixelFormat format, void* b
 	return width * bytesPerPixel;
 }
 
-/* PngImageObject */
+/*
+ *
+ * PngImageObject
+ *
+ * See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
+ */
 
 const uint64_t pngSignature{0x0a1a0a0d474e5089ULL};
 const uint32_t pngChunkIHDR{0x52444849};
@@ -427,7 +432,14 @@ bool PngImageObject::init()
 	return true;
 }
 
-/* JpegImageObject */
+/*
+ * JpegImageObject
+ *
+ * https://en.wikipedia.org/wiki/JPEG_File_Interchange_Format#File_format_structure
+ * https://en.wikipedia.org/wiki/JPEG#Syntax_and_structure
+ * https://www.w3.org/Graphics/JPEG/itu-t81.pdf
+ *
+ */
 
 bool JpegImageObject::init()
 {
@@ -459,11 +471,14 @@ bool JpegImageObject::init()
 	};
 
 	/*
+	 * ITU-T81 Appendix B.2.2 DCT baseline frame. Example:
+
 		ff c0		SOF0
 		00 11		Length (17 - 2) = 15 bytes
 		08			sample precision
 		03 84		lines (HEIGHT)
 		04 fe		samples per line (WIDTH)
+		// We don't need this, included for completeness
 		03 			image components
 		01 22 00	C1=1, H1=2, V1=2, Tq1=0
 		02 11 01	C2=2, H2=1, V2=1, Tq2=1
