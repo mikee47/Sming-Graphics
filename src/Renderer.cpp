@@ -110,7 +110,7 @@ bool MultiRenderer::execute(Surface& surface)
 			}
 		}
 
-		debug_g("[RENDER] %s -> %s", object->toString().c_str(), location.toString().c_str());
+		debug_g("[RENDER] %s -> %s", object->getTypeStr().c_str(), location.toString().c_str());
 
 		if(!surface.render(*object, location.dest, renderer)) {
 			// Render couldn't be started, try again with another surface
