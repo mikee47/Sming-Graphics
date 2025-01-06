@@ -84,11 +84,12 @@ public:
 
 	uint16_t readMemoryBlock(char* data, int bufSize) override
 	{
-		return source.readMemoryBlock(data, bufSize);
+		return source.readMemoryBlock(data, std::min(bufSize, available()));
 	}
 
 	int seekFrom(int offset, SeekOrigin origin) override
 	{
+
 		size_t newPos;
 		switch(origin) {
 		case SeekOrigin::Start:
