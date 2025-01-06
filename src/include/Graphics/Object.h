@@ -579,6 +579,11 @@ public:
 class ImageObject : public ObjectTemplate<Object::Kind::Image>
 {
 public:
+	/**
+	 * @brief Create an appropriate Image object for the given resource.
+	 */
+	static std::unique_ptr<ImageObject> create(const Resource::ImageResource& res);
+
 	ImageObject(Size size) : imageSize(size)
 	{
 	}

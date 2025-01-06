@@ -285,12 +285,15 @@ inline bool fromString(const String& s, Color& color)
  * @brief Order refers to colour order within bitstream
  */
 enum ColorOrder { orderRGB, orderBGR };
-// name, bytes per pixel, bits per pixel, color order, byte order
+// name, bytes per pixel, bits per pixel, color order
 #define PIXEL_FORMAT_MAP(XX)                                                                                           \
 	XX(RGB24, 3, 24, orderRGB, "24-bit RGB")                                                                           \
 	XX(BGRA32, 4, 32, orderRGB, "32-bit ARGB")                                                                         \
 	XX(BGR24, 3, 24, orderBGR, "24-bit BGR")                                                                           \
-	XX(RGB565, 2, 16, orderRGB, "16-bit RGB 5/6/5")
+	XX(RGB565, 2, 16, orderRGB, "16-bit RGB 5/6/5")                                                                    \
+	XX(ARGB1555, 2, 15, orderRGB, "16-bit ARGB 1/5/5/5")                                                               \
+	XX(ARGB4, 2, 12, orderRGB, "16-bit ARGB 4/4/4/4")                                                                  \
+	XX(ARGB2, 1, 6, orderRGB, "8-bit ARGB 2/2/2/2")
 
 enum class PixelFormat : uint8_t {
 	None,

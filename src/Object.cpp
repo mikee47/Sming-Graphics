@@ -161,6 +161,22 @@ Renderer* FilledArcObject::createRenderer(const Location& location) const
 
 /* ImageObject */
 
+std::unique_ptr<ImageObject> ImageObject::create(const Resource::ImageResource& res)
+{
+	switch(res.format) {
+	case ImageFormat::RAW:
+		return std::make_unique<RawImageObject>(res);
+	case ImageFormat::BMP:
+		return std::make_unique<BitmapObject>(res);
+	case ImageFormat::JPEG:
+		return std::make_unique<JpegImageObject>(res);
+	case ImageFormat::PNG:
+		return std::make_unique<PngImageObject>(res);
+	}
+
+	return nullptr;
+}
+
 Renderer* ImageObject::createRenderer(const Location& location) const
 {
 	return new ImageRenderer(location, *this);

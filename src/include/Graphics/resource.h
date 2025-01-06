@@ -156,6 +156,17 @@ struct ImageResource {
 	{
 		return FSTR::readValue(&pixelFormat);
 	}
+
+	static const ImageResource& empty()
+	{
+		static ImageResource imageEmpty{};
+		return imageEmpty;
+	}
+
+	explicit operator bool() const
+	{
+		return name != nullptr;
+	}
 };
 
 } // namespace Resource

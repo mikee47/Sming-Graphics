@@ -56,57 +56,61 @@ class Image(Resource):
         out.write(self.bitmap)
 
 
-def convert_rgb24(image, source):
-    image.format = 'RAW'
-    image.pixel_format = 'RGB24'
-    data = bytearray(image.width * image.height * 3)
-    i = 0
-    for p in source.getdata():
-        data[i+0] = p[0]
-        data[i+1] = p[1]
-        data[i+2] = p[2]
-        i += 3
-    return data
+def convert(image, source, format):
+    def convert_raw(bytesPerPixel: int, callback):
+        image.format = 'RAW'
+        image.pixel_format = format
+        data = bytearray(image.width * image.height * bytesPerPixel)
+        i = 0
+        for p in source.getdata():
+            data[i:i+bytesPerPixel] = bytearray(callback(p))
+            i += bytesPerPixel
+        image.bitmap = data
+        return True
 
 
-def convert_rgb565(image, source):
-    image.format = 'RAW'
-    image.pixel_format = 'RGB565'
-    data = bytearray(image.width * image.height * 2)
-    i = 0
-    for p in source.getdata():
-        r, g, b = p[0] >> 3, p[1] >> 2, p[2] >> 3
-        color = (r << 11) | (g << 5) | b
-        data[i+0] = color >> 8
-        data[i+1] = color & 0xff
-        i += 2
-    return data
+    if format == 'RGB24':
+        def rgb24(src):
+            return src[0], src[1], src[2]
+        return convert_raw(3, rgb24)
 
+    if format == 'RGB565':
+        def rgb565(src):
+            r, g, b = src[0] >> 3, src[1] >> 2, src[2] >> 3
+            color = (r << 11) | (g << 5) | b
+            return (color >> 8, color & 0xff)
+        return convert_raw(2, rgb565)
 
-def convert_standard(image, source, format):
-    image.format = format
-    image.pixel_format = 'None'
-    bytes = io.BytesIO()
-    source.convert('RGB').save(bytes, format)
-    return bytes.getbuffer()
+    if format == 'ARGB1555':
+        def argb1555(src):
+            r, g, b, a = src[0] >> 3, src[1] >> 3, src[2] >> 3, src[3] >> 7
+            color = (a << 15) | (r << 10) | (g << 5) | b
+            return (color >> 8, color & 0xff)
+        return convert_raw(2, argb1555)
 
-def convert_bmp(image, source):
-    return convert_standard(image, source, 'BMP')
+    if format == 'ARGB2':
+        def argb2(src):
+            r, g, b, a = src[0] >> 6, src[1] >> 6, src[2] >> 6, src[3] >> 6
+            color = (a << 6) | (r << 4) | (g << 2) | b
+            return (color,)
+        return convert_raw(1, argb2)
 
-def convert_jpeg(image, source):
-    return convert_standard(image, source, 'JPEG')
+    if format == 'ARGB4':
+        def argb4(src):
+            r, g, b, a = src[0] >> 4, src[1] >> 4, src[2] >> 4, src[3] >> 4
+            color = (a << 12) | (r << 8) | (g << 4) | b
+            return (color >> 8, color & 0xff)
 
-def convert_png(image, source):
-    return convert_standard(image, source, 'PNG')
+    if format in ['BMP', 'JPEG', 'PNG']:
+        image.format = format
+        image.pixel_format = 'None'
+        bytes = io.BytesIO()
+        source.save(bytes, format)
+        image.bitmap = bytes.getbuffer()
+        return True
 
+    return False
 
-converters = {
-    'RGB24': convert_rgb24,
-    'RGB565': convert_rgb565,
-    'BMP': convert_bmp,
-    'JPEG': convert_jpeg,
-    'PNG': convert_png,
-}
 
 # Crop image to "x, y, w, h"
 def crop_image(img, args):
@@ -205,22 +209,17 @@ def parse_item(item, name):
 
     # status("Source image %s: '%s': %s %s, %u bytes" % (name, resname, img.format, img.size, imgsize))
 
-    img_format = img.format
+    image = Image()
+    image.name = name
+    image.format = img.format
 
     transform = item.get('transform')
     if transform is not None:
         for op, value in transform.items():
             img = transforms[op](img, value)
 
-    image = Image()
-    image.name = name
     (image.width, image.height) = img.size
-    format = item.get('format')
-    if format:
-        convert = converters[format]
-        image.bitmap = convert(image, img)
-    else:
-        image.format = img_format
+    if not convert(image, img, item.get('format')):
         if imgdata:
             image.bitmap = imgdata
         else:
