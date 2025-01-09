@@ -120,15 +120,15 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 
 		if(ref.blend == nullptr) {
 			return render(ref.object, loc.dest);
-			// return ref.object.createRenderer(loc);
 		}
 
 		if(ref.object.kind() == Object::Kind::Image) {
 			auto& image = static_cast<const ImageObject&>(ref.object);
-			return new ImageCopyRenderer(loc, image, ref.blend);
+			renderer = std::make_unique<ImageCopyRenderer>(loc, image, ref.blend);
+		} else {
+			renderer = std::make_unique<BlendRenderer>(loc, ref.object, ref.blend);
 		}
-
-		return new BlendRenderer(loc, ref.object, ref.blend);
+		return true;
 	}
 
 		DEFAULT_RENDER(Surface)
