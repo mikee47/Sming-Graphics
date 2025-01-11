@@ -238,7 +238,7 @@ class Screen:
                 data = list.read(datalen)
                 self.setPixels(data)
             elif cmd == Code.writeDataBuffer:
-                addr = list.read(datalen) # Discard pointer to buffer
+                addr = list.read(4) # Discard pointer to buffer. TODO: This could be 32 or 64 bits
                 data = self.packetQueue.get(timeout=0.5)
                 if data is None:
                     debug("Missing WRITE packet")
@@ -276,7 +276,7 @@ class Screen:
             elif cmd == Code.read or cmd == Code.readStart:
                 if cmd == Code.readStart:
                     self.addr.reset()
-                list.read(4) # Discard pointer to buffer
+                list.read(4) # Discard pointer to buffer. TODO: This could be 32 or 64 bits
                 buffer = self.readPixels(datalen // BYTES_PER_PIXEL)
                 # debug("READ(%u): %u" % (datalen, len(buffer)))
                 self.server.send(buffer)
