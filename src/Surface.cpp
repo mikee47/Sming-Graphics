@@ -119,7 +119,7 @@ bool Surface::render(const Object& object, const Rect& location, std::unique_ptr
 		ref.adjustLocation(loc);
 
 		if(ref.blend == nullptr) {
-			return render(ref.object, loc.dest);
+			return render(ref.object, loc.dest, renderer);
 		}
 
 		if(ref.object.kind() == Object::Kind::Image) {
