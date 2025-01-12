@@ -1432,6 +1432,7 @@ DEFINE_FSTR_ARRAY_LOCAL(myDrawing, uint8_t,
 	GDRAW_PEN_COLOR(makeColor(Color::Black, 150))
 	GDRAW_XABS(125)
 	GDRAW_YABS(115)
+	GDRAW_FONT_STYLE(10, 0)
 	GDRAW_DRAW_CHARS(5, 'x', 'a', ' ', 'i', '#')
 	GDRAW_YREL(10)
 	GDRAW_XABS(10)
@@ -1439,10 +1440,10 @@ DEFINE_FSTR_ARRAY_LOCAL(myDrawing, uint8_t,
 	GDRAW_MOVE()
 	GDRAW_XREL(150)
 	GDRAW_YREL(20)
-	GDRAW_FONT_STYLE(1, FontStyle::Underscore | FontStyle::Bold | FontStyle::Italic)
+	GDRAW_FONT_STYLE(10, FontStyle::Underscore | FontStyle::Bold | FontStyle::Italic)
 	GDRAW_OFFSET_LENGTH(0, 4)
 	GDRAW_DRAW_TEXT(100)
-	GDRAW_FONT_STYLE(1, 0)
+	GDRAW_FONT_STYLE(10, 0)
 	GDRAW_OFFSET_LENGTH(4, 99)
 	GDRAW_DRAW_TEXT(100)
 	GDRAW_BRUSH_COLOR(makeColor(Color::White, 100))
@@ -1486,7 +1487,7 @@ DEFINE_FSTR_ARRAY_LOCAL(myDrawing, uint8_t,
 
 	auto drawing = new DrawingObject(myDrawing);
 	drawing->assets.store(new TextAsset(100, F("This is some text")));
-	drawing->assets.store(new ResourceFont(1, Resource::freeSans9pt));
+	drawing->assets.store(new ResourceFont(10, Resource::freeSans9pt));
 	printStream(drawing->getStream());
 	// printDrawing(*drawing);
 
