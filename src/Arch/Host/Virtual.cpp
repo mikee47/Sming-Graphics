@@ -149,6 +149,12 @@ public:
 		return state != State::idle;
 	}
 
+	void reset()
+	{
+		assert(state == State::idle);
+		DisplayList::reset();
+	}
+
 	template <typename T> bool writeCommand(const T& param)
 	{
 		return DisplayList::writeCommand(uint8_t(T::command), &param, sizeof(param));
@@ -180,10 +186,11 @@ public:
 	void complete()
 	{
 		// debug_i("%p %s(), offset %u, size %u", this, __FUNCTION__, offset, size);
+		// Must set state first as we're called from network thread
+		state = CommandList::State::idle;
 		if(callback) {
 			System.queueCallback(callback, param);
 		}
-		state = CommandList::State::idle;
 	}
 
 	volatile State state{};
