@@ -152,81 +152,48 @@ PixelBuffer unpack(PixelBuffer src, PixelFormat format)
 	}
 }
 
-uint8_t mixColor(uint8_t dst, uint8_t src, uint8_t alpha)
-{
-	return (src * alpha / 255) + (dst * (255 - alpha) / 255);
-}
-
 size_t writeColor(void* buffer, PackedColor color, PixelFormat format)
 {
 	auto ptr = static_cast<uint8_t*>(buffer);
-	switch(format) {
-	case PixelFormat::RGB565:
-		ptr[0] = color.value;
-		ptr[1] = color.value >> 8;
-		return 2;
-	case PixelFormat::ARGB1555:
-		if(true){//color.alpha >= 128) {
-			ptr[0] = color.value;
-			ptr[1] = color.value >> 8;
-		}
-		return 2;
-	case PixelFormat::RGB24:
-	case PixelFormat::BGR24:
-		if(color.alpha == 255) {
-			ptr[0] = color.value;
-			ptr[1] = color.value >> 8;
-			ptr[2] = color.value >> 16;
-		} else {
-			ptr[0] = mixColor(ptr[0], color.value, color.alpha);
-			ptr[1] = mixColor(ptr[1], color.value >> 8, color.alpha);
-			ptr[2] = mixColor(ptr[2], color.value >> 16, color.alpha);
-		}
-		return 3;
+	auto len = getBytesPerPixel(format);
+	switch(len) {
+	case 1:
+		*ptr = color.value;
+		break;
+	case 2:
+		*ptr++ = color.value;
+		*ptr++ = color.value >> 8;
+		break;
+	case 3:
+		*ptr++ = color.value;
+		*ptr++ = color.value >> 8;
+		*ptr++ = color.value >> 16;
+		break;
 	default:
 		assert(false);
-		return getBytesPerPixel(format);
 	}
+	return len;
 }
 
 size_t writeColor(void* buffer, PackedColor color, PixelFormat format, size_t count)
 {
 	auto ptr = static_cast<uint8_t*>(buffer);
-	switch(format) {
-	case PixelFormat::RGB565:
+	switch(getBytesPerPixel(format)) {
+	case 1:
+		memset(buffer, color.value, count);
+		ptr += count;
+		break;
+	case 2:
 		while(count-- > 0) {
-			ptr[0] = color.value;
-			ptr[1] = color.value >> 8;
-			ptr += 2;
+			*ptr++ = color.value;
+			*ptr++ = color.value >> 8;
 		}
 		break;
-	case PixelFormat::ARGB1555:
-		if(true){//color.alpha >= 128) {
-			while(count-- > 0) {
-				ptr[0] = color.value;
-				ptr[1] = color.value >> 8;
-				ptr += 2;
-			}
-		} else {
-			ptr += count * 2;
-		}
-		break;
-	case PixelFormat::RGB24:
-	case PixelFormat::BGR24:
-		if(color.alpha == 255) {
-			while(count-- > 0) {
-				ptr[0] = color.value;
-				ptr[1] = color.value >> 8;
-				ptr[2] = color.value >> 16;
-				ptr += 3;
-			}
-		} else {
-			while(count-- > 0) {
-				ptr[0] = mixColor(ptr[0], color.value, color.alpha);
-				ptr[1] = mixColor(ptr[1], color.value >> 8, color.alpha);
-				ptr[2] = mixColor(ptr[2], color.value >> 16, color.alpha);
-				ptr += 3;
-			}
+	case 3:
+		while(count-- > 0) {
+			*ptr++ = color.value;
+			*ptr++ = color.value >> 8;
+			*ptr++ = color.value >> 16;
 		}
 		break;
 	default:
