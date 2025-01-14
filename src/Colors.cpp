@@ -100,6 +100,16 @@ PixelBuffer pack(PixelBuffer src, PixelFormat format)
 		std::swap(dst.u8[0], dst.u8[1]);
 		return dst;
 	}
+	case PixelFormat::ARGB1555: {
+		PixelBuffer dst;
+		dst.argb1555.r = src.bgra32.r >> 3;
+		dst.argb1555.g = src.bgra32.g >> 3;
+		dst.argb1555.b = src.bgra32.b >> 3;
+		dst.argb1555.a = (src.bgra32.a >= 128) ? 1 : 0;
+		dst.packed.alpha = dst.argb1555.a ? 255 : 0;
+		std::swap(dst.u8[0], dst.u8[1]);
+		return dst;
+	}
 	case PixelFormat::RGB24:
 		std::swap(src.bgra32.r, src.bgra32.b);
 		return src;
@@ -122,6 +132,15 @@ PixelBuffer unpack(PixelBuffer src, PixelFormat format)
 		dst.bgra32.a = 255;
 		return dst;
 	}
+	case PixelFormat::ARGB1555: {
+		std::swap(src.u8[0], src.u8[1]);
+		PixelBuffer dst;
+		dst.bgra32.b = src.argb1555.b << 3;
+		dst.bgra32.g = src.argb1555.g << 3;
+		dst.bgra32.r = src.argb1555.r << 3;
+		dst.bgra32.a = src.argb1555.a ? 255 : 0;
+		return dst;
+	}
 	case PixelFormat::RGB24:
 		std::swap(src.bgra32.r, src.bgra32.b);
 		[[fallthrough]];
@@ -133,48 +152,81 @@ PixelBuffer unpack(PixelBuffer src, PixelFormat format)
 	}
 }
 
+uint8_t mixColor(uint8_t dst, uint8_t src, uint8_t alpha)
+{
+	return (src * alpha / 255) + (dst * (255 - alpha) / 255);
+}
+
 size_t writeColor(void* buffer, PackedColor color, PixelFormat format)
 {
 	auto ptr = static_cast<uint8_t*>(buffer);
-	auto len = getBytesPerPixel(format);
-	switch(len) {
-	case 1:
-		*ptr = color.value;
-		break;
-	case 2:
-		*ptr++ = color.value;
-		*ptr++ = color.value >> 8;
-		break;
-	case 3:
-		*ptr++ = color.value;
-		*ptr++ = color.value >> 8;
-		*ptr++ = color.value >> 16;
-		break;
+	switch(format) {
+	case PixelFormat::RGB565:
+		ptr[0] = color.value;
+		ptr[1] = color.value >> 8;
+		return 2;
+	case PixelFormat::ARGB1555:
+		if(true){//color.alpha >= 128) {
+			ptr[0] = color.value;
+			ptr[1] = color.value >> 8;
+		}
+		return 2;
+	case PixelFormat::RGB24:
+	case PixelFormat::BGR24:
+		if(color.alpha == 255) {
+			ptr[0] = color.value;
+			ptr[1] = color.value >> 8;
+			ptr[2] = color.value >> 16;
+		} else {
+			ptr[0] = mixColor(ptr[0], color.value, color.alpha);
+			ptr[1] = mixColor(ptr[1], color.value >> 8, color.alpha);
+			ptr[2] = mixColor(ptr[2], color.value >> 16, color.alpha);
+		}
+		return 3;
 	default:
 		assert(false);
+		return getBytesPerPixel(format);
 	}
-	return len;
 }
 
 size_t writeColor(void* buffer, PackedColor color, PixelFormat format, size_t count)
 {
 	auto ptr = static_cast<uint8_t*>(buffer);
-	switch(getBytesPerPixel(format)) {
-	case 1:
-		memset(buffer, color.value, count);
-		ptr += count;
-		break;
-	case 2:
+	switch(format) {
+	case PixelFormat::RGB565:
 		while(count-- > 0) {
-			*ptr++ = color.value;
-			*ptr++ = color.value >> 8;
+			ptr[0] = color.value;
+			ptr[1] = color.value >> 8;
+			ptr += 2;
 		}
 		break;
-	case 3:
-		while(count-- > 0) {
-			*ptr++ = color.value;
-			*ptr++ = color.value >> 8;
-			*ptr++ = color.value >> 16;
+	case PixelFormat::ARGB1555:
+		if(true){//color.alpha >= 128) {
+			while(count-- > 0) {
+				ptr[0] = color.value;
+				ptr[1] = color.value >> 8;
+				ptr += 2;
+			}
+		} else {
+			ptr += count * 2;
+		}
+		break;
+	case PixelFormat::RGB24:
+	case PixelFormat::BGR24:
+		if(color.alpha == 255) {
+			while(count-- > 0) {
+				ptr[0] = color.value;
+				ptr[1] = color.value >> 8;
+				ptr[2] = color.value >> 16;
+				ptr += 3;
+			}
+		} else {
+			while(count-- > 0) {
+				ptr[0] = mixColor(ptr[0], color.value, color.alpha);
+				ptr[1] = mixColor(ptr[1], color.value >> 8, color.alpha);
+				ptr[2] = mixColor(ptr[2], color.value >> 16, color.alpha);
+				ptr += 3;
+			}
 		}
 		break;
 	default:

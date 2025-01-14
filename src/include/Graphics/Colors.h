@@ -337,6 +337,27 @@ inline uint8_t getBytesPerPixel(PixelFormat format)
 }
 
 /**
+ * @brief Determine if format has alpha channel
+ */
+inline bool formatHasAlpha(PixelFormat format)
+{
+	switch(format) {
+	case PixelFormat::ARGB1555:
+	case PixelFormat::ARGB2:
+	case PixelFormat::ARGB4:
+	case PixelFormat::BGRA32:
+		return true;
+	case PixelFormat::BGR24:
+	case PixelFormat::RGB24:
+	case PixelFormat::RGB565:
+	case PixelFormat::None:
+		return false;
+	}
+
+	return false;
+}
+
+/**
  * @brief Colour in device pixel format
  */
 struct PackedColor {

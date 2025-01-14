@@ -554,7 +554,7 @@ size_t RawImageObject::readPixels(const Location& loc, PixelFormat format, void*
 	auto bpp = getBytesPerPixel(pixelFormat);
 	uint32_t offset = ((pos.y * imageSize.w) + pos.x) * bpp;
 	seek(offset);
-	if(format == pixelFormat) {
+	if(format == pixelFormat && !formatHasAlpha(format)) {
 		size_t count = width * bpp;
 		read(buffer, count);
 		return count;

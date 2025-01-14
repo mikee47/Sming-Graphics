@@ -1419,6 +1419,7 @@ bool ImageRenderer::execute(Surface& surface)
 			if(buffer == nullptr) {
 				return false;
 			}
+			memset(bufptr, 0, available);
 			available /= bytesPerPixel;
 		}
 
