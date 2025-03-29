@@ -4,6 +4,7 @@
 
 import PIL.Image
 import PIL.ImageOps
+import PIL.ImageEnhance
 import os
 import io
 import struct
@@ -161,6 +162,17 @@ def colorise_image(img, args):
     gimg = PIL.ImageOps.grayscale(img)
     return PIL.ImageOps.colorize(gimg, black, white, mid, blackpoint, whitepoint, midpoint)
 
+
+def adjust_contrast(img, args):
+    enhancer = PIL.ImageEnhance.Contrast(img)
+    return enhancer.enhance(args)
+
+
+def adjust_brightness(img, args):
+    enhancer = PIL.ImageEnhance.Brightness(img)
+    return enhancer.enhance(args)
+
+
 transforms = {
     'crop': crop_image,
     'resize': resize_image,
@@ -169,6 +181,8 @@ transforms = {
     'flip': flip_image,
     'rotate': rotate_image,
     'color': colorise_image,
+    'contrast': adjust_contrast,
+    'brightness': adjust_brightness,
 }
 
 def parse_item(item, name):
