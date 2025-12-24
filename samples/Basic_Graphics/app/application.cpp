@@ -68,7 +68,7 @@ BasicGui gui;
 // Re-usable assets
 BitmapObject* bitmap;
 RawImageObject* rawImage;
-RawImageObject* heron;
+RawImageObject* swan;
 constexpr Size targetSymbolSize{50, 50};
 SceneObject targetSymbol(targetSymbolSize, "target");
 ResourceFont fontSans(Resource::freeSans9pt);
@@ -1129,7 +1129,7 @@ void imageBrushTests()
 	auto scene = new SceneObject(tft, F("Image Brush Test"));
 	scene->clear();
 
-	auto brush = new ImageBrush(BrushStyle::FullScreen, *heron);
+	auto brush = new ImageBrush(BrushStyle::FullScreen, *swan);
 	scene->addAsset(brush);
 
 	Rect r = scene->getSize();
@@ -1710,7 +1710,7 @@ void init()
 		debug_e("Invalid bitmap");
 	}
 	rawImage = new RawImageObject(Resource::sming_raw);
-	heron = new RawImageObject(Resource::heron_raw);
+	swan = new RawImageObject(Resource::swan_raw);
 
 	// Create a target symbol, used in various tests
 	Rect r(targetSymbolSize);

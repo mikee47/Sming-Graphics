@@ -8,16 +8,16 @@
                 "format": "RGB565",
                 "source": "sming.bmp"
             },
-            "heron_raw": {
+            "swan_raw": {
                 "format": "RGB565",
-                "source": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Ardea_purpurea%2C_Tarn%2C_France%2C_2012.jpg/800px-Ardea_purpurea%2C_Tarn%2C_France%2C_2012.jpg",
+                "source": "https://raw.githubusercontent.com/mikee47/Sming-Graphics/refs/heads/develop/resource/images/swan.jpg",
                 "transform": {
                     "width": 100
                 }
             },
-            "otter_raw": {
+            "leaf_raw": {
                 "format": "RGB565",
-                "source": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Sea-otter-morro-bay_13.jpg/320px-Sea-otter-morro-bay_13.jpg"
+                "source": "https://raw.githubusercontent.com/mikee47/Sming-Graphics/refs/heads/develop/resource/images/leaf.jpg"
             }
         },
         "font": {
